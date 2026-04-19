@@ -1,0 +1,22 @@
+{
+  "name": "@datevibe/domain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pure business rules for the mobile MVP",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "author": "DateVibe",
+  "license": "ISC",
+  "dependencies": {
+    "@datevibe/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "src"
+  ]
+}

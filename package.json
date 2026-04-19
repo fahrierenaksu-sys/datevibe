@@ -11,6 +11,9 @@
     "check-env-docs": "npm run check --workspace=contrib/tools/generate-env-docs"
   },
   "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*",
     "play",
     "back",
     "map-storage",

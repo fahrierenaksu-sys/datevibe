@@ -1,0 +1,22 @@
+{
+  "name": "@datevibe/realtime-client",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Realtime client boundary for the mobile MVP",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "author": "DateVibe",
+  "license": "ISC",
+  "dependencies": {
+    "@datevibe/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "src"
+  ]
+}

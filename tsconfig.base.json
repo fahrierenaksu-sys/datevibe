@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@contracts": ["packages/contracts/src/index.ts"],
+      "@contracts/*": ["packages/contracts/src/*"],
+      "@domain": ["packages/domain/src/index.ts"],
+      "@domain/*": ["packages/domain/src/*"],
+      "@realtime-client": ["packages/realtime-client/src/index.ts"],
+      "@realtime-client/*": ["packages/realtime-client/src/*"]
+    }
+  }
+}
