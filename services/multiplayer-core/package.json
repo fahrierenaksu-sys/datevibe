@@ -1,8 +1,8 @@
 {
-  "name": "@datevibe/realtime-client",
+  "name": "@datevibe/multiplayer-core",
   "version": "1.0.0",
   "private": true,
-  "description": "Realtime client boundary for the mobile MVP",
+  "description": "Minimal backend core for the mobile MVP lobby and mini rooms",
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
@@ -11,7 +11,8 @@
   "author": "DateVibe",
   "license": "ISC",
   "dependencies": {
-    "@datevibe/contracts": "1.0.0"
+    "@datevibe/contracts": "1.0.0",
+    "@datevibe/domain": "1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "DateVibe Mobile",
+    "slug": "datevibe-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "jsEngine": "hermes"
+  }
+}

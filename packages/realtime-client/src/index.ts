@@ -1,1 +1,1 @@
-export type { ClientEvent, ServerEvent } from "@contracts";
+export type { ClientEvent, ServerEvent } from "@datevibe/contracts";

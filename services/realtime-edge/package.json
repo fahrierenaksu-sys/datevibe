@@ -1,0 +1,28 @@
+{
+  "name": "@datevibe/realtime-edge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal realtime gateway for the mobile MVP",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@datevibe/contracts": "1.0.0",
+    "@datevibe/multiplayer-core": "1.0.0",
+    "express": "^5.0.0",
+    "ws": "^8.18.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.19.26",
+    "@types/ws": "^8.5.12",
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "src"
+  ]
+}

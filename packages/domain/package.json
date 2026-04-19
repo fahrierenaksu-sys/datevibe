@@ -11,7 +11,7 @@
   "author": "DateVibe",
   "license": "ISC",
   "dependencies": {
-    "@datevibe/contracts": "workspace:*"
+    "@datevibe/contracts": "1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
