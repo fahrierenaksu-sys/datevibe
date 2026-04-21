@@ -14,9 +14,7 @@ export function LobbyScreen(props: LobbyScreenProps): JSX.Element {
 
   const { connectionStatus, lobbyState } = useLobbyFlow({
     sessionActor,
-    onInvalidSession: () => {
-      void onResetSession()
-    }
+    onInvalidSession: onResetSession
   })
 
   return (
