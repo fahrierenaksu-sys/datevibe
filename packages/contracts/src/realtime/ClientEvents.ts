@@ -1,7 +1,14 @@
 import type { JoinRoomRequest } from "../rooms/JoinRoom";
 import type { LeaveRoomRequest } from "../rooms/LeaveRoom";
 import type { MoveToSpotCommand } from "../presence/MoveToSpotCommand";
+import type { MiniRoomLeaveCommand } from "../miniRooms/MiniRoomEnd";
 import type { MiniRoomInviteDecisionStatus } from "../miniRooms/MiniRoomInviteDecision";
+import type { ConnectionDecisionCommand } from "../connections/ConnectionDecision";
+import type {
+  ChatListMessagesCommand,
+  ChatListThreadsCommand,
+  ChatSendMessageCommand,
+} from "../chat/ChatThread";
 import type { ReactionType } from "../reactions/ReactionEvent";
 import type { ReportReason } from "../safety/ReportReason";
 
@@ -16,6 +23,7 @@ export type ClientEvent =
         recipientUserId: string;
       };
     }
+  | { type: "mini_room.leave"; payload: MiniRoomLeaveCommand }
   | {
       type: "mini_room.invite_decision";
       payload: {
@@ -23,6 +31,10 @@ export type ClientEvent =
         status: Exclude<MiniRoomInviteDecisionStatus, "cancelled">;
       };
     }
+  | { type: "connection.decide"; payload: ConnectionDecisionCommand }
+  | { type: "chat.list_threads"; payload: ChatListThreadsCommand }
+  | { type: "chat.list_messages"; payload: ChatListMessagesCommand }
+  | { type: "chat.send_message"; payload: ChatSendMessageCommand }
   | {
       type: "reaction.send";
       payload: {

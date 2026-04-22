@@ -9,6 +9,8 @@ class MiniRoomSpace {
     invites = new Map();
     inviteDecisions = new Map();
     miniRoomsByInviteId = new Map();
+    miniRoomsById = new Map();
+    endedMiniRoomsById = new Map();
     constructor(livekitHandoffService) {
         this.livekitHandoffService = livekitHandoffService;
     }
@@ -38,6 +40,8 @@ class MiniRoomSpace {
         }
         const decision = {
             inviteId,
+            senderUserId: invite.senderUserId,
+            recipientUserId: invite.recipientUserId,
             status,
             decidedAt: new Date().toISOString()
         };
@@ -59,14 +63,40 @@ class MiniRoomSpace {
                 livekitRoomName: createId("livekit_room")
             };
             this.miniRoomsByInviteId.set(inviteId, miniRoom);
+            this.miniRoomsById.set(miniRoom.miniRoomId, miniRoom);
         }
         if (!miniRoom.participantUserIds.includes(requestingUserId)) {
+            return undefined;
+        }
+        if (this.endedMiniRoomsById.has(miniRoom.miniRoomId)) {
             return undefined;
         }
         return {
             miniRoom,
             mediaSession: this.livekitHandoffService.issueToken(miniRoom, requestingUserId)
         };
+    }
+    getMiniRoom(miniRoomId) {
+        return this.miniRoomsById.get(miniRoomId);
+    }
+    endMiniRoom(miniRoomId, endedByUserId) {
+        const miniRoom = this.miniRoomsById.get(miniRoomId);
+        if (!miniRoom || !miniRoom.participantUserIds.includes(endedByUserId)) {
+            return undefined;
+        }
+        const existingEnd = this.endedMiniRoomsById.get(miniRoomId);
+        if (existingEnd) {
+            return existingEnd;
+        }
+        const ended = {
+            miniRoomId,
+            lobbyRoomId: miniRoom.lobbyRoomId,
+            participantUserIds: miniRoom.participantUserIds,
+            endedByUserId,
+            endedAt: new Date().toISOString()
+        };
+        this.endedMiniRoomsById.set(miniRoomId, ended);
+        return ended;
     }
 }
 exports.MiniRoomSpace = MiniRoomSpace;

@@ -17,4 +17,5 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./rooms/spotOccupancy"), exports);
 __exportStar(require("./proximity/getNearbyUsers"), exports);
 __exportStar(require("./miniRooms/inviteRules"), exports);
+__exportStar(require("./connections/connectionDecisionRules"), exports);
 __exportStar(require("./safety/safetyRules"), exports);

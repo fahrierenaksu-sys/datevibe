@@ -102,6 +102,20 @@ class EventCodec {
                     }
                 };
             }
+            case "mini_room.leave": {
+                if (!isString(payload.miniRoomId)) {
+                    return { ok: false, error: "invalid_mini_room_leave_payload" };
+                }
+                return {
+                    ok: true,
+                    event: {
+                        type,
+                        payload: {
+                            miniRoomId: payload.miniRoomId
+                        }
+                    }
+                };
+            }
             case "mini_room.invite_decision": {
                 if (!isString(payload.inviteId) ||
                     (payload.status !== "accepted" && payload.status !== "declined")) {
@@ -114,6 +128,65 @@ class EventCodec {
                         payload: {
                             inviteId: payload.inviteId,
                             status: payload.status
+                        }
+                    }
+                };
+            }
+            case "connection.decide": {
+                if (!isString(payload.miniRoomId) ||
+                    !isString(payload.partnerUserId) ||
+                    !isAllowedValue(contracts_1.CONNECTION_DECISION_STATUSES, payload.status)) {
+                    return { ok: false, error: "invalid_connection_decision_payload" };
+                }
+                return {
+                    ok: true,
+                    event: {
+                        type,
+                        payload: {
+                            miniRoomId: payload.miniRoomId,
+                            partnerUserId: payload.partnerUserId,
+                            status: payload.status
+                        }
+                    }
+                };
+            }
+            case "chat.list_threads": {
+                return {
+                    ok: true,
+                    event: {
+                        type,
+                        payload: {}
+                    }
+                };
+            }
+            case "chat.list_messages": {
+                if (!isString(payload.threadId)) {
+                    return { ok: false, error: "invalid_chat_message_list_payload" };
+                }
+                return {
+                    ok: true,
+                    event: {
+                        type,
+                        payload: {
+                            threadId: payload.threadId
+                        }
+                    }
+                };
+            }
+            case "chat.send_message": {
+                if (!isString(payload.threadId) ||
+                    !isString(payload.body) ||
+                    payload.body.trim().length === 0 ||
+                    payload.body.trim().length > 500) {
+                    return { ok: false, error: "invalid_chat_message_payload" };
+                }
+                return {
+                    ok: true,
+                    event: {
+                        type,
+                        payload: {
+                            threadId: payload.threadId,
+                            body: payload.body
                         }
                     }
                 };

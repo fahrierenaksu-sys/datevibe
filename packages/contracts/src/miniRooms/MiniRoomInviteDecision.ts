@@ -4,6 +4,8 @@ export type MiniRoomInviteDecisionStatus = (typeof MINI_ROOM_INVITE_DECISIONS)[n
 
 export interface MiniRoomInviteDecision {
   inviteId: string;
+  senderUserId: string;
+  recipientUserId: string;
   status: MiniRoomInviteDecisionStatus;
   decidedAt: string;
 }

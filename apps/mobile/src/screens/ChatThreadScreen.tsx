@@ -27,6 +27,12 @@ type ChatThreadScreenProps = NativeStackScreenProps<
   "ChatThread"
 >
 
+const ROOM_INVITE_SENTINEL = "__room_invite__"
+
+function isRoomInviteMessage(body: string): boolean {
+  return body.trim() === ROOM_INVITE_SENTINEL
+}
+
 function formatMessageTime(isoDate: string): string {
   const d = new Date(isoDate)
   if (Number.isNaN(d.getTime())) return ""
@@ -102,6 +108,55 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
     }
     return () => setActiveThread(null)
   }, [resolvedThreadId, setActiveThread])
+
+  const handleJoinRoom = useCallback((): void => {
+    if (!sessionActor || !partnerUserId) return
+    const now = Date.now()
+    const miniRoomId = `demo-invite-${now}`
+    hapticLight()
+    navigation.navigate("MiniRoom", {
+      readyMiniRoom: {
+        miniRoom: {
+          miniRoomId,
+          lobbyRoomId: "demo-lobby",
+          participantUserIds: [
+            sessionActor.profile.userId,
+            partnerUserId
+          ] as [string, string],
+          livekitRoomName: `demo-room-${now}`
+        },
+        mediaSession: {
+          miniRoomId,
+          livekitUrl: "wss://demo.livekit.invalid",
+          token: "demo",
+          issuedAt: new Date().toISOString()
+        }
+      },
+      participants: {
+        you: {
+          userId: sessionActor.profile.userId,
+          displayName: sessionActor.profile.displayName
+        },
+        partner: { userId: partnerUserId, displayName: partnerName }
+      }
+    })
+  }, [navigation, partnerName, partnerUserId, sessionActor])
+
+  const handleSendInvite = useCallback((): void => {
+    if (!resolvedThreadId || !currentUserId) return
+    addOptimisticMessage({
+      threadId: resolvedThreadId,
+      senderUserId: currentUserId,
+      body: ROOM_INVITE_SENTINEL
+    })
+    // Fire-and-forget server send so a mutual server-side thread still sees it;
+    // demo threads don't have a backend and just keep the optimistic echo.
+    const sendChatMessage = route.params.sendChatMessage
+    if (sendChatMessage) {
+      sendChatMessage(resolvedThreadId, ROOM_INVITE_SENTINEL)
+    }
+    hapticLight()
+  }, [addOptimisticMessage, currentUserId, resolvedThreadId, route.params.sendChatMessage])
 
   const handleSend = useCallback(() => {
     const body = inputText.trim()
@@ -220,6 +275,8 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                   itemDate.toDateString() !== prevDate.toDateString()
                 const dateLabel = showDateSep ? formatDateSeparator(itemDate) : null
 
+                const isInvite = isRoomInviteMessage(item.body)
+
                 return (
                   <View key={item.messageId}>
                     {dateLabel ? (
@@ -237,29 +294,59 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                     {!isMe ? (
                       <Avatar name={partnerName} seed={partnerUserId} size={28} />
                     ) : null}
-                    <View
-                      style={[
-                        bubbleStyles.bubble,
-                        isMe ? bubbleStyles.bubbleMe : bubbleStyles.bubbleThem
-                      ]}
-                    >
-                      <Text
+                    {isInvite ? (
+                      <View style={inviteStyles.card}>
+                        <View style={inviteStyles.headerRow}>
+                          <View style={inviteStyles.iconCircle}>
+                            <Text style={inviteStyles.iconText}>🎥</Text>
+                          </View>
+                          <View style={inviteStyles.headerText}>
+                            <Text style={inviteStyles.title}>
+                              {isMe ? "Odaya davet gönderdin" : `${partnerName} seni odaya davet etti`}
+                            </Text>
+                            <Text style={inviteStyles.subtitle}>
+                              Canlı mini-oda · yüz yüze konuşma
+                            </Text>
+                          </View>
+                        </View>
+                        <Pressable
+                          onPress={handleJoinRoom}
+                          style={({ pressed }) => [
+                            inviteStyles.joinButton,
+                            pressed ? inviteStyles.joinButtonPressed : null
+                          ]}
+                        >
+                          <Text style={inviteStyles.joinButtonText}>Odaya Gir →</Text>
+                        </Pressable>
+                        <Text style={inviteStyles.time}>
+                          {formatMessageTime(item.sentAt)}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View
                         style={[
-                          bubbleStyles.body,
-                          isMe ? bubbleStyles.bodyMe : null
+                          bubbleStyles.bubble,
+                          isMe ? bubbleStyles.bubbleMe : bubbleStyles.bubbleThem
                         ]}
                       >
-                        {item.body}
-                      </Text>
-                      <Text
-                        style={[
-                          bubbleStyles.time,
-                          isMe ? bubbleStyles.timeMe : null
-                        ]}
-                      >
-                        {formatMessageTime(item.sentAt)}
-                      </Text>
-                    </View>
+                        <Text
+                          style={[
+                            bubbleStyles.body,
+                            isMe ? bubbleStyles.bodyMe : null
+                          ]}
+                        >
+                          {item.body}
+                        </Text>
+                        <Text
+                          style={[
+                            bubbleStyles.time,
+                            isMe ? bubbleStyles.timeMe : null
+                          ]}
+                        >
+                          {formatMessageTime(item.sentAt)}
+                        </Text>
+                      </View>
+                    )}
                     </View>
                   </View>
                 )
@@ -272,6 +359,18 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
 
           <SafeAreaView edges={["bottom"]} style={styles.composerSafe}>
             <View style={styles.composer}>
+              <Pressable
+                onPress={handleSendInvite}
+                disabled={isPendingThread}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  styles.inviteButton,
+                  isPendingThread ? styles.inviteButtonDisabled : null,
+                  pressed ? styles.inviteButtonPressed : null
+                ]}
+              >
+                <Text style={styles.inviteButtonIcon}>🎥</Text>
+              </Pressable>
               <TextInput
                 style={styles.input}
                 value={inputText}
@@ -390,6 +489,90 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 20,
     fontWeight: "800"
+  },
+  inviteButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: uiTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.border,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  inviteButtonDisabled: {
+    opacity: 0.4
+  },
+  inviteButtonPressed: {
+    backgroundColor: uiTheme.colors.surfaceMuted
+  },
+  inviteButtonIcon: {
+    fontSize: 18
+  }
+})
+
+const inviteStyles = StyleSheet.create({
+  card: {
+    maxWidth: "82%",
+    borderRadius: uiTheme.radius.lg,
+    backgroundColor: uiTheme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: "rgba(239, 107, 155, 0.35)",
+    padding: uiTheme.spacing.md,
+    gap: uiTheme.spacing.sm,
+    ...uiTheme.shadow.soft
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: uiTheme.spacing.sm
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  iconText: {
+    fontSize: 18
+  },
+  headerText: {
+    flex: 1,
+    gap: 2
+  },
+  title: {
+    color: uiTheme.colors.textPrimary,
+    fontSize: uiTheme.typography.bodySmall,
+    fontWeight: "800",
+    letterSpacing: -0.1
+  },
+  subtitle: {
+    color: uiTheme.colors.textSecondary,
+    fontSize: uiTheme.typography.caption,
+    fontWeight: "600"
+  },
+  joinButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: uiTheme.spacing.lg,
+    paddingVertical: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.primary
+  },
+  joinButtonPressed: {
+    backgroundColor: uiTheme.colors.primaryPressed
+  },
+  joinButtonText: {
+    color: "#FFFFFF",
+    fontSize: uiTheme.typography.bodySmall,
+    fontWeight: "800",
+    letterSpacing: 0.2
+  },
+  time: {
+    fontSize: uiTheme.typography.micro,
+    color: uiTheme.colors.textMuted,
+    alignSelf: "flex-end"
   }
 })
 

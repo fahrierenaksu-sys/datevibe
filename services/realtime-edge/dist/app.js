@@ -26,7 +26,14 @@ function createRealtimeEdgeApp(configOverrides = {}) {
     });
     const connectionRegistry = new ConnectionRegistry_1.ConnectionRegistry();
     const eventCodec = new EventCodec_1.EventCodec();
-    const multiplayerCore = new multiplayer_core_1.MultiplayerCoreApp();
+    const multiplayerCore = new multiplayer_core_1.MultiplayerCoreApp({
+        livekit: {
+            livekitUrl: config.livekit.url,
+            apiKey: config.livekit.apiKey,
+            apiSecret: config.livekit.apiSecret,
+            tokenTtlSeconds: config.livekit.tokenTtlSeconds
+        }
+    });
     const eventBridge = new EventBridge_1.EventBridge(multiplayerCore, connectionRegistry);
     const app = (0, express_1.default)();
     app.use(express_1.default.json({ limit: "64kb" }));

@@ -1,6 +1,7 @@
 import type {
   MediaSessionToken,
   MiniRoom,
+  MiniRoomEnded,
   MiniRoomInvite,
   MiniRoomInviteDecision,
   MiniRoomInviteDecisionStatus
@@ -22,6 +23,8 @@ export class MiniRoomSpace {
   private readonly invites = new Map<string, MiniRoomInvite>();
   private readonly inviteDecisions = new Map<string, MiniRoomInviteDecision>();
   private readonly miniRoomsByInviteId = new Map<string, MiniRoom>();
+  private readonly miniRoomsById = new Map<string, MiniRoom>();
+  private readonly endedMiniRoomsById = new Map<string, MiniRoomEnded>();
 
   public constructor(private readonly livekitHandoffService: LivekitHandoffService) {}
 
@@ -59,6 +62,8 @@ export class MiniRoomSpace {
 
     const decision: MiniRoomInviteDecision = {
       inviteId,
+      senderUserId: invite.senderUserId,
+      recipientUserId: invite.recipientUserId,
       status,
       decidedAt: new Date().toISOString()
     };
@@ -87,9 +92,14 @@ export class MiniRoomSpace {
         livekitRoomName: createId("livekit_room")
       };
       this.miniRoomsByInviteId.set(inviteId, miniRoom);
+      this.miniRoomsById.set(miniRoom.miniRoomId, miniRoom);
     }
 
     if (!miniRoom.participantUserIds.includes(requestingUserId)) {
+      return undefined;
+    }
+
+    if (this.endedMiniRoomsById.has(miniRoom.miniRoomId)) {
       return undefined;
     }
 
@@ -97,5 +107,32 @@ export class MiniRoomSpace {
       miniRoom,
       mediaSession: this.livekitHandoffService.issueToken(miniRoom, requestingUserId)
     };
+  }
+
+  public getMiniRoom(miniRoomId: string): MiniRoom | undefined {
+    return this.miniRoomsById.get(miniRoomId);
+  }
+
+  public endMiniRoom(miniRoomId: string, endedByUserId: string): MiniRoomEnded | undefined {
+    const miniRoom = this.miniRoomsById.get(miniRoomId);
+    if (!miniRoom || !miniRoom.participantUserIds.includes(endedByUserId)) {
+      return undefined;
+    }
+
+    const existingEnd = this.endedMiniRoomsById.get(miniRoomId);
+    if (existingEnd) {
+      return existingEnd;
+    }
+
+    const ended: MiniRoomEnded = {
+      miniRoomId,
+      lobbyRoomId: miniRoom.lobbyRoomId,
+      participantUserIds: miniRoom.participantUserIds,
+      endedByUserId,
+      endedAt: new Date().toISOString()
+    };
+
+    this.endedMiniRoomsById.set(miniRoomId, ended);
+    return ended;
   }
 }

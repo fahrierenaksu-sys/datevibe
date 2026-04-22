@@ -88,7 +88,11 @@ export function InboxScreen(props: InboxScreenProps) {
               ) ?? thread.participants[0]
               const partnerName = partnerSummary?.displayName ?? "Someone"
               const partnerUserId = partnerSummary?.userId ?? ""
-              const lastBody = thread.lastMessage?.body
+              const rawLastBody = thread.lastMessage?.body
+              const lastBody =
+                rawLastBody?.trim() === "__room_invite__"
+                  ? "🎥 Odaya davet"
+                  : rawLastBody
               const lastTime = formatTimeAgo(thread.lastMessage?.sentAt)
 
               return (

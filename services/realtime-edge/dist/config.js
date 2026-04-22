@@ -13,6 +13,12 @@ function loadRealtimeEdgeConfig(env = process.env) {
         host: env.REALTIME_EDGE_HOST ?? "0.0.0.0",
         port: parseNumber(env.REALTIME_EDGE_PORT, 4100),
         websocketPath: env.REALTIME_EDGE_WS_PATH ?? "/ws",
-        sessionTtlMs: parseNumber(env.REALTIME_EDGE_SESSION_TTL_MS, 1000 * 60 * 60 * 24)
+        sessionTtlMs: parseNumber(env.REALTIME_EDGE_SESSION_TTL_MS, 1000 * 60 * 60 * 24),
+        livekit: {
+            url: env.LIVEKIT_URL,
+            apiKey: env.LIVEKIT_API_KEY,
+            apiSecret: env.LIVEKIT_API_SECRET,
+            tokenTtlSeconds: parseNumber(env.LIVEKIT_TOKEN_TTL_SECONDS, 60 * 30)
+        }
     };
 }

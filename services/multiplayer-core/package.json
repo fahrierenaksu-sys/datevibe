@@ -13,7 +13,8 @@
   "license": "ISC",
   "dependencies": {
     "@datevibe/contracts": "1.0.0",
-    "@datevibe/domain": "1.0.0"
+    "@datevibe/domain": "1.0.0",
+    "livekit-server-sdk": "^2.15.1"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

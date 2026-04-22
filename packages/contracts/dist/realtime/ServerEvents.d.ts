@@ -4,7 +4,10 @@ import type { NearbyUser } from "../presence/NearbyUser";
 import type { MiniRoomInvite } from "../miniRooms/MiniRoomInvite";
 import type { MiniRoomInviteDecision } from "../miniRooms/MiniRoomInviteDecision";
 import type { MiniRoom } from "../miniRooms/MiniRoom";
+import type { MiniRoomEnded } from "../miniRooms/MiniRoomEnd";
 import type { MediaSessionToken } from "../miniRooms/MediaSessionToken";
+import type { ConnectionDecisionRecord, ConnectionMatch } from "../connections/ConnectionDecision";
+import type { ChatMessageList, ChatMessage, ChatThread, ChatThreadList } from "../chat/ChatThread";
 import type { ReactionEvent } from "../reactions/ReactionEvent";
 export type ServerEvent = {
     type: "room.joined";
@@ -36,6 +39,27 @@ export type ServerEvent = {
         miniRoom: MiniRoom;
         mediaSession: MediaSessionToken;
     };
+} | {
+    type: "mini_room.ended";
+    payload: MiniRoomEnded;
+} | {
+    type: "connection.decision_recorded";
+    payload: ConnectionDecisionRecord;
+} | {
+    type: "connection.matched";
+    payload: ConnectionMatch;
+} | {
+    type: "chat.thread_created";
+    payload: ChatThread;
+} | {
+    type: "chat.thread_listed";
+    payload: ChatThreadList;
+} | {
+    type: "chat.message_listed";
+    payload: ChatMessageList;
+} | {
+    type: "chat.message_received";
+    payload: ChatMessage;
 } | {
     type: "reaction.received";
     payload: ReactionEvent;

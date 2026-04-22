@@ -44,6 +44,8 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
   const requestIdRef = useRef(0)
   const mountedRef = useRef(true)
 
+  const isDemoRoom = roomInfo.miniRoomId.startsWith("demo-")
+
   const runConnectAttempt = useCallback(async () => {
     const requestId = requestIdRef.current + 1
     requestIdRef.current = requestId
@@ -55,6 +57,20 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
       connectAttemptedAt: new Date().toISOString(),
       roomInfo
     }))
+
+    // Demo mode: skip real LiveKit handshake, fake a successful connect
+    // so the mini-room UI can be shown end-to-end without the backend.
+    if (isDemoRoom) {
+      setTimeout(() => {
+        if (!mountedRef.current || requestId !== requestIdRef.current) return
+        setMediaState((previousState) => ({
+          ...previousState,
+          connectionStatus: "connected",
+          errorMessage: null
+        }))
+      }, 800)
+      return
+    }
 
     try {
       if (!livekitClientRef.current) {
@@ -86,7 +102,7 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
         errorMessage: getErrorMessage(error)
       }))
     }
-  }, [mediaSession.livekitUrl, mediaSession.token, roomInfo])
+  }, [isDemoRoom, mediaSession.livekitUrl, mediaSession.token, roomInfo])
 
   const retryConnect = useCallback(async () => {
     await livekitClientRef.current?.disconnect()
@@ -95,12 +111,12 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
 
   const toggleMic = useCallback(async (): Promise<void> => {
     const client = livekitClientRef.current
-    if (!client) return
     const nextEnabled = !mediaState.localMedia.micEnabled
     setMediaState((prev) => ({
       ...prev,
       localMedia: { ...prev.localMedia, micEnabled: nextEnabled }
     }))
+    if (isDemoRoom || !client) return
     try {
       await client.setMicrophoneEnabled(nextEnabled)
     } catch {
@@ -109,16 +125,16 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
         localMedia: { ...prev.localMedia, micEnabled: !nextEnabled }
       }))
     }
-  }, [mediaState.localMedia.micEnabled])
+  }, [isDemoRoom, mediaState.localMedia.micEnabled])
 
   const toggleCamera = useCallback(async (): Promise<void> => {
     const client = livekitClientRef.current
-    if (!client) return
     const nextEnabled = !mediaState.localMedia.cameraEnabled
     setMediaState((prev) => ({
       ...prev,
       localMedia: { ...prev.localMedia, cameraEnabled: nextEnabled }
     }))
+    if (isDemoRoom || !client) return
     try {
       await client.setCameraEnabled(nextEnabled)
     } catch {
@@ -127,7 +143,7 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
         localMedia: { ...prev.localMedia, cameraEnabled: !nextEnabled }
       }))
     }
-  }, [mediaState.localMedia.cameraEnabled])
+  }, [isDemoRoom, mediaState.localMedia.cameraEnabled])
 
   useEffect(() => {
     mountedRef.current = true

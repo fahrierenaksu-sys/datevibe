@@ -8,11 +8,18 @@ const SpotProximityService_1 = require("./proximity/SpotProximityService");
 const SafetyService_1 = require("./safety/SafetyService");
 const LivekitHandoffService_1 = require("./media/LivekitHandoffService");
 const MiniRoomSpace_1 = require("./miniRooms/MiniRoomSpace");
+const ConnectionDecisionService_1 = require("./connections/ConnectionDecisionService");
+const ChatThreadService_1 = require("./chat/ChatThreadService");
 class MultiplayerCoreApp {
     lobbyRoom = new LobbyRoom_1.LobbyRoom(publicLobby_1.PUBLIC_LOBBY_LAYOUT);
     safetyService = new SafetyService_1.SafetyService();
     proximityService = new SpotProximityService_1.SpotProximityService(this.safetyService);
-    miniRoomSpace = new MiniRoomSpace_1.MiniRoomSpace(new LivekitHandoffService_1.LivekitHandoffService());
+    miniRoomSpace;
+    connectionDecisionService = new ConnectionDecisionService_1.ConnectionDecisionService();
+    chatThreadService = new ChatThreadService_1.ChatThreadService();
+    constructor(options = {}) {
+        this.miniRoomSpace = new MiniRoomSpace_1.MiniRoomSpace(new LivekitHandoffService_1.LivekitHandoffService(options.livekit));
+    }
     handleClientEvent(actor, event) {
         switch (event.type) {
             case "room.join": {
@@ -93,6 +100,16 @@ class MultiplayerCoreApp {
                     actor.userId !== invite.recipientUserId) {
                     return [];
                 }
+                if (event.payload.status === "accepted") {
+                    const sender = this.lobbyRoom.getUser(invite.senderUserId);
+                    const recipient = this.lobbyRoom.getUser(invite.recipientUserId);
+                    if (!sender || !recipient || sender.inMiniRoom || recipient.inMiniRoom) {
+                        const cancelled = this.miniRoomSpace.decideInvite(event.payload.inviteId, "cancelled");
+                        return cancelled
+                            ? [{ type: "mini_room.invite_decided", payload: cancelled }]
+                            : [];
+                    }
+                }
                 const decision = this.miniRoomSpace.decideInvite(event.payload.inviteId, event.payload.status);
                 if (!decision) {
                     return [];
@@ -116,6 +133,86 @@ class MultiplayerCoreApp {
                     }
                 }
                 return events;
+            }
+            case "mini_room.leave": {
+                const ended = this.miniRoomSpace.endMiniRoom(event.payload.miniRoomId, actor.userId);
+                if (!ended) {
+                    return [];
+                }
+                this.lobbyRoom.setInMiniRoom(ended.participantUserIds[0], false);
+                this.lobbyRoom.setInMiniRoom(ended.participantUserIds[1], false);
+                return [
+                    { type: "mini_room.ended", payload: ended },
+                    { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() },
+                    ...this.createNearbyEventsForAllUsers()
+                ];
+            }
+            case "connection.decide": {
+                const miniRoom = this.miniRoomSpace.getMiniRoom(event.payload.miniRoomId);
+                if (!miniRoom) {
+                    return [];
+                }
+                const eligibility = (0, domain_1.canRecordConnectionDecision)({
+                    miniRoom,
+                    actorUserId: actor.userId,
+                    partnerUserId: event.payload.partnerUserId
+                });
+                if (!eligibility.allowed) {
+                    return [];
+                }
+                const result = this.connectionDecisionService.recordDecision({
+                    miniRoom,
+                    actorUserId: actor.userId,
+                    partnerUserId: event.payload.partnerUserId,
+                    status: event.payload.status
+                });
+                const events = [
+                    { type: "connection.decision_recorded", payload: result.decision }
+                ];
+                if (result.match) {
+                    events.push({ type: "connection.matched", payload: result.match });
+                    events.push({
+                        type: "chat.thread_created",
+                        payload: this.chatThreadService.createThreadForMatch({
+                            match: result.match,
+                            participants: this.createChatParticipants(result.match.participantUserIds)
+                        })
+                    });
+                }
+                return events;
+            }
+            case "chat.list_threads": {
+                return [
+                    {
+                        type: "chat.thread_listed",
+                        payload: this.chatThreadService.listThreadsForUser(actor.userId)
+                    }
+                ];
+            }
+            case "chat.list_messages": {
+                const messageList = this.chatThreadService.listMessagesForUser({
+                    threadId: event.payload.threadId,
+                    userId: actor.userId
+                });
+                return messageList
+                    ? [{ type: "chat.message_listed", payload: messageList }]
+                    : [];
+            }
+            case "chat.send_message": {
+                const thread = this.chatThreadService.getThread(event.payload.threadId);
+                if (!thread || !thread.participantUserIds.includes(actor.userId)) {
+                    return [];
+                }
+                const recipientUserId = thread.participantUserIds.find((userId) => userId !== actor.userId);
+                if (recipientUserId && this.safetyService.isBlocked(actor.userId, recipientUserId)) {
+                    return [];
+                }
+                const message = this.chatThreadService.sendMessage({
+                    threadId: event.payload.threadId,
+                    senderUserId: actor.userId,
+                    body: event.payload.body
+                });
+                return message ? [{ type: "chat.message_received", payload: message }] : [];
             }
             case "reaction.send": {
                 if (event.payload.roomId !== this.lobbyRoom.getLayout().roomId) {
@@ -166,6 +263,9 @@ class MultiplayerCoreApp {
     getLobbySnapshot() {
         return { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() };
     }
+    getChatThread(threadId) {
+        return this.chatThreadService.getThread(threadId);
+    }
     createNearbyEvent(userId) {
         return {
             type: "presence.nearby",
@@ -178,6 +278,19 @@ class MultiplayerCoreApp {
     }
     createNearbyEventsForAllUsers() {
         return this.lobbyRoom.getUsers().map((user) => this.createNearbyEvent(user.userId));
+    }
+    createChatParticipants(participantUserIds) {
+        return [
+            this.createChatParticipant(participantUserIds[0]),
+            this.createChatParticipant(participantUserIds[1])
+        ];
+    }
+    createChatParticipant(userId) {
+        const presenceUser = this.lobbyRoom.getUser(userId);
+        return {
+            userId,
+            displayName: presenceUser?.displayName
+        };
     }
 }
 exports.MultiplayerCoreApp = MultiplayerCoreApp;

@@ -2,6 +2,8 @@ export declare const MINI_ROOM_INVITE_DECISIONS: readonly ["accepted", "declined
 export type MiniRoomInviteDecisionStatus = (typeof MINI_ROOM_INVITE_DECISIONS)[number];
 export interface MiniRoomInviteDecision {
     inviteId: string;
+    senderUserId: string;
+    recipientUserId: string;
     status: MiniRoomInviteDecisionStatus;
     decidedAt: string;
 }

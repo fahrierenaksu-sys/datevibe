@@ -22,6 +22,7 @@ export declare class WebSocketGateway {
     attach(): void;
     detach(): void;
     private readonly onUpgrade;
+    private closeUpgradeWithPolicyViolation;
     private readonly onConnection;
     private handleMessage;
     private emitServerEvent;

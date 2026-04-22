@@ -3,5 +3,6 @@ export interface UserProfile {
     userId: string;
     displayName: string;
     avatar: AvatarSelection;
+    age?: number;
 }
 //# sourceMappingURL=UserProfile.d.ts.map

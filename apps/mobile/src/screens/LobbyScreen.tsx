@@ -9,7 +9,9 @@ import {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import {
   Animated,
+  Dimensions,
   Easing,
+  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -60,6 +62,8 @@ import {
 import { uiTheme } from "../ui/theme"
 import { useChatStore } from "../features/chat/chatStore"
 import { BottomNav, type BottomNavKey } from "../ui/bottomNav"
+import { isDemoMode } from "../features/demo/demoStore"
+import { DemoLobbyView } from "./DemoLobbyView"
 
 interface LobbyScreenProps {
   sessionActor: SessionActor
@@ -76,6 +80,10 @@ interface DiscoverProfile {
 }
 
 const PENDING_INVITE_TTL_MS = 30_000
+
+const SCREEN_WIDTH = Dimensions.get("window").width
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.26
+const SWIPE_EXIT_TARGET = SCREEN_WIDTH * 1.25
 
 type DiscoverFeedbackTone = "soft" | "warm"
 
@@ -172,6 +180,8 @@ export function LobbyScreen(props: LobbyScreenProps) {
   const [discoverFeedback, setDiscoverFeedback] =
     useState<DiscoverFeedback | null>(null)
   const cardEntryAnim = useRef(new Animated.Value(1)).current
+  const cardDragX = useRef(new Animated.Value(0)).current
+  const isCommittingSwipeRef = useRef(false)
   const feedbackAnim = useRef(new Animated.Value(0)).current
   const feedbackCounterRef = useRef(0)
 
@@ -229,13 +239,15 @@ export function LobbyScreen(props: LobbyScreenProps) {
 
   useEffect(() => {
     cardEntryAnim.setValue(0)
+    cardDragX.setValue(0)
+    isCommittingSwipeRef.current = false
     Animated.timing(cardEntryAnim, {
       toValue: 1,
       duration: 220,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true
     }).start()
-  }, [cardAnimationKey, cardEntryAnim])
+  }, [cardAnimationKey, cardDragX, cardEntryAnim])
 
   const senderDisplayName = useMemo(() => {
     if (!incomingInvite) return null
@@ -498,6 +510,164 @@ export function LobbyScreen(props: LobbyScreenProps) {
     void skipDiscoveryCandidate({ userId: featuredCandidate.userId })
   }, [featuredCandidate, showDiscoverFeedback, triggerHaptic])
 
+  // ── Demo: simulate an invite → accept → MiniRoom handshake with "Irmak" ───
+  const runIrmakDemo = useCallback((): void => {
+    triggerHaptic("warm")
+    showDiscoverFeedback("Invite sent to Irmak…", "warm")
+    const acceptTimer = setTimeout(() => {
+      triggerHaptic("warm")
+      showDiscoverFeedback("Irmak accepted ✓", "warm")
+      const navTimer = setTimeout(() => {
+        const now = Date.now()
+        const miniRoomId = `demo-irmak-${now}`
+        const demoPartnerId = "demo-irmak"
+        const readyMiniRoom = {
+          miniRoom: {
+            miniRoomId,
+            lobbyRoomId: "demo-lobby",
+            participantUserIds: [myUserId, demoPartnerId] as [string, string],
+            livekitRoomName: `demo-room-${now}`
+          },
+          mediaSession: {
+            miniRoomId,
+            livekitUrl: "wss://demo.livekit.invalid",
+            token: "demo",
+            issuedAt: new Date().toISOString()
+          }
+        }
+        const participants: MiniRoomParticipantsRouteParam = {
+          you: { userId: myUserId, displayName: myDisplayName },
+          partner: { userId: demoPartnerId, displayName: "Irmak" }
+        }
+        navigation.navigate("MiniRoom", { readyMiniRoom, participants })
+      }, 700)
+      return () => clearTimeout(navTimer)
+    }, 1200)
+    // Best-effort cleanup on unmount is not strictly required here, since
+    // the user navigating away will just let timers fire into a no-op.
+    void acceptTimer
+  }, [myDisplayName, myUserId, navigation, showDiscoverFeedback, triggerHaptic])
+
+  const isPendingForFeatured =
+    !!featuredCandidate &&
+    pendingInviteUserIds.has(featuredCandidate.userId)
+
+  const likeDisabled =
+    !featuredCandidate ||
+    !lobbyState.isJoined ||
+    connectionStatus !== "connected" ||
+    !featuredCandidate.canInvite ||
+    featuredCandidate.blocked ||
+    isPendingForFeatured
+
+  // ── Swipe-to-decide PanResponder ─────────────────────────────────────────
+  const springDragBack = useCallback((): void => {
+    Animated.spring(cardDragX, {
+      toValue: 0,
+      useNativeDriver: true,
+      friction: 6,
+      tension: 80
+    }).start()
+  }, [cardDragX])
+
+  const commitSwipe = useCallback(
+    (direction: "like" | "pass"): void => {
+      if (isCommittingSwipeRef.current) return
+      isCommittingSwipeRef.current = true
+      const target =
+        direction === "like" ? SWIPE_EXIT_TARGET : -SWIPE_EXIT_TARGET
+      Animated.timing(cardDragX, {
+        toValue: target,
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }).start(({ finished }) => {
+        if (!finished) {
+          isCommittingSwipeRef.current = false
+          return
+        }
+        if (direction === "like") {
+          handlePrimaryLike()
+        } else {
+          handleSkipFeatured()
+        }
+        // The card-key-change effect will reset dragX + committing flag.
+      })
+    },
+    [cardDragX, handlePrimaryLike, handleSkipFeatured]
+  )
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_event, gesture) => {
+          if (isCommittingSwipeRef.current) return false
+          if (!featuredCandidate) return false
+          return (
+            Math.abs(gesture.dx) > 6 &&
+            Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.4
+          )
+        },
+        onPanResponderGrant: () => {
+          cardDragX.stopAnimation()
+        },
+        onPanResponderMove: (_event, gesture) => {
+          if (isCommittingSwipeRef.current) return
+          cardDragX.setValue(gesture.dx)
+        },
+        onPanResponderRelease: (_event, gesture) => {
+          if (isCommittingSwipeRef.current) return
+          if (gesture.dx > SWIPE_THRESHOLD) {
+            if (likeDisabled) {
+              showDiscoverFeedback(
+                isPendingForFeatured
+                  ? "Invite already sent — give them a moment."
+                  : "Can't send an invite right now.",
+                "soft"
+              )
+              springDragBack()
+            } else {
+              commitSwipe("like")
+            }
+          } else if (gesture.dx < -SWIPE_THRESHOLD) {
+            commitSwipe("pass")
+          } else {
+            springDragBack()
+          }
+        },
+        onPanResponderTerminate: () => {
+          if (isCommittingSwipeRef.current) return
+          springDragBack()
+        }
+      }),
+    [
+      cardDragX,
+      commitSwipe,
+      featuredCandidate,
+      isPendingForFeatured,
+      likeDisabled,
+      showDiscoverFeedback,
+      springDragBack
+    ]
+  )
+
+  const cardRotate = cardDragX.interpolate({
+    inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+    outputRange: ["-12deg", "0deg", "12deg"],
+    extrapolate: "clamp"
+  })
+  const likeStampOpacity = cardDragX.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: "clamp"
+  })
+  const passStampOpacity = cardDragX.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, 0],
+    outputRange: [1, 0],
+    extrapolate: "clamp"
+  })
+
   // Handle Like fired from ProfilePreview via navigation param bounce.
   useEffect(() => {
     const target = route.params?.pendingLikeUserId
@@ -522,18 +692,6 @@ export function LobbyScreen(props: LobbyScreenProps) {
     route.params?.pendingLikeUserId,
     sendInvite
   ])
-
-  const isPendingForFeatured =
-    !!featuredCandidate &&
-    pendingInviteUserIds.has(featuredCandidate.userId)
-
-  const likeDisabled =
-    !featuredCandidate ||
-    !lobbyState.isJoined ||
-    connectionStatus !== "connected" ||
-    !featuredCandidate.canInvite ||
-    featuredCandidate.blocked ||
-    isPendingForFeatured
 
   const distanceLabel = distanceLabelOf(featuredCandidate?.distance)
 
@@ -725,74 +883,126 @@ export function LobbyScreen(props: LobbyScreenProps) {
             />
           ) : null}
 
-          <Animated.View
-            style={[
-              styles.cardTransition,
-              {
-                opacity: cardEntryAnim,
-                transform: [
+          {isDemoMode() ? (
+            <DemoLobbyView />
+          ) : (
+            <>
+              <Animated.View
+                style={[
+                  styles.cardTransition,
                   {
-                    translateY: cardEntryAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [14, 0]
-                    })
-                  },
-                  {
-                    scale: cardEntryAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.985, 1]
-                    })
+                    opacity: cardEntryAnim,
+                    transform: [
+                      {
+                        translateY: cardEntryAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [14, 0]
+                        })
+                      },
+                      {
+                        scale: cardEntryAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.985, 1]
+                        })
+                      }
+                    ]
                   }
-                ]
-              }
-            ]}
-          >
-            {featuredCandidate && profilePreviewData ? (
-              <DiscoverCard
-                displayName={featuredCandidate.displayName}
-                userId={featuredCandidate.userId}
-                headline={profileHeadline}
-                distanceLabel={distanceLabel}
-                vibeTags={vibeTags}
-                isPending={isPendingForFeatured}
-                isOnline={featuredCandidate.canInvite}
-              />
-            ) : (
-              <EmptyDiscoverCard
-                connectionStatus={connectionStatus}
-                myDisplayName={myDisplayName}
-                myUserId={myUserId}
-                hasSeenEveryone={nearbyCount > 0}
-              />
-            )}
-          </Animated.View>
+                ]}
+              >
+                {featuredCandidate && profilePreviewData ? (
+                  <Animated.View
+                    style={[
+                      styles.swipeWrapper,
+                      {
+                        transform: [
+                          { translateX: cardDragX },
+                          { rotate: cardRotate }
+                        ]
+                      }
+                    ]}
+                    {...panResponder.panHandlers}
+                  >
+                    <DiscoverCard
+                      displayName={featuredCandidate.displayName}
+                      userId={featuredCandidate.userId}
+                      headline={profileHeadline}
+                      distanceLabel={distanceLabel}
+                      vibeTags={vibeTags}
+                      isPending={isPendingForFeatured}
+                      isOnline={featuredCandidate.canInvite}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.swipeStamp,
+                        styles.swipeStampLike,
+                        { opacity: likeStampOpacity }
+                      ]}
+                      pointerEvents="none"
+                    >
+                      <Text style={styles.swipeStampLikeText}>LIKE</Text>
+                    </Animated.View>
+                    <Animated.View
+                      style={[
+                        styles.swipeStamp,
+                        styles.swipeStampPass,
+                        { opacity: passStampOpacity }
+                      ]}
+                      pointerEvents="none"
+                    >
+                      <Text style={styles.swipeStampPassText}>NOPE</Text>
+                    </Animated.View>
+                  </Animated.View>
+                ) : (
+                  <EmptyDiscoverCard
+                    connectionStatus={connectionStatus}
+                    myDisplayName={myDisplayName}
+                    myUserId={myUserId}
+                    hasSeenEveryone={nearbyCount > 0}
+                  />
+                )}
+              </Animated.View>
 
-          {featuredCandidate && profilePreviewData ? (
-            <View style={styles.actionRow}>
-              <ActionButtonCircle
-                onPress={handleSkipFeatured}
-                size={60}
+              {featuredCandidate && profilePreviewData ? (
+                <View style={styles.actionRow}>
+                  <ActionButtonCircle
+                    onPress={handleSkipFeatured}
+                    size={60}
+                  >
+                    ✕
+                  </ActionButtonCircle>
+                  <ActionButtonCircle
+                    onPress={() => {
+                      navigation.navigate("ProfilePreview", { profile: profilePreviewData })
+                    }}
+                    size={60}
+                  >
+                    i
+                  </ActionButtonCircle>
+                  <ActionButtonCircle
+                    onPress={handlePrimaryLike}
+                    size={76}
+                    variant="primary"
+                    disabled={likeDisabled}
+                  >
+                    ♥
+                  </ActionButtonCircle>
+                </View>
+              ) : null}
+
+              <Pressable
+                onPress={runIrmakDemo}
+                style={({ pressed }) => [
+                  styles.demoButton,
+                  pressed ? styles.demoButtonPressed : null
+                ]}
+                hitSlop={6}
               >
-                ✕
-              </ActionButtonCircle>
-              <ActionButtonCircle
-                onPress={() => {
-                  navigation.navigate("ProfilePreview", { profile: profilePreviewData })
-                }}
-                size={60}
-              >
-                i
-              </ActionButtonCircle>
-              <ActionButtonCircle
-                onPress={handlePrimaryLike}
-                size={76}
-                variant="primary"
-                disabled={likeDisabled}
-              >
-                ♥
-              </ActionButtonCircle>
-            </View>
-          ) : null}
+                <Text style={styles.demoButtonText}>
+                  ✨ Demo · Meet Irmak
+                </Text>
+              </Pressable>
+            </>
+          )}
 
           {discoverFeedback ? (
             <Animated.View
@@ -939,6 +1149,60 @@ const styles = StyleSheet.create({
   },
   cardTransition: {
     width: "100%"
+  },
+  swipeWrapper: {
+    position: "relative",
+    width: "100%"
+  },
+  swipeStamp: {
+    position: "absolute",
+    top: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: uiTheme.radius.md,
+    borderWidth: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.92)"
+  },
+  swipeStampLike: {
+    left: 22,
+    transform: [{ rotate: "-14deg" }],
+    borderColor: uiTheme.colors.success
+  },
+  swipeStampLikeText: {
+    color: uiTheme.colors.success,
+    fontSize: 26,
+    fontWeight: "900",
+    letterSpacing: 2
+  },
+  swipeStampPass: {
+    right: 22,
+    transform: [{ rotate: "14deg" }],
+    borderColor: uiTheme.colors.danger
+  },
+  swipeStampPassText: {
+    color: uiTheme.colors.danger,
+    fontSize: 26,
+    fontWeight: "900",
+    letterSpacing: 2
+  },
+  demoButton: {
+    alignSelf: "center",
+    marginTop: uiTheme.spacing.xs,
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.full,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.borderStrong,
+    backgroundColor: uiTheme.colors.surface
+  },
+  demoButtonPressed: {
+    backgroundColor: uiTheme.colors.surfaceMuted
+  },
+  demoButtonText: {
+    color: uiTheme.colors.textSecondary,
+    fontSize: uiTheme.typography.caption,
+    fontWeight: "800",
+    letterSpacing: 0.4
   },
   feedbackPill: {
     alignSelf: "center",

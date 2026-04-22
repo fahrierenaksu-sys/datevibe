@@ -34,7 +34,14 @@ export function createRealtimeEdgeApp(
   })
   const connectionRegistry = new ConnectionRegistry()
   const eventCodec = new EventCodec()
-  const multiplayerCore = new MultiplayerCoreApp()
+  const multiplayerCore = new MultiplayerCoreApp({
+    livekit: {
+      livekitUrl: config.livekit.url,
+      apiKey: config.livekit.apiKey,
+      apiSecret: config.livekit.apiSecret,
+      tokenTtlSeconds: config.livekit.tokenTtlSeconds
+    }
+  })
   const eventBridge = new EventBridge(multiplayerCore, connectionRegistry)
 
   const app = express()

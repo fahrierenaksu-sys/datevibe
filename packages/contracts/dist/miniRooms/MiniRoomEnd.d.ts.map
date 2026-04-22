@@ -1,0 +1,1 @@
+{"version":3,"file":"MiniRoomEnd.d.ts","sourceRoot":"","sources":["../../src/miniRooms/MiniRoomEnd.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,oBAAoB;IACnC,UAAU,EAAE,MAAM,CAAC;CACpB;AAED,MAAM,WAAW,aAAa;IAC5B,UAAU,EAAE,MAAM,CAAC;IACnB,WAAW,EAAE,MAAM,CAAC;IACpB,kBAAkB,EAAE,CAAC,MAAM,EAAE,MAAM,CAAC,CAAC;IACrC,aAAa,EAAE,MAAM,CAAC;IACtB,OAAO,EAAE,MAAM,CAAC;CACjB"}

@@ -58,13 +58,13 @@ export class WebSocketGateway {
 
     const sessionToken = requestUrl.searchParams.get("sessionToken")
     if (!sessionToken) {
-      socket.destroy()
+      this.closeUpgradeWithPolicyViolation(request, socket, head)
       return
     }
 
     const actor = this.dependencies.sessionService.resolveActorProfile(sessionToken)
     if (!actor) {
-      socket.destroy()
+      this.closeUpgradeWithPolicyViolation(request, socket, head)
       return
     }
 
@@ -75,6 +75,16 @@ export class WebSocketGateway {
         request,
         { actor, sessionToken } satisfies ConnectionAuthContext
       )
+    })
+  }
+
+  private closeUpgradeWithPolicyViolation(
+    request: IncomingMessage,
+    socket: NetSocket,
+    head: Buffer
+  ): void {
+    this.webSocketServer.handleUpgrade(request, socket, head, (webSocket: WebSocket) => {
+      webSocket.close(1008, "invalid_session")
     })
   }
 

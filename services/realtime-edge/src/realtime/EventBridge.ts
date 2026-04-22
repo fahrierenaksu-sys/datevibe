@@ -62,21 +62,47 @@ export class EventBridge {
         return
       }
       case "mini_room.invite_decided": {
-        const participants = this.inviteParticipantsByInviteId.get(serverEvent.payload.inviteId)
-        if (participants) {
-          this.emitToUsers(
-            [participants.senderUserId, participants.recipientUserId],
-            serverEvent,
-            input.emit
-          )
-          this.inviteParticipantsByInviteId.delete(serverEvent.payload.inviteId)
-        } else {
-          input.emit(input.connectionId, serverEvent)
-        }
+        this.emitToUsers(
+          [serverEvent.payload.senderUserId, serverEvent.payload.recipientUserId],
+          serverEvent,
+          input.emit
+        )
+        this.inviteParticipantsByInviteId.delete(serverEvent.payload.inviteId)
         return
       }
       case "mini_room.ready": {
         this.emitToUsers(serverEvent.payload.miniRoom.participantUserIds, serverEvent, input.emit)
+        return
+      }
+      case "mini_room.ended": {
+        this.emitToUsers(serverEvent.payload.participantUserIds, serverEvent, input.emit)
+        return
+      }
+      case "connection.decision_recorded": {
+        this.emitToUser(serverEvent.payload.actorUserId, serverEvent, input.emit)
+        return
+      }
+      case "connection.matched": {
+        this.emitToUsers(serverEvent.payload.participantUserIds, serverEvent, input.emit)
+        return
+      }
+      case "chat.thread_created": {
+        this.emitToUsers(serverEvent.payload.participantUserIds, serverEvent, input.emit)
+        return
+      }
+      case "chat.thread_listed": {
+        this.emitToUser(serverEvent.payload.userId, serverEvent, input.emit)
+        return
+      }
+      case "chat.message_listed": {
+        this.emitToUser(serverEvent.payload.userId, serverEvent, input.emit)
+        return
+      }
+      case "chat.message_received": {
+        const thread = this.multiplayerCore.getChatThread(serverEvent.payload.threadId)
+        if (thread) {
+          this.emitToUsers(thread.participantUserIds, serverEvent, input.emit)
+        }
         return
       }
       case "reaction.received": {

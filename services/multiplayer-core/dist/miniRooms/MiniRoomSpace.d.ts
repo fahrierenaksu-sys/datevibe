@@ -1,4 +1,4 @@
-import type { MediaSessionToken, MiniRoom, MiniRoomInvite, MiniRoomInviteDecision, MiniRoomInviteDecisionStatus } from "@datevibe/contracts";
+import type { MediaSessionToken, MiniRoom, MiniRoomEnded, MiniRoomInvite, MiniRoomInviteDecision, MiniRoomInviteDecisionStatus } from "@datevibe/contracts";
 import { LivekitHandoffService } from "../media/LivekitHandoffService";
 export interface CreateInviteInput {
     roomId: string;
@@ -11,6 +11,8 @@ export declare class MiniRoomSpace {
     private readonly invites;
     private readonly inviteDecisions;
     private readonly miniRoomsByInviteId;
+    private readonly miniRoomsById;
+    private readonly endedMiniRoomsById;
     constructor(livekitHandoffService: LivekitHandoffService);
     createInvite(input: CreateInviteInput): MiniRoomInvite;
     getInvite(inviteId: string): MiniRoomInvite | undefined;
@@ -19,5 +21,7 @@ export declare class MiniRoomSpace {
         miniRoom: MiniRoom;
         mediaSession: MediaSessionToken;
     } | undefined;
+    getMiniRoom(miniRoomId: string): MiniRoom | undefined;
+    endMiniRoom(miniRoomId: string, endedByUserId: string): MiniRoomEnded | undefined;
 }
 //# sourceMappingURL=MiniRoomSpace.d.ts.map

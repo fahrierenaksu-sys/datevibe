@@ -1,22 +1,40 @@
 import type {
+  ChatParticipantSummary,
+  ChatThread,
   ClientEvent,
   ReactionEvent,
   ServerEvent,
   UserProfile,
 } from "@datevibe/contracts";
-import { canInviteUser } from "@datevibe/domain";
+import {
+  canInviteUser,
+  canRecordConnectionDecision,
+} from "@datevibe/domain";
 import { LobbyRoom } from "./lobby/LobbyRoom";
 import { PUBLIC_LOBBY_LAYOUT } from "./lobby/layouts/publicLobby";
 import { SpotProximityService } from "./proximity/SpotProximityService";
 import { SafetyService } from "./safety/SafetyService";
 import { LivekitHandoffService } from "./media/LivekitHandoffService";
+import type { LivekitHandoffOptions } from "./media/LivekitHandoffService";
 import { MiniRoomSpace } from "./miniRooms/MiniRoomSpace";
+import { ConnectionDecisionService } from "./connections/ConnectionDecisionService";
+import { ChatThreadService } from "./chat/ChatThreadService";
+
+export interface MultiplayerCoreAppOptions {
+  livekit?: LivekitHandoffOptions;
+}
 
 export class MultiplayerCoreApp {
   private readonly lobbyRoom = new LobbyRoom(PUBLIC_LOBBY_LAYOUT);
   private readonly safetyService = new SafetyService();
   private readonly proximityService = new SpotProximityService(this.safetyService);
-  private readonly miniRoomSpace = new MiniRoomSpace(new LivekitHandoffService());
+  private readonly miniRoomSpace: MiniRoomSpace;
+  private readonly connectionDecisionService = new ConnectionDecisionService();
+  private readonly chatThreadService = new ChatThreadService();
+
+  public constructor(options: MultiplayerCoreAppOptions = {}) {
+    this.miniRoomSpace = new MiniRoomSpace(new LivekitHandoffService(options.livekit));
+  }
 
   public handleClientEvent(actor: UserProfile, event: ClientEvent): ServerEvent[] {
     switch (event.type) {
@@ -111,6 +129,20 @@ export class MultiplayerCoreApp {
           return [];
         }
 
+        if (event.payload.status === "accepted") {
+          const sender = this.lobbyRoom.getUser(invite.senderUserId);
+          const recipient = this.lobbyRoom.getUser(invite.recipientUserId);
+          if (!sender || !recipient || sender.inMiniRoom || recipient.inMiniRoom) {
+            const cancelled = this.miniRoomSpace.decideInvite(
+              event.payload.inviteId,
+              "cancelled"
+            );
+            return cancelled
+              ? [{ type: "mini_room.invite_decided", payload: cancelled }]
+              : [];
+          }
+        }
+
         const decision = this.miniRoomSpace.decideInvite(
           event.payload.inviteId,
           event.payload.status
@@ -141,6 +173,98 @@ export class MultiplayerCoreApp {
         }
 
         return events;
+      }
+      case "mini_room.leave": {
+        const ended = this.miniRoomSpace.endMiniRoom(
+          event.payload.miniRoomId,
+          actor.userId
+        );
+        if (!ended) {
+          return [];
+        }
+
+        this.lobbyRoom.setInMiniRoom(ended.participantUserIds[0], false);
+        this.lobbyRoom.setInMiniRoom(ended.participantUserIds[1], false);
+
+        return [
+          { type: "mini_room.ended", payload: ended },
+          { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() },
+          ...this.createNearbyEventsForAllUsers()
+        ];
+      }
+      case "connection.decide": {
+        const miniRoom = this.miniRoomSpace.getMiniRoom(event.payload.miniRoomId);
+        if (!miniRoom) {
+          return [];
+        }
+
+        const eligibility = canRecordConnectionDecision({
+          miniRoom,
+          actorUserId: actor.userId,
+          partnerUserId: event.payload.partnerUserId
+        });
+        if (!eligibility.allowed) {
+          return [];
+        }
+
+        const result = this.connectionDecisionService.recordDecision({
+          miniRoom,
+          actorUserId: actor.userId,
+          partnerUserId: event.payload.partnerUserId,
+          status: event.payload.status
+        });
+
+        const events: ServerEvent[] = [
+          { type: "connection.decision_recorded", payload: result.decision }
+        ];
+        if (result.match) {
+          events.push({ type: "connection.matched", payload: result.match });
+          events.push({
+            type: "chat.thread_created",
+            payload: this.chatThreadService.createThreadForMatch({
+              match: result.match,
+              participants: this.createChatParticipants(result.match.participantUserIds)
+            })
+          });
+        }
+        return events;
+      }
+      case "chat.list_threads": {
+        return [
+          {
+            type: "chat.thread_listed",
+            payload: this.chatThreadService.listThreadsForUser(actor.userId)
+          }
+        ];
+      }
+      case "chat.list_messages": {
+        const messageList = this.chatThreadService.listMessagesForUser({
+          threadId: event.payload.threadId,
+          userId: actor.userId
+        });
+        return messageList
+          ? [{ type: "chat.message_listed", payload: messageList }]
+          : [];
+      }
+      case "chat.send_message": {
+        const thread = this.chatThreadService.getThread(event.payload.threadId);
+        if (!thread || !thread.participantUserIds.includes(actor.userId)) {
+          return [];
+        }
+
+        const recipientUserId = thread.participantUserIds.find(
+          (userId) => userId !== actor.userId
+        );
+        if (recipientUserId && this.safetyService.isBlocked(actor.userId, recipientUserId)) {
+          return [];
+        }
+
+        const message = this.chatThreadService.sendMessage({
+          threadId: event.payload.threadId,
+          senderUserId: actor.userId,
+          body: event.payload.body
+        });
+        return message ? [{ type: "chat.message_received", payload: message }] : [];
       }
       case "reaction.send": {
         if (event.payload.roomId !== this.lobbyRoom.getLayout().roomId) {
@@ -198,6 +322,10 @@ export class MultiplayerCoreApp {
     return { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() };
   }
 
+  public getChatThread(threadId: string): ChatThread | undefined {
+    return this.chatThreadService.getThread(threadId);
+  }
+
   private createNearbyEvent(userId: string): ServerEvent {
     return {
       type: "presence.nearby",
@@ -215,5 +343,22 @@ export class MultiplayerCoreApp {
 
   private createNearbyEventsForAllUsers(): ServerEvent[] {
     return this.lobbyRoom.getUsers().map((user) => this.createNearbyEvent(user.userId));
+  }
+
+  private createChatParticipants(
+    participantUserIds: [string, string]
+  ): [ChatParticipantSummary, ChatParticipantSummary] {
+    return [
+      this.createChatParticipant(participantUserIds[0]),
+      this.createChatParticipant(participantUserIds[1])
+    ];
+  }
+
+  private createChatParticipant(userId: string): ChatParticipantSummary {
+    const presenceUser = this.lobbyRoom.getUser(userId);
+    return {
+      userId,
+      displayName: presenceUser?.displayName
+    };
   }
 }
