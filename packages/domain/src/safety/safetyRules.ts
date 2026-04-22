@@ -1,4 +1,8 @@
-import type { BlockUserCommand, ReportReason, ReportUserCommand } from "@contracts";
+import type {
+  BlockUserCommand,
+  ReportReason,
+  ReportUserCommand,
+} from "@datevibe/contracts";
 
 export interface BlockRecord {
   actorUserId: string;

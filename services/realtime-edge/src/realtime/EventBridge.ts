@@ -1,4 +1,8 @@
-import type { ClientEvent, ServerEvent, UserProfile } from "@contracts"
+import type {
+  ClientEvent,
+  ServerEvent,
+  UserProfile
+} from "@datevibe/contracts"
 import { MultiplayerCoreApp } from "@datevibe/multiplayer-core"
 import { ConnectionRegistry } from "./ConnectionRegistry"
 

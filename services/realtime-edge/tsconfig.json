@@ -1,21 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": "src",
     "outDir": "dist",
     "lib": ["es2022"],
     "declaration": true,
     "declarationMap": true,
-    "types": ["node"],
-    "paths": {
-      "@contracts": ["packages/contracts/src/index.ts"],
-      "@contracts/*": ["packages/contracts/src/*"],
-      "@domain": ["packages/domain/src/index.ts"],
-      "@domain/*": ["packages/domain/src/*"],
-      "@realtime-client": ["packages/realtime-client/src/index.ts"],
-      "@realtime-client/*": ["packages/realtime-client/src/*"],
-      "@datevibe/multiplayer-core": ["services/multiplayer-core/src/index.ts"],
-      "@datevibe/multiplayer-core/*": ["services/multiplayer-core/src/*"]
-    }
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

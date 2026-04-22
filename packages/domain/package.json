@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "Pure business rules for the mobile MVP",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
@@ -17,6 +18,7 @@
     "typescript": "^5.8.3"
   },
   "files": [
-    "src"
+    "src",
+    "dist"
   ]
 }

@@ -1,7 +1,7 @@
 import type { IncomingMessage, Server as HttpServer } from "http"
 import type { Socket as NetSocket } from "net"
 import WebSocket from "ws"
-import type { ServerEvent, UserProfile } from "@contracts"
+import type { ServerEvent, UserProfile } from "@datevibe/contracts"
 import { SessionService } from "../session/SessionService"
 import { ConnectionRegistry } from "./ConnectionRegistry"
 import { EventCodec } from "./EventCodec"

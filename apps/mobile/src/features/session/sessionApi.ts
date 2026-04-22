@@ -3,6 +3,7 @@ import type { AuthSession, UserProfile } from "@datevibe/contracts"
 export interface BootstrapSessionInput {
   displayName: string
   avatarPresetId?: string
+  age?: number
 }
 
 export interface SessionActor {
@@ -51,7 +52,8 @@ export async function bootstrapSession(
     },
     body: JSON.stringify({
       displayName: input.displayName,
-      avatarPresetId: input.avatarPresetId
+      avatarPresetId: input.avatarPresetId,
+      age: input.age
     })
   })
 

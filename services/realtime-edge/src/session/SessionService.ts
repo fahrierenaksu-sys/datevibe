@@ -1,5 +1,9 @@
 import { randomUUID } from "crypto"
-import type { AuthSession, AvatarSelection, UserProfile } from "@contracts"
+import type {
+  AuthSession,
+  AvatarSelection,
+  UserProfile
+} from "@datevibe/contracts"
 import { InMemorySessionStore } from "./InMemorySessionStore"
 
 export interface CreateSessionInput {

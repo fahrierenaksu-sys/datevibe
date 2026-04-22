@@ -1,4 +1,4 @@
-import type { NearbyUser } from "@contracts";
+import type { NearbyUser } from "@datevibe/contracts";
 
 export const INVITE_DENIAL_REASONS = [
   "self",

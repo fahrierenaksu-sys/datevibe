@@ -1,7 +1,11 @@
-import type { BlockUserCommand, ReportUserCommand } from "@contracts";
-import { REPORT_REASONS } from "@contracts";
-import { applyBlock, canReportUser, isInteractionBlocked } from "@domain";
-import type { BlockRecord } from "@domain";
+import type { BlockUserCommand, ReportUserCommand } from "@datevibe/contracts";
+import { REPORT_REASONS } from "@datevibe/contracts";
+import {
+  applyBlock,
+  canReportUser,
+  isInteractionBlocked,
+} from "@datevibe/domain";
+import type { BlockRecord } from "@datevibe/domain";
 
 interface StoredReport extends ReportUserCommand {
   receivedAt: string;

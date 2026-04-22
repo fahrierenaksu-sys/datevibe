@@ -1,13 +1,21 @@
 import { useMemo, useState } from "react"
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import type { BootstrapSessionInput } from "../features/session/sessionApi"
+import { SoftBlobBackground } from "../ui/backgrounds"
+import { BrandMark } from "../ui/brandMark"
+import { FieldInput } from "../ui/fieldInput"
+import { uiTheme } from "../ui/theme"
+import { VIBE_PRESETS, VibeTilePicker } from "../ui/vibeTilePicker"
 
 interface SessionBootstrapScreenProps {
   isSubmitting: boolean
@@ -15,18 +23,19 @@ interface SessionBootstrapScreenProps {
   onBootstrap: (input: BootstrapSessionInput) => Promise<void>
 }
 
-export function SessionBootstrapScreen(
-  props: SessionBootstrapScreenProps
-): JSX.Element {
+export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
   const { isSubmitting, errorMessage, onBootstrap } = props
-
   const [displayName, setDisplayName] = useState("")
-  const [avatarPresetId, setAvatarPresetId] = useState("default")
+  const [ageText, setAgeText] = useState("")
+  const [selectedPreset, setSelectedPreset] = useState<string>(VIBE_PRESETS[0].id)
 
-  const canSubmit = useMemo(() => displayName.trim().length > 0 && !isSubmitting, [
-    displayName,
-    isSubmitting
-  ])
+  const parsedAge = ageText.length > 0 ? Number.parseInt(ageText, 10) : undefined
+  const ageValid = parsedAge === undefined || (Number.isFinite(parsedAge) && parsedAge >= 18 && parsedAge <= 99)
+
+  const canSubmit = useMemo(
+    () => displayName.trim().length >= 2 && ageValid && !isSubmitting,
+    [displayName, ageValid, isSubmitting]
+  )
 
   const submit = async (): Promise<void> => {
     if (!canSubmit) {
@@ -34,95 +43,222 @@ export function SessionBootstrapScreen(
     }
     await onBootstrap({
       displayName: displayName.trim(),
-      avatarPresetId: avatarPresetId.trim() || undefined
+      avatarPresetId: selectedPreset,
+      age: parsedAge
     })
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>DateVibe Mobile</Text>
-      <Text style={styles.subtitle}>Bootstrap your MVP session</Text>
+    <View style={styles.root}>
+      <SoftBlobBackground variant="bootstrap" />
+      <SafeAreaView style={styles.safe} edges={["top", "left", "right", "bottom"]}>
+        <KeyboardAvoidingView
+          style={styles.kav}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.hero}>
+              <BrandMark size={56} />
+              <View style={styles.heroText}>
+                <Text style={styles.eyebrow}>Welcome to DateVibe</Text>
+                <Text style={styles.headline}>
+                  Real people.{"\n"}Right here. Right now.
+                </Text>
+                <Text style={styles.subhead}>
+                  We pair you with someone nearby for a short, real mini-chat. Bring your vibe.
+                </Text>
+              </View>
+            </View>
 
-      <TextInput
-        style={styles.input}
-        value={displayName}
-        onChangeText={setDisplayName}
-        autoCapitalize="words"
-        placeholder="Display name"
-        editable={!isSubmitting}
-      />
+            <View style={styles.form}>
+              <FieldInput
+                label="What should we call you?"
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCapitalize="words"
+                autoCorrect={false}
+                placeholder="Your first name"
+                editable={!isSubmitting}
+                returnKeyType="next"
+                onSubmitEditing={() => {
+                  // focus next field ideally
+                }}
+              />
 
-      <TextInput
-        style={styles.input}
-        value={avatarPresetId}
-        onChangeText={setAvatarPresetId}
-        autoCapitalize="none"
-        placeholder="Avatar preset (optional)"
-        editable={!isSubmitting}
-      />
+              <FieldInput
+                label="How old are you? (optional)"
+                value={ageText}
+                onChangeText={(text) => setAgeText(text.replace(/[^0-9]/g, "").slice(0, 2))}
+                keyboardType="number-pad"
+                placeholder="e.g. 24"
+                editable={!isSubmitting}
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  void submit()
+                }}
+              />
+              {ageText.length > 0 && !ageValid ? (
+                <Text style={styles.ageHint}>Must be 18–99</Text>
+              ) : null}
 
-      <Pressable
-        style={[styles.button, !canSubmit && styles.buttonDisabled]}
-        onPress={() => {
-          void submit()
-        }}
-        disabled={!canSubmit}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>Continue</Text>
-        )}
-      </Pressable>
+              <View style={styles.vibeGroup}>
+                <Text style={styles.vibeLabel}>Pick a vibe</Text>
+                <Text style={styles.vibeHelper}>
+                  This becomes your profile color until you add a photo.
+                </Text>
+                <VibeTilePicker
+                  selectedId={selectedPreset}
+                  onSelect={setSelectedPreset}
+                />
+              </View>
 
-      {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+              {errorMessage ? (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              <Pressable
+                disabled={!canSubmit}
+                onPress={() => {
+                  void submit()
+                }}
+                style={({ pressed }) => [
+                  styles.cta,
+                  !canSubmit ? styles.ctaDisabled : null,
+                  pressed && canSubmit ? styles.ctaPressed : null
+                ]}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.ctaText}>Start discovering</Text>
+                )}
+              </Pressable>
+
+              <Text style={styles.footnote}>
+                By continuing, you agree to DateVibe's community rules. Be kind. Be real.
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    gap: 12,
-    backgroundColor: "#ffffff"
+    backgroundColor: uiTheme.colors.backgroundWarm
   },
-  title: {
-    fontSize: 28,
+  safe: {
+    flex: 1
+  },
+  kav: {
+    flex: 1
+  },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: uiTheme.spacing.lg,
+    paddingTop: uiTheme.spacing.lg,
+    paddingBottom: uiTheme.spacing.xl,
+    gap: uiTheme.spacing.xl,
+    justifyContent: "space-between"
+  },
+  hero: {
+    gap: uiTheme.spacing.md,
+    marginTop: uiTheme.spacing.md
+  },
+  heroText: {
+    gap: uiTheme.spacing.xs
+  },
+  eyebrow: {
+    color: uiTheme.colors.primary,
+    fontSize: uiTheme.typography.caption,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase"
+  },
+  headline: {
+    color: uiTheme.colors.textPrimary,
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: "800",
+    letterSpacing: -0.5
+  },
+  subhead: {
+    color: uiTheme.colors.textSecondary,
+    fontSize: uiTheme.typography.body,
+    lineHeight: 22
+  },
+  form: {
+    gap: uiTheme.spacing.md
+  },
+  vibeGroup: {
+    gap: 6
+  },
+  vibeLabel: {
+    color: uiTheme.colors.textPrimary,
+    fontSize: uiTheme.typography.bodySmall,
     fontWeight: "700"
   },
-  subtitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 8
+  vibeHelper: {
+    color: uiTheme.colors.textMuted,
+    fontSize: uiTheme.typography.caption,
+    marginBottom: uiTheme.spacing.xs
   },
-  input: {
+  errorBanner: {
+    borderRadius: uiTheme.radius.md,
+    backgroundColor: uiTheme.colors.dangerSoft,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10
+    borderColor: "#F7C9D1",
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.sm
   },
-  button: {
-    marginTop: 4,
-    borderRadius: 10,
-    backgroundColor: "#111827",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44
-  },
-  buttonDisabled: {
-    opacity: 0.45
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 15,
+  errorText: {
+    color: uiTheme.colors.dangerInk,
+    fontSize: uiTheme.typography.bodySmall,
     fontWeight: "600"
   },
-  error: {
-    marginTop: 4,
-    color: "#dc2626",
-    fontSize: 13
+  cta: {
+    marginTop: uiTheme.spacing.xs,
+    minHeight: 56,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    ...uiTheme.shadow.lift
+  },
+  ctaDisabled: {
+    backgroundColor: uiTheme.colors.primaryDisabled,
+    shadowOpacity: 0,
+    elevation: 0
+  },
+  ctaPressed: {
+    backgroundColor: uiTheme.colors.primaryPressed
+  },
+  ctaText: {
+    color: "#FFFFFF",
+    fontSize: uiTheme.typography.body,
+    fontWeight: "800",
+    letterSpacing: 0.3
+  },
+  footnote: {
+    textAlign: "center",
+    color: uiTheme.colors.textMuted,
+    fontSize: uiTheme.typography.caption,
+    lineHeight: 18,
+    paddingHorizontal: uiTheme.spacing.sm
+  },
+  ageHint: {
+    color: uiTheme.colors.danger,
+    fontSize: uiTheme.typography.caption,
+    fontWeight: "600",
+    marginTop: -uiTheme.spacing.xs
   }
 })

@@ -5,8 +5,11 @@ import type {
   RoomLayout,
   RoomPresenceSnapshot,
   UserProfile
-} from "@contracts";
-import { canOccupySpot, getFirstAvailableSpot } from "@domain";
+} from "@datevibe/contracts";
+import {
+  canOccupySpot,
+  getFirstAvailableSpot,
+} from "@datevibe/domain";
 
 function nowIso(): string {
   return new Date().toISOString();

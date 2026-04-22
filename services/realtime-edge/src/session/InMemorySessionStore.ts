@@ -1,4 +1,4 @@
-import type { AuthSession, UserProfile } from "@contracts"
+import type { AuthSession, UserProfile } from "@datevibe/contracts"
 
 export interface StoredSessionActor {
   session: AuthSession

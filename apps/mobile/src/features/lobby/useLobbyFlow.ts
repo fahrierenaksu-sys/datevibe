@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ServerEvent } from "@datevibe/realtime-client"
-import { MOBILE_WS_BASE_URL } from "../../config/env"
 import type { SessionActor } from "../session/sessionApi"
-import { useRealtimeConnection } from "../realtime/useRealtimeConnection"
+import {
+  useGlobalRealtime,
+  useGlobalRealtimeEvents
+} from "../realtime/globalRealtimeProvider"
 import {
   applyServerEventToLobbyState,
   createInitialLobbyState,
@@ -16,18 +18,41 @@ export interface UseLobbyFlowOptions {
 }
 
 export interface UseLobbyFlowResult {
-  connectionStatus: ReturnType<typeof useRealtimeConnection>["connectionStatus"]
+  connectionStatus: ReturnType<typeof useGlobalRealtime>["connectionStatus"]
   lobbyState: LobbyState
+  nearbyUsers: NearbyLobbyUser[]
+  incomingInvite: LobbyState["interaction"]["incomingInvite"]
+  readyMiniRoom: LobbyState["interaction"]["readyMiniRoom"]
+  recentReactions: LobbyState["interaction"]["recentReactions"]
+  clearReadyMiniRoom: () => void
+  sendInvite: (recipientUserId: string) => void
+  decideInvite: (status: InviteDecisionStatus) => void
+  sendReaction: (reaction: LobbyReaction) => void
+  requestRefresh: () => void
 }
 
+export interface NearbyLobbyUser {
+  userId: string
+  displayName: string
+  spotId: string
+  distance: number
+  canInvite: boolean
+  blocked: boolean
+}
+
+export type LobbyReaction = "wave" | "heart" | "laugh" | "fire"
+export type InviteDecisionStatus = "accepted" | "declined"
+
 export function useLobbyFlow(options: UseLobbyFlowOptions): UseLobbyFlowResult {
-  const { sessionActor, onInvalidSession } = options
+  const { sessionActor } = options
   const [lobbyState, setLobbyState] = useState<LobbyState>(() =>
     createInitialLobbyState(PUBLIC_LOBBY_ROOM_ID)
   )
 
   const joinSentRef = useRef(false)
+  const { connectionStatus, send } = useGlobalRealtime()
 
+  // Apply lobby-relevant server events to lobby state
   const handleServerEvent = useCallback(
     (serverEvent: ServerEvent) => {
       setLobbyState((previousState) =>
@@ -37,12 +62,7 @@ export function useLobbyFlow(options: UseLobbyFlowOptions): UseLobbyFlowResult {
     [sessionActor.profile.userId]
   )
 
-  const { connectionStatus, sendEvent } = useRealtimeConnection({
-    wsBaseUrl: MOBILE_WS_BASE_URL,
-    sessionToken: sessionActor.session.sessionToken,
-    onServerEvent: handleServerEvent,
-    onInvalidSession
-  })
+  useGlobalRealtimeEvents(handleServerEvent)
 
   useEffect(() => {
     joinSentRef.current = false
@@ -55,20 +75,127 @@ export function useLobbyFlow(options: UseLobbyFlowOptions): UseLobbyFlowResult {
     }
 
     joinSentRef.current = true
-    sendEvent({
+    send({
       type: "room.join",
       payload: {
         roomId: PUBLIC_LOBBY_ROOM_ID,
         sessionToken: sessionActor.session.sessionToken
       }
     })
-  }, [connectionStatus, sendEvent, sessionActor.session.sessionToken])
+  }, [connectionStatus, send, sessionActor.session.sessionToken])
+
+  const sendInvite = useCallback(
+    (recipientUserId: string) => {
+      if (connectionStatus !== "connected" || !lobbyState.isJoined) {
+        return
+      }
+
+      send({
+        type: "mini_room.invite",
+        payload: {
+          roomId: lobbyState.roomId,
+          recipientUserId
+        }
+      })
+    },
+    [connectionStatus, lobbyState.isJoined, lobbyState.roomId, send]
+  )
+
+  const sendReaction = useCallback(
+    (reaction: LobbyReaction) => {
+      if (connectionStatus !== "connected" || !lobbyState.isJoined) {
+        return
+      }
+
+      send({
+        type: "reaction.send",
+        payload: {
+          roomId: lobbyState.roomId,
+          reaction
+        }
+      })
+    },
+    [connectionStatus, lobbyState.isJoined, lobbyState.roomId, send]
+  )
+
+  const decideInvite = useCallback(
+    (status: InviteDecisionStatus) => {
+      const incomingInvite = lobbyState.interaction.incomingInvite
+      if (connectionStatus !== "connected" || !incomingInvite) {
+        return
+      }
+
+      send({
+        type: "mini_room.invite_decision",
+        payload: {
+          inviteId: incomingInvite.inviteId,
+          status
+        }
+      })
+    },
+    [connectionStatus, lobbyState.interaction.incomingInvite, send]
+  )
+
+  const clearReadyMiniRoom = useCallback(() => {
+    setLobbyState((previousState) => {
+      if (!previousState.interaction.readyMiniRoom) {
+        return previousState
+      }
+      return {
+        ...previousState,
+        interaction: {
+          ...previousState.interaction,
+          readyMiniRoom: null
+        }
+      }
+    })
+  }, [])
+
+  const nearbyUsers = useMemo<NearbyLobbyUser[]>(() => {
+    const usersById = new Map(
+      (lobbyState.snapshot?.users ?? []).map((user) => [user.userId, user.displayName])
+    )
+
+    return lobbyState.interaction.nearbyUsers.map((nearbyUser) => ({
+      ...nearbyUser,
+      displayName: usersById.get(nearbyUser.userId) ?? nearbyUser.userId
+    }))
+  }, [lobbyState.interaction.nearbyUsers, lobbyState.snapshot?.users])
+
+  const requestRefresh = useCallback(() => {
+    if (connectionStatus !== "connected") return
+    send({
+      type: "room.join",
+      payload: {
+        roomId: PUBLIC_LOBBY_ROOM_ID,
+        sessionToken: sessionActor.session.sessionToken
+      }
+    })
+  }, [connectionStatus, send, sessionActor.session.sessionToken])
 
   return useMemo(
     () => ({
       connectionStatus,
-      lobbyState
+      lobbyState,
+      nearbyUsers,
+      incomingInvite: lobbyState.interaction.incomingInvite,
+      readyMiniRoom: lobbyState.interaction.readyMiniRoom,
+      recentReactions: lobbyState.interaction.recentReactions,
+      clearReadyMiniRoom,
+      sendInvite,
+      decideInvite,
+      sendReaction,
+      requestRefresh
     }),
-    [connectionStatus, lobbyState]
+    [
+      connectionStatus,
+      lobbyState,
+      nearbyUsers,
+      clearReadyMiniRoom,
+      sendInvite,
+      decideInvite,
+      sendReaction,
+      requestRefresh
+    ]
   )
 }

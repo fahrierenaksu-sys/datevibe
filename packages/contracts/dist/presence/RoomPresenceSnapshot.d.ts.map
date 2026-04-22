@@ -1,0 +1,1 @@
+{"version":3,"file":"RoomPresenceSnapshot.d.ts","sourceRoot":"","sources":["../../src/presence/RoomPresenceSnapshot.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,gBAAgB,CAAC;AAEnD,MAAM,WAAW,oBAAoB;IACnC,MAAM,EAAE,MAAM,CAAC;IACf,KAAK,EAAE,YAAY,EAAE,CAAC;IACtB,SAAS,EAAE,MAAM,CAAC;CACnB"}

@@ -4,7 +4,7 @@ import {
   REPORT_REASONS,
   type ClientEvent,
   type ServerEvent
-} from "@contracts"
+} from "@datevibe/contracts"
 
 export type DecodedClientEvent =
   | { ok: true; event: ClientEvent }

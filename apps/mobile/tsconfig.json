@@ -1,9 +1,14 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "baseUrl": "../..",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["react", "react-native", "node"]
+    "types": ["react", "react-native", "node"],
+    "paths": {
+      "@contracts": ["packages/contracts/src/index.ts"],
+      "@contracts/*": ["packages/contracts/src/*"]
+    }
   },
   "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx"]
 }

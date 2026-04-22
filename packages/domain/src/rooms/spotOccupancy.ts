@@ -1,4 +1,4 @@
-import type { PresenceUser, RoomLayout } from "@contracts";
+import type { PresenceUser, RoomLayout } from "@datevibe/contracts";
 
 function hasSpot(layout: RoomLayout, spotId: string): boolean {
   return layout.spots.some((spot) => spot.spotId === spotId);

@@ -1,4 +1,9 @@
-import type { NearbyUser, PresenceUser, RoomLayout, RoomSpot } from "@contracts";
+import type {
+  NearbyUser,
+  PresenceUser,
+  RoomLayout,
+  RoomSpot,
+} from "@datevibe/contracts";
 
 function getSpot(layout: RoomLayout, spotId: string): RoomSpot | undefined {
   return layout.spots.find((spot) => spot.spotId === spotId);

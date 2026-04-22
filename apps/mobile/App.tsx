@@ -1,10 +1,13 @@
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { RootNavigator } from "./src/navigation/RootNavigator"
+import { ErrorBoundary } from "./src/ui/errorBoundary"
 
-export default function App(): JSX.Element {
+export default function App() {
   return (
-    <SafeAreaProvider>
-      <RootNavigator />
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <RootNavigator />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   )
 }

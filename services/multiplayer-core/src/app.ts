@@ -1,5 +1,10 @@
-import type { ClientEvent, ReactionEvent, ServerEvent, UserProfile } from "@contracts";
-import { canInviteUser } from "@domain";
+import type {
+  ClientEvent,
+  ReactionEvent,
+  ServerEvent,
+  UserProfile,
+} from "@datevibe/contracts";
+import { canInviteUser } from "@datevibe/domain";
 import { LobbyRoom } from "./lobby/LobbyRoom";
 import { PUBLIC_LOBBY_LAYOUT } from "./lobby/layouts/publicLobby";
 import { SpotProximityService } from "./proximity/SpotProximityService";
@@ -28,7 +33,7 @@ export class MultiplayerCoreApp {
         return [
           { type: "room.joined", payload: joined },
           { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() },
-          this.createNearbyEvent(actor.userId)
+          ...this.createNearbyEventsForAllUsers()
         ];
       }
       case "room.leave": {
@@ -38,7 +43,8 @@ export class MultiplayerCoreApp {
         this.lobbyRoom.leave(actor.userId);
         return [
           { type: "room.left", payload: { roomId: event.payload.roomId } },
-          { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() }
+          { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() },
+          ...this.createNearbyEventsForAllUsers()
         ];
       }
       case "presence.move_to_spot": {
@@ -51,7 +57,7 @@ export class MultiplayerCoreApp {
         }
         return [
           { type: "presence.snapshot", payload: this.lobbyRoom.snapshot() },
-          this.createNearbyEvent(actor.userId)
+          ...this.createNearbyEventsForAllUsers()
         ];
       }
       case "mini_room.invite": {
@@ -130,6 +136,7 @@ export class MultiplayerCoreApp {
               }
             });
             events.push({ type: "presence.snapshot", payload: this.lobbyRoom.snapshot() });
+            events.push(...this.createNearbyEventsForAllUsers());
           }
         }
 
@@ -204,5 +211,9 @@ export class MultiplayerCoreApp {
         )
       }
     };
+  }
+
+  private createNearbyEventsForAllUsers(): ServerEvent[] {
+    return this.lobbyRoom.getUsers().map((user) => this.createNearbyEvent(user.userId));
   }
 }

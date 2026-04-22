@@ -1,0 +1,1 @@
+{"version":3,"file":"getNearbyUsers.d.ts","sourceRoot":"","sources":["../../src/proximity/getNearbyUsers.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EACV,UAAU,EACV,YAAY,EACZ,UAAU,EAEX,MAAM,qBAAqB,CAAC;AAY7B,wBAAgB,cAAc,CAC5B,MAAM,EAAE,UAAU,EAClB,KAAK,EAAE,SAAS,YAAY,EAAE,EAC9B,aAAa,EAAE,MAAM,EACrB,yBAAyB,GAAE,SAAS,MAAM,EAAO,GAChD,UAAU,EAAE,CAgCd"}

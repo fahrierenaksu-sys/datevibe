@@ -1,11 +1,11 @@
 import type { PresenceUser } from "@datevibe/contracts"
-import { FlatList, StyleSheet, Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 
 interface PresenceListProps {
   users: PresenceUser[]
 }
 
-function renderPresenceItem(user: PresenceUser): JSX.Element {
+function renderPresenceItem(user: PresenceUser) {
   return (
     <View style={styles.row}>
       <Text style={styles.name}>{user.displayName}</Text>
@@ -14,7 +14,7 @@ function renderPresenceItem(user: PresenceUser): JSX.Element {
   )
 }
 
-export function PresenceList(props: PresenceListProps): JSX.Element {
+export function PresenceList(props: PresenceListProps) {
   const { users } = props
 
   if (users.length === 0) {
@@ -22,13 +22,14 @@ export function PresenceList(props: PresenceListProps): JSX.Element {
   }
 
   return (
-    <FlatList
-      data={users}
-      keyExtractor={(item) => item.userId}
-      renderItem={({ item }) => renderPresenceItem(item)}
-      contentContainerStyle={styles.listContent}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-    />
+    <View style={styles.listContent}>
+      {users.map((user, index) => (
+        <View key={user.userId}>
+          {renderPresenceItem(user)}
+          {index < users.length - 1 ? <View style={styles.separator} /> : null}
+        </View>
+      ))}
+    </View>
   )
 }
 

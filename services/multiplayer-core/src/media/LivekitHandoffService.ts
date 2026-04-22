@@ -1,4 +1,4 @@
-import type { MediaSessionToken, MiniRoom } from "@contracts";
+import type { MediaSessionToken, MiniRoom } from "@datevibe/contracts";
 
 function createId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;

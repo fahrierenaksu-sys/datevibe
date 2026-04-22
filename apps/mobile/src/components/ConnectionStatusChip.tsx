@@ -13,7 +13,7 @@ const STATUS_COLORS: Record<RealtimeConnectionStatus, string> = {
   error: "#dc2626"
 }
 
-export function ConnectionStatusChip(props: ConnectionStatusChipProps): JSX.Element {
+export function ConnectionStatusChip(props: ConnectionStatusChipProps) {
   const { status } = props
   return (
     <View style={[styles.chip, { borderColor: STATUS_COLORS[status] }]}>

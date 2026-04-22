@@ -4,7 +4,7 @@ import type {
   MiniRoomInvite,
   MiniRoomInviteDecision,
   MiniRoomInviteDecisionStatus
-} from "@contracts";
+} from "@datevibe/contracts";
 import { LivekitHandoffService } from "../media/LivekitHandoffService";
 
 function createId(prefix: string): string {

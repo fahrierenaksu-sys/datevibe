@@ -1,5 +1,10 @@
-import type { NearbyUser, RoomPresenceSnapshot } from "@datevibe/contracts"
+import type { RoomPresenceSnapshot } from "@datevibe/contracts"
 import type { ServerEvent } from "@datevibe/realtime-client"
+import {
+  createInitialInteractionState,
+  withRecentReaction,
+  type LobbyInteractionState
+} from "./interactionState"
 import { PUBLIC_LOBBY_ROOM_ID } from "./publicLobby"
 
 export interface LobbyState {
@@ -8,7 +13,7 @@ export interface LobbyState {
   currentUserId?: string
   assignedSpotId?: string
   snapshot: RoomPresenceSnapshot | null
-  nearbyUsers: NearbyUser[]
+  interaction: LobbyInteractionState
 }
 
 export function createInitialLobbyState(roomId = PUBLIC_LOBBY_ROOM_ID): LobbyState {
@@ -18,7 +23,7 @@ export function createInitialLobbyState(roomId = PUBLIC_LOBBY_ROOM_ID): LobbySta
     currentUserId: undefined,
     assignedSpotId: undefined,
     snapshot: null,
-    nearbyUsers: []
+    interaction: createInitialInteractionState()
   }
 }
 
@@ -44,7 +49,8 @@ export function applyServerEventToLobbyState(
         isJoined: false,
         currentUserId: undefined,
         assignedSpotId: undefined,
-        nearbyUsers: []
+        snapshot: null,
+        interaction: createInitialInteractionState()
       }
     }
     case "presence.snapshot": {
@@ -62,7 +68,56 @@ export function applyServerEventToLobbyState(
       }
       return {
         ...state,
-        nearbyUsers: event.payload.nearbyUsers
+        interaction: {
+          ...state.interaction,
+          nearbyUsers: event.payload.nearbyUsers
+        }
+      }
+    }
+    case "mini_room.invite_received": {
+      if (event.payload.roomId !== state.roomId) {
+        return state
+      }
+      return {
+        ...state,
+        interaction: {
+          ...state.interaction,
+          incomingInvite: event.payload
+        }
+      }
+    }
+    case "mini_room.invite_decided": {
+      return {
+        ...state,
+        interaction: {
+          ...state.interaction,
+          incomingInvite:
+            state.interaction.incomingInvite?.inviteId === event.payload.inviteId
+              ? null
+              : state.interaction.incomingInvite,
+          latestInviteDecision: event.payload
+        }
+      }
+    }
+    case "mini_room.ready": {
+      return {
+        ...state,
+        interaction: {
+          ...state.interaction,
+          readyMiniRoom: {
+            miniRoom: event.payload.miniRoom,
+            mediaSession: event.payload.mediaSession
+          }
+        }
+      }
+    }
+    case "reaction.received": {
+      if (event.payload.roomId !== state.roomId) {
+        return state
+      }
+      return {
+        ...state,
+        interaction: withRecentReaction(state.interaction, event.payload)
       }
     }
     default:

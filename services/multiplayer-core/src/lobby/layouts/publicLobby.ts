@@ -1,4 +1,4 @@
-import type { RoomLayout } from "@contracts";
+import type { RoomLayout } from "@datevibe/contracts";
 
 export const PUBLIC_LOBBY_LAYOUT: RoomLayout = {
   roomId: "public-lobby",

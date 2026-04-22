@@ -1,5 +1,9 @@
-import type { NearbyUser, PresenceUser, RoomLayout } from "@contracts";
-import { getNearbyUsers } from "@domain";
+import type {
+  NearbyUser,
+  PresenceUser,
+  RoomLayout,
+} from "@datevibe/contracts";
+import { getNearbyUsers } from "@datevibe/domain";
 import { SafetyService } from "../safety/SafetyService";
 
 export class SpotProximityService {

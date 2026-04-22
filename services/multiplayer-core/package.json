@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "Minimal backend core for the mobile MVP lobby and mini rooms",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
@@ -18,6 +19,7 @@
     "typescript": "^5.8.3"
   },
   "files": [
-    "src"
+    "src",
+    "dist"
   ]
 }
