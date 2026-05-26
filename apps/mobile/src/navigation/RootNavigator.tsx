@@ -32,9 +32,15 @@ import {
 import { LobbyScreen } from "../screens/LobbyScreen"
 import { MiniRoomScreen } from "../screens/MiniRoomScreen"
 import {
+  MyRoomScreen,
+  RoomShopScreen
+} from "../screens/MyRoomScreen"
+import { MyRoomV2PreviewScreen } from "../screens/MyRoomV2PreviewScreen"
+import {
   ProfilePreviewScreen,
   type ProfilePreviewData
 } from "../screens/ProfilePreviewScreen"
+import { RoomV2PreviewScreen } from "../screens/RoomV2PreviewScreen"
 import { RoomDebriefScreen } from "../screens/RoomDebriefScreen"
 import { SavedConnectionsScreen } from "../screens/SavedConnectionsScreen"
 import { InboxScreen } from "../screens/InboxScreen"
@@ -45,6 +51,7 @@ import { ProfileEditScreen } from "../screens/ProfileEditScreen"
 import { SettingsScreen } from "../screens/SettingsScreen"
 import { WelcomeScreen } from "../screens/WelcomeScreen"
 import { SessionBootstrapScreen } from "../screens/SessionBootstrapScreen"
+import { WardrobeV2Screen } from "../screens/WardrobeV2Screen"
 import { useSessionState } from "../features/session/useSessionState"
 import { uiTheme } from "../ui/theme"
 import { ToastContainer, showToast } from "../ui/toast"
@@ -80,9 +87,14 @@ export type RootStackParamList = {
   }
   SavedConnections: undefined
   Inbox: undefined
+  MyRoom: undefined
   You: undefined
   CosmeticShop: undefined
   ProfileEdit: undefined
+  WardrobeV2: undefined
+  MyRoomV2Preview: undefined
+  RoomV2Preview: undefined
+  RoomShop: undefined
   Settings: undefined
   ChatThread: {
     threadId?: string
@@ -355,6 +367,37 @@ export function RootNavigator() {
             <Stack.Screen
               name="Inbox"
               component={InboxScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="MyRoom"
+              options={{ headerShown: false }}
+            >
+              {(screenProps) => (
+                <MyRoomScreen
+                  {...screenProps}
+                  sessionActor={sessionActor}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen
+              name="WardrobeV2"
+              component={WardrobeV2Screen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="MyRoomV2Preview"
+              component={MyRoomV2PreviewScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="RoomV2Preview"
+              component={RoomV2PreviewScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="RoomShop"
+              component={RoomShopScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen
