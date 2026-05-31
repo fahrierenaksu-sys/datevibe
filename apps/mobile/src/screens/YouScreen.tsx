@@ -105,6 +105,16 @@ export function YouScreen(props: YouScreenProps) {
 
           {/* Actions */}
           <Pressable
+            onPress={() => navigation.navigate("MyRoom")}
+            style={({ pressed }) => [
+              styles.customizeButton,
+              pressed ? { opacity: 0.85 } : null
+            ]}
+          >
+            <Text style={styles.customizeText}>✦ My Room</Text>
+          </Pressable>
+
+          <Pressable
             onPress={() => navigation.navigate("CosmeticShop")}
             style={({ pressed }) => [
               styles.customizeButton,
