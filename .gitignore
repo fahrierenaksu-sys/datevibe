@@ -1,0 +1,62 @@
+.env
+.env.*
+.idea
+.vagrant
+Vagrantfile
+docker-compose.override.yaml
+.DS_Store
+*.DS_Store
+maps/yarn.lock
+maps/dist/computer.js
+maps/dist/computer.js.map
+node_modules
+.expo/
+.turbo/
+.next/
+dist/
+build/
+coverage/
+_
+*.code-workspace
+/install.lock
+.vscode/extensions.json
+*.log
+*.tmp
+*.cache
+.claude/
+apps/mobile/qa/
+
+# Helm
+# Chart dependencies
+**/charts/*.tgz
+
+synapse/homeserver.log*
+synapse/matrix.workadventure.localhost.signing.key
+synapse/homeserver.db
+synapse/homeserver.db-*
+synapse/homeserver.yaml
+synapse/media_store/*
+
+.vscode/settings.json
+play/src/i18n/ko-KR/*.backup
+*.tsbuildinfo
+apps/mobile/ios/Pods/
+Pods/
+
+# local / generated
+node_modules/
+.claude/
+.DS_Store
+.expo/
+build/
+dist/
+coverage/
+
+# iOS generated dependencies
+Pods/
+apps/mobile/ios/Pods/
+
+# Expo / native generated
+apps/mobile/.expo/
+apps/mobile/ios/build/
+apps/mobile/android/build/

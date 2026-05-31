@@ -1,0 +1,14 @@
+node_modules
+.expo
+.expo-shared
+.turbo/
+.next/
+dist
+build/
+coverage/
+*.log
+*.tmp
+*.cache
+.env
+.env.*
+qa/

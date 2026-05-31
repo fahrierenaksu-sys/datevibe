@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "DateVibe Mobile",
+    "slug": "datevibe-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "plugins": [
+      "@config-plugins/react-native-webrtc"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bitcode": false,
+      "bundleIdentifier": "com.anonymous.datevibe-mobile"
+    },
+    "android": {
+      "permissions": [
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
+      ],
+      "package": "com.anonymous.datevibemobile"
+    }
+  }
+}
