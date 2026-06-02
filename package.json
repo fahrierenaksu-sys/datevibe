@@ -1,0 +1,15 @@
+{
+  "name": "datevibe",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "packages/contracts",
+    "packages/domain",
+    "packages/realtime-client"
+  ],
+  "scripts": {
+    "mobile": "npm --workspace @datevibe/mobile start",
+    "build:packages": "npm --workspaces --if-present run build"
+  }
+}
