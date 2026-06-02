@@ -1,8 +1,15 @@
 import type { ServerEvent } from "@datevibe/contracts"
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { StyleSheet, View } from "react-native"
 import { useGlobalRealtime, useGlobalRealtimeEvents } from "../features/realtime/globalRealtimeProvider"
+import {
+  DEFAULT_ROOM_V2_SHELL_ID,
+  ROOM_V2_FURNITURE_CATALOG,
+  ROOM_V2_SHELL_CATALOG
+} from "../features/roomV2/roomV2.mock"
+import { resolveRoomV2Scene } from "../features/roomV2/roomV2Selectors"
+import { useRoomV2 } from "../features/roomV2/state/RoomV2Provider"
 import type { SessionActor } from "../features/session/sessionApi"
 import { MiniRoomScene } from "../features/miniRoom/scene/MiniRoomScene"
 import { useInRoomChat } from "../features/miniRoom/useInRoomChat"
@@ -19,6 +26,7 @@ export function MiniRoomScreen(props: MiniRoomScreenProps) {
   const { navigation, route, sessionActor } = props
   const { readyMiniRoom, participants } = route.params
   const { miniRoom, mediaSession } = readyMiniRoom
+  const { userRoomDecor } = useRoomV2()
   const { mediaState, retryConnect, toggleMic, toggleCamera } = useMiniRoomMedia({ miniRoom, mediaSession })
   const { recentReactions, sendReaction, canSend } = useMiniRoomReactions({
     sessionActor,
@@ -37,6 +45,17 @@ export function MiniRoomScreen(props: MiniRoomScreenProps) {
   const exitedRef = useRef<boolean>(false)
   const endRequestedRef = useRef<boolean>(false)
   const [endRequested, setEndRequested] = useState(false)
+
+  const roomDecorScene = useMemo(
+    () =>
+      resolveRoomV2Scene({
+        roomShellCatalog: ROOM_V2_SHELL_CATALOG,
+        furnitureCatalog: ROOM_V2_FURNITURE_CATALOG,
+        decor: userRoomDecor,
+        defaultRoomShellId: DEFAULT_ROOM_V2_SHELL_ID
+      }),
+    [userRoomDecor]
+  )
 
   useEffect(() => {
     if (status === "connected") {
@@ -110,6 +129,7 @@ export function MiniRoomScreen(props: MiniRoomScreenProps) {
         partnerUser={participants.partner}
         connectionStatus={status}
         localMedia={mediaState.localMedia}
+        roomDecorScene={roomDecorScene}
         recentReactions={recentReactions}
         canSendReaction={canSend}
         leaveDisabled={leaveDisabled}

@@ -16,10 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import type { MiniRoomConnectionStatus, MiniRoomLocalMediaState } from "../miniRoomMediaState"
 import type { MiniRoomReactionEntry } from "../useMiniRoomReactions"
 import type { InRoomChatMessageEvent } from "../useInRoomChat"
+import type { ResolvedRoomV2Scene } from "../../roomV2/roomV2.types"
 import { uiTheme } from "../../../ui/theme"
 import { AvatarLayer } from "./AvatarLayer"
 import { HotspotLayer } from "./HotspotLayer"
 import { MiniRoomHud } from "./MiniRoomHud"
+import { MiniRoomRoomDecorLayer } from "./MiniRoomRoomDecorLayer"
 import { RoomMapLayer } from "./RoomMapLayer"
 import { useMiniRoomSceneStore } from "./miniRoomSceneStore"
 import type { RoomPhrase } from "./miniRoomSceneTypes"
@@ -35,6 +37,7 @@ interface MiniRoomSceneProps {
   }
   connectionStatus: MiniRoomConnectionStatus
   localMedia: MiniRoomLocalMediaState
+  roomDecorScene?: ResolvedRoomV2Scene
   recentReactions: MiniRoomReactionEntry[]
   canSendReaction: boolean
   leaveDisabled: boolean
@@ -66,6 +69,7 @@ export function MiniRoomScene(props: MiniRoomSceneProps) {
     partnerUser,
     connectionStatus,
     localMedia,
+    roomDecorScene,
     recentReactions,
     canSendReaction,
     leaveDisabled,
@@ -230,7 +234,14 @@ export function MiniRoomScene(props: MiniRoomSceneProps) {
             }}
             onPress={handleRoomPress}
           >
-            <RoomMapLayer scene={store.scene} interaction={store.interaction} />
+            {roomDecorScene?.shell ? (
+              <MiniRoomRoomDecorLayer
+                scene={roomDecorScene}
+                interaction={store.interaction}
+              />
+            ) : (
+              <RoomMapLayer scene={store.scene} interaction={store.interaction} />
+            )}
             <HotspotLayer
               hotspots={store.scene.hotspots}
               interaction={store.interaction}

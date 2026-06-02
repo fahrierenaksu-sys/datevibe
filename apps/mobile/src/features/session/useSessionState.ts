@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
-import { MOBILE_HTTP_BASE_URL } from "../../config/env"
+import {
+  IS_DATEVIBE_MEDIA_DEMO_MODE,
+  MOBILE_HTTP_BASE_URL
+} from "../../config/env"
 import {
   bootstrapSession,
+  createDemoSessionActor,
   type BootstrapSessionInput,
   type SessionActor
 } from "./sessionApi"
@@ -66,7 +70,9 @@ export function useSessionState(): UseSessionStateResult {
     setErrorMessage(null)
 
     try {
-      const nextSessionActor = await bootstrapSession(MOBILE_HTTP_BASE_URL, input)
+      const nextSessionActor = IS_DATEVIBE_MEDIA_DEMO_MODE
+        ? createDemoSessionActor(input)
+        : await bootstrapSession(MOBILE_HTTP_BASE_URL, input)
       await saveSessionActor(nextSessionActor)
       setSessionActor(nextSessionActor)
     } catch (error) {

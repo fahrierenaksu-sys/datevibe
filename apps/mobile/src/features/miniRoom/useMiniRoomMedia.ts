@@ -1,5 +1,6 @@
 import type { MediaSessionToken, MiniRoom } from "@datevibe/contracts"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { IS_DATEVIBE_MEDIA_DEMO_MODE } from "../../config/env"
 import { createLivekitClient } from "./livekitClient"
 import {
   createInitialMiniRoomMediaState,
@@ -44,8 +45,6 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
   const requestIdRef = useRef(0)
   const mountedRef = useRef(true)
 
-  const isDemoRoom = roomInfo.miniRoomId.startsWith("demo-")
-
   const runConnectAttempt = useCallback(async () => {
     const requestId = requestIdRef.current + 1
     requestIdRef.current = requestId
@@ -57,20 +56,6 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
       connectAttemptedAt: new Date().toISOString(),
       roomInfo
     }))
-
-    // Demo mode: skip real LiveKit handshake, fake a successful connect
-    // so the mini-room UI can be shown end-to-end without the backend.
-    if (isDemoRoom) {
-      setTimeout(() => {
-        if (!mountedRef.current || requestId !== requestIdRef.current) return
-        setMediaState((previousState) => ({
-          ...previousState,
-          connectionStatus: "connected",
-          errorMessage: null
-        }))
-      }, 800)
-      return
-    }
 
     try {
       if (!livekitClientRef.current) {
@@ -102,7 +87,7 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
         errorMessage: getErrorMessage(error)
       }))
     }
-  }, [isDemoRoom, mediaSession.livekitUrl, mediaSession.token, roomInfo])
+  }, [mediaSession.livekitUrl, mediaSession.token, roomInfo])
 
   const retryConnect = useCallback(async () => {
     await livekitClientRef.current?.disconnect()
@@ -116,7 +101,7 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
       ...prev,
       localMedia: { ...prev.localMedia, micEnabled: nextEnabled }
     }))
-    if (isDemoRoom || !client) return
+    if (IS_DATEVIBE_MEDIA_DEMO_MODE || !client) return
     try {
       await client.setMicrophoneEnabled(nextEnabled)
     } catch {
@@ -125,7 +110,7 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
         localMedia: { ...prev.localMedia, micEnabled: !nextEnabled }
       }))
     }
-  }, [isDemoRoom, mediaState.localMedia.micEnabled])
+  }, [mediaState.localMedia.micEnabled])
 
   const toggleCamera = useCallback(async (): Promise<void> => {
     const client = livekitClientRef.current
@@ -134,7 +119,7 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
       ...prev,
       localMedia: { ...prev.localMedia, cameraEnabled: nextEnabled }
     }))
-    if (isDemoRoom || !client) return
+    if (IS_DATEVIBE_MEDIA_DEMO_MODE || !client) return
     try {
       await client.setCameraEnabled(nextEnabled)
     } catch {
@@ -143,7 +128,7 @@ export function useMiniRoomMedia(input: UseMiniRoomMediaInput): UseMiniRoomMedia
         localMedia: { ...prev.localMedia, cameraEnabled: !nextEnabled }
       }))
     }
-  }, [isDemoRoom, mediaState.localMedia.cameraEnabled])
+  }, [mediaState.localMedia.cameraEnabled])
 
   useEffect(() => {
     mountedRef.current = true

@@ -11,6 +11,27 @@ export interface SessionActor {
   profile: UserProfile
 }
 
+export function createDemoSessionActor(input: BootstrapSessionInput): SessionActor {
+  const issuedAt = Date.now()
+  const userId = `demo-user-${issuedAt}`
+
+  return {
+    session: {
+      userId,
+      sessionToken: `demo-session-${issuedAt}`,
+      expiresAt: new Date(issuedAt + 1000 * 60 * 60 * 24 * 30).toISOString()
+    },
+    profile: {
+      userId,
+      displayName: input.displayName,
+      age: input.age,
+      avatar: {
+        presetId: input.avatarPresetId ?? "dusk"
+      }
+    }
+  }
+}
+
 function withBaseUrl(baseHttpUrl: string, path: string): string {
   const trimmed = baseHttpUrl.endsWith("/") ? baseHttpUrl.slice(0, -1) : baseHttpUrl
   return `${trimmed}${path}`

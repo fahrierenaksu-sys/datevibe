@@ -9,3 +9,14 @@ export const MOBILE_HTTP_BASE_URL = ensureNoTrailingSlash(
 export const MOBILE_WS_BASE_URL = ensureNoTrailingSlash(
   process.env.EXPO_PUBLIC_REALTIME_EDGE_WS_URL ?? "ws://127.0.0.1:4100"
 )
+
+export type DateVibeMediaMode = "demo" | "native"
+
+const rawMediaMode = process.env.EXPO_PUBLIC_DATEVIBE_MEDIA_MODE
+  ?.trim()
+  .toLowerCase()
+
+export const DATEVIBE_MEDIA_MODE: DateVibeMediaMode =
+  rawMediaMode === "native" ? "native" : "demo"
+
+export const IS_DATEVIBE_MEDIA_DEMO_MODE = DATEVIBE_MEDIA_MODE === "demo"

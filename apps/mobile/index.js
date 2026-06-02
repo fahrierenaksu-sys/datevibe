@@ -10,7 +10,4 @@ if (typeof globalThis.DOMException === 'undefined') {
   };
 }
 
-const { registerGlobals } = require('@livekit/react-native');
-
-registerGlobals();
 registerRootComponent(App);

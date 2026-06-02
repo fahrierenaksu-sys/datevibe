@@ -1,3 +1,5 @@
+import { IS_DATEVIBE_MEDIA_DEMO_MODE } from "../../config/env"
+
 interface LivekitLocalParticipantLike {
   setMicrophoneEnabled: (enabled: boolean) => Promise<unknown>
   setCameraEnabled: (enabled: boolean) => Promise<unknown>
@@ -54,7 +56,28 @@ function loadLivekitClientModule(): LivekitClientModuleLike {
   return require("livekit-client") as LivekitClientModuleLike
 }
 
+function createDemoLivekitClient(): LivekitClient {
+  return {
+    async connect(): Promise<void> {
+      return
+    },
+    async disconnect(): Promise<void> {
+      return
+    },
+    async setMicrophoneEnabled(): Promise<void> {
+      return
+    },
+    async setCameraEnabled(): Promise<void> {
+      return
+    }
+  }
+}
+
 export function createLivekitClient(): LivekitClient {
+  if (IS_DATEVIBE_MEDIA_DEMO_MODE) {
+    return createDemoLivekitClient()
+  }
+
   const livekitModule = loadLivekitModule()
   livekitModule.registerGlobals?.()
   const livekitClientModule = loadLivekitClientModule()
