@@ -1,0 +1,1 @@
+{"version":3,"file":"PresenceUser.d.ts","sourceRoot":"","sources":["../../src/presence/PresenceUser.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,2BAA2B,CAAC;AAEjE,MAAM,WAAW,YAAY;IAC3B,MAAM,EAAE,MAAM,CAAC;IACf,WAAW,EAAE,MAAM,CAAC;IACpB,MAAM,EAAE,eAAe,CAAC;IACxB,MAAM,EAAE,MAAM,CAAC;IACf,UAAU,EAAE,OAAO,CAAC;CACrB"}
