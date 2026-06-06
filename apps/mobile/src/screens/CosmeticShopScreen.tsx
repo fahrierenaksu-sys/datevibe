@@ -1,6 +1,8 @@
+import { Ionicons } from "@expo/vector-icons"
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { useCallback, useMemo, useState } from "react"
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,197 +10,601 @@ import {
   View
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { AVATAR_V2_CATALOG } from "../features/avatarV2/avatarV2.mock"
 import {
-  RARITY_COLORS,
-  getCosmeticsByCategory,
-  type AvatarCosmetic,
-  type CosmeticCategory
-} from "../features/cosmetics/cosmeticCatalog"
-import { useCosmeticStore } from "../features/cosmetics/cosmeticStore"
+  equipAvatarV2Item,
+} from "../features/avatarV2/avatarV2Selectors"
+import { AvatarPreview2D } from "../features/avatarV2/components/AvatarPreview2D"
+import { useAvatarV2 } from "../features/avatarV2/state/AvatarV2Provider"
+import { useInventoryStore } from "../features/inventory/inventoryStore"
+import { RoomRenderer2D } from "../features/roomV2/components/RoomRenderer2D"
+import {
+  DEFAULT_ROOM_V2_SHELL_ID,
+  ROOM_V2_FURNITURE_CATALOG,
+  ROOM_V2_SHELL_CATALOG
+} from "../features/roomV2/roomV2.mock"
+import { resolveRoomV2Scene } from "../features/roomV2/roomV2Selectors"
+import { useRoomV2 } from "../features/roomV2/state/RoomV2Provider"
+import type {
+  FurnitureItem,
+  RoomFurnitureRotation,
+  UserRoomDecor
+} from "../features/roomV2/roomV2.types"
+import {
+  buildShopCatalogItems,
+  INITIAL_SHOP_ITEM_ID,
+  type ShopCatalogItem,
+  type StatusCardCatalogItem
+} from "../features/shop/shopCatalog"
 import type { RootStackParamList } from "../navigation/RootNavigator"
-import { Avatar } from "../ui/avatar"
-import { MyAvatar } from "../ui/myAvatar"
-import { SoftBlobBackground } from "../ui/backgrounds"
+import { hapticError, hapticLight, hapticSuccess } from "../ui/haptics"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
-import { hapticError, hapticLight, hapticSuccess } from "../ui/haptics"
-import { useSessionState } from "../features/session/useSessionState"
+import { showToast } from "../ui/toast"
 
 type CosmeticShopScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "CosmeticShop"
 >
 
-const CATEGORIES: { key: CosmeticCategory; label: string; icon: string }[] = [
-  { key: "hat", label: "Hats", icon: "🎩" },
-  { key: "frame", label: "Frames", icon: "💫" },
-  { key: "effect", label: "Effects", icon: "✦" },
-  { key: "expression", label: "Faces", icon: "😊" }
-]
-
 export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
   const { navigation } = props
-  const { sessionActor } = useSessionState()
-  const cosmetics = useCosmeticStore()
-  const [activeCategory, setActiveCategory] = useState<CosmeticCategory>("hat")
+  const avatarV2 = useAvatarV2()
+  const inventoryStore = useInventoryStore()
+  const roomV2 = useRoomV2()
+  const [selectedId, setSelectedId] = useState(INITIAL_SHOP_ITEM_ID)
 
-  const items = useMemo(
-    () => getCosmeticsByCategory(activeCategory),
-    [activeCategory]
+  const shopItems = useMemo(
+    () =>
+      buildShopCatalogItems({
+        inventory: inventoryStore.inventory,
+        avatar: avatarV2.avatar,
+        roomDecor: roomV2.userRoomDecor
+      }),
+    [avatarV2.avatar, inventoryStore.inventory, roomV2.userRoomDecor]
   )
 
-  const profile = sessionActor?.profile
-  const displayName = profile?.displayName ?? "You"
-  const userId = profile?.userId ?? "unknown"
+  const avatarProducts = useMemo(
+    () => shopItems.filter((item) => item.sectionId === "avatar"),
+    [shopItems]
+  )
+  const roomProducts = useMemo(
+    () => shopItems.filter((item) => item.sectionId === "room"),
+    [shopItems]
+  )
+  const statusProducts = useMemo(
+    () => shopItems.filter((item) => item.sectionId === "status"),
+    [shopItems]
+  )
+  const myItems = useMemo(
+    () =>
+      shopItems.filter((item) =>
+        item.owned &&
+        (item.previewType === "avatar" || item.previewType === "room")
+      ),
+    [shopItems]
+  )
 
-  const handleItemPress = useCallback((item: AvatarCosmetic) => {
-    if (cosmetics.isUnlocked(item.id)) {
-      // Already owned — toggle equip
-      const equipped = cosmetics.getEquippedItem(item.category)
-      if (equipped?.id === item.id) {
-        cosmetics.unequipCategory(item.category)
-        hapticLight()
-      } else {
-        cosmetics.equipCosmetic(item.id)
-        hapticLight()
-      }
-    } else {
-      // Attempt to purchase
-      const result = cosmetics.unlockCosmetic(item.id)
-      if (result.success) {
-        hapticSuccess()
-      } else {
-        hapticError()
-      }
+  const selectedProduct = useMemo(
+    () =>
+      shopItems.find((product) => product.id === selectedId)
+        ?? avatarProducts[0]
+        ?? roomProducts[0]
+        ?? statusProducts[0],
+    [avatarProducts, roomProducts, selectedId, shopItems, statusProducts]
+  )
+
+  const previewAvatar = useMemo(() => {
+    if (selectedProduct?.previewType !== "avatar" || !selectedProduct.avatarItem) {
+      return avatarV2.avatar
     }
-  }, [cosmetics])
+    return equipAvatarV2Item(avatarV2.avatar, selectedProduct.avatarItem)
+  }, [avatarV2.avatar, selectedProduct])
+
+  const roomPreviewScene = useMemo(() => {
+    const selectedRoomItem =
+      selectedProduct?.previewType === "room"
+        ? selectedProduct.roomItem
+        : roomProducts[0]?.roomItem
+    if (!selectedRoomItem) {
+      return resolveRoomV2Scene({
+        roomShellCatalog: ROOM_V2_SHELL_CATALOG,
+        furnitureCatalog: ROOM_V2_FURNITURE_CATALOG,
+        decor: { roomShellId: DEFAULT_ROOM_V2_SHELL_ID, placedItems: [] },
+        defaultRoomShellId: DEFAULT_ROOM_V2_SHELL_ID
+      })
+    }
+    return resolveRoomV2Scene({
+      roomShellCatalog: ROOM_V2_SHELL_CATALOG,
+      furnitureCatalog: ROOM_V2_FURNITURE_CATALOG,
+      decor: createRoomPreviewDecor(selectedRoomItem),
+      defaultRoomShellId: DEFAULT_ROOM_V2_SHELL_ID
+    })
+  }, [roomProducts, selectedProduct])
+
+  const handleSelectProduct = useCallback((product: ShopCatalogItem): void => {
+    hapticLight()
+    setSelectedId(product.id)
+  }, [])
+
+  const handlePrimaryAction = useCallback((): void => {
+    if (!selectedProduct) return
+
+    if (selectedProduct.actionType === "avatarUnlock") {
+      if (selectedProduct.priceCoins === null) {
+        hapticError()
+        showToast({
+          title: "Preview only",
+          body: selectedProduct.disabledReason,
+          type: "warning"
+        })
+        return
+      }
+      const result = inventoryStore.unlockAvatarItem(
+        selectedProduct.sourceItemId,
+        selectedProduct.priceCoins
+      )
+      if (!result.success) {
+        hapticError()
+        showToast({
+          title: getUnlockFailureTitle(result.reason),
+          type: "warning"
+        })
+        return
+      }
+      hapticSuccess()
+      showToast({
+        title: `${selectedProduct.title} unlocked`,
+        body: "Tap Equip to make it visible on your avatar.",
+        type: "success"
+      })
+      return
+    }
+
+    if (selectedProduct.actionType === "avatarEquip") {
+      if (!selectedProduct.avatarItem || !avatarV2.equipItem(selectedProduct.avatarItem)) {
+        hapticError()
+        showToast({
+          title: "Unlock before equipping",
+          type: "warning"
+        })
+        return
+      }
+      hapticSuccess()
+      showToast({
+        title: `${selectedProduct.title} equipped`,
+        body: "Your saved avatar updates across DateVibe.",
+        type: "success"
+      })
+      return
+    }
+
+    if (selectedProduct.actionType === "roomUnlock") {
+      if (!selectedProduct.roomItem || selectedProduct.priceCoins === null) {
+        hapticError()
+        showToast({
+          title: "Preview only",
+          body: selectedProduct.disabledReason,
+          type: "warning"
+        })
+        return
+      }
+      const result = inventoryStore.unlockRoomItem(
+        selectedProduct.sourceItemId,
+        selectedProduct.priceCoins
+      )
+      if (!result.success) {
+        hapticError()
+        showToast({
+          title: getUnlockFailureTitle(result.reason),
+          type: "warning"
+        })
+        return
+      }
+      hapticSuccess()
+      showToast({
+        title: `${selectedProduct.title} unlocked`,
+        body: "Place it in Edit Room, then save your room.",
+        type: "success"
+      })
+      navigation.navigate("MyRoomV2Preview", {
+        placementItemId: selectedProduct.sourceItemId
+      })
+      return
+    }
+
+    if (selectedProduct.actionType === "roomPlace") {
+      if (!selectedProduct.roomItem) {
+        hapticError()
+        showToast({
+          title: "Room item unavailable",
+          type: "warning"
+        })
+        return
+      }
+      hapticSuccess()
+      showToast({
+        title: `${selectedProduct.title} ready to place`,
+        body: "Position it in Edit Room, then save your room.",
+        type: "success"
+      })
+      navigation.navigate("MyRoomV2Preview", {
+        placementItemId: selectedProduct.sourceItemId
+      })
+      return
+    }
+
+    if (selectedProduct.actionType === "disabled") {
+      if (selectedProduct.disabledReason) {
+        hapticError()
+        showToast({
+          title: selectedProduct.actionLabel,
+          body: selectedProduct.disabledReason,
+          type: "warning"
+        })
+      }
+      return
+    }
+  }, [avatarV2, inventoryStore, navigation, roomV2, selectedProduct])
 
   return (
     <View style={styles.root}>
-      <SoftBlobBackground variant="lobby" />
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right", "bottom"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
         <TopBar
-          title="Avatar Shop"
-          subtitle="Express yourself"
+          title="Shop"
+          subtitle="Preview, unlock, equip, place"
           titleAlign="start"
           leftSlot={
             <ActionButtonCircle onPress={() => navigation.goBack()} size={40}>
-              ←
+              <Ionicons name="chevron-back" size={20} color={uiTheme.colors.textPrimary} />
             </ActionButtonCircle>
+          }
+          rightSlot={
+            <View style={styles.coinPill}>
+              <Ionicons name="diamond" size={14} color="#B9820D" />
+              <Text style={styles.coinText}>
+                {inventoryStore.inventory.coins.toLocaleString()}
+              </Text>
+            </View>
           }
         />
 
         <ScrollView
-          contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
         >
-          {/* Preview */}
-          <View style={styles.previewCard}>
-            <View style={styles.previewGlow} pointerEvents="none" />
-            <MyAvatar name={displayName} seed={userId} size={120} ring="strong" />
-            <Text style={styles.previewName}>{displayName}</Text>
-            <View style={styles.coinPill}>
-              <Text style={styles.coinIcon}>◆</Text>
-              <Text style={styles.coinText}>{cosmetics.coinBalance.toLocaleString()} coins</Text>
-            </View>
-          </View>
+          <SelectedProductPreview
+            product={selectedProduct}
+            previewAvatar={previewAvatar}
+            roomPreviewScene={roomPreviewScene}
+            onPrimaryAction={handlePrimaryAction}
+          />
 
-          {/* Category tabs */}
-          <View style={styles.tabRow}>
-            {CATEGORIES.map((cat) => {
-              const active = cat.key === activeCategory
-              return (
-                <Pressable
-                  key={cat.key}
-                  style={[styles.tab, active ? styles.tabActive : null]}
-                  onPress={() => setActiveCategory(cat.key)}
-                >
-                  <Text style={styles.tabIcon}>{cat.icon}</Text>
-                  <Text
-                    style={[styles.tabLabel, active ? styles.tabLabelActive : null]}
-                  >
-                    {cat.label}
-                  </Text>
-                </Pressable>
-              )
-            })}
-          </View>
+          <ShopSection
+            title="My Items"
+            subtitle="Owned pieces, equipped avatar items, and placed room decor."
+            products={myItems}
+            selectedId={selectedProduct?.id}
+            onSelect={handleSelectProduct}
+            getMetaLabel={getMyItemStateLabel}
+          />
 
-          <View style={styles.grid}>
-            {items.map((item) => {
-              const owned = cosmetics.isUnlocked(item.id)
-              const equipped = cosmetics.getEquippedItem(item.category)
-              const isEquipped = equipped?.id === item.id
-              return (
-                <CosmeticItemCard
-                  key={item.id}
-                  item={item}
-                  isOwned={owned}
-                  isEquipped={isEquipped}
-                  onPress={() => handleItemPress(item)}
-                />
-              )
-            })}
-          </View>
+          <ShopSection
+            title="Avatar Wearables"
+            subtitle="Owned pieces equip now. Locked pieces preview first."
+            products={avatarProducts}
+            selectedId={selectedProduct?.id}
+            onSelect={handleSelectProduct}
+          />
+
+          <ShopSection
+            title="Room Pieces"
+            subtitle="Owned decor can be placed into My Room."
+            products={roomProducts}
+            selectedId={selectedProduct?.id}
+            onSelect={handleSelectProduct}
+          />
+
+          <ShopSection
+            title="Status Styles"
+            subtitle="Prepared for future card and chat identity items."
+            products={statusProducts}
+            selectedId={selectedProduct?.id}
+            onSelect={handleSelectProduct}
+          />
         </ScrollView>
       </SafeAreaView>
     </View>
   )
 }
 
-// ── Item card ───────────────────────────────────────────────
+function SelectedProductPreview(props: {
+  product: ShopCatalogItem | undefined
+  previewAvatar: ReturnType<typeof equipAvatarV2Item>
+  roomPreviewScene: ReturnType<typeof resolveRoomV2Scene>
+  onPrimaryAction: () => void
+}) {
+  const { product, previewAvatar, roomPreviewScene, onPrimaryAction } = props
+  if (!product) return null
 
-interface CosmeticItemCardProps {
-  item: AvatarCosmetic
-  isOwned: boolean
-  isEquipped: boolean
-  onPress: () => void
-}
-
-function CosmeticItemCard(props: CosmeticItemCardProps) {
-  const { item, isOwned, isEquipped, onPress } = props
-  const rarityColor = RARITY_COLORS[item.rarity]
+  const disabled = product.actionType === "disabled"
 
   return (
+    <View style={styles.previewCard}>
+      <View style={styles.previewHeader}>
+        <View>
+          <Text style={styles.previewEyebrow}>{product.eyebrow}</Text>
+          <Text style={styles.previewTitle}>{product.title}</Text>
+        </View>
+        <View style={styles.statePill}>
+          <Text style={styles.stateText}>{product.stateLabel}</Text>
+        </View>
+      </View>
+
+      <View style={styles.previewStage}>
+        {product.previewType === "avatar" ? (
+          <AvatarPreview2D
+            avatar={previewAvatar}
+            catalog={AVATAR_V2_CATALOG}
+            size={164}
+            stageHeight={230}
+            label="Preview on avatar"
+          />
+        ) : product.previewType === "room" ? (
+          <RoomRenderer2D
+            shell={roomPreviewScene.shell}
+            renderItems={roomPreviewScene.renderItems}
+            style={styles.roomPreviewRenderer}
+            testID="shop-room-preview"
+          />
+        ) : (
+          <StatusCardPreview item={product.statusCardItem} />
+        )}
+      </View>
+
+      <Text style={styles.previewDescription}>{product.description}</Text>
+      <Pressable
+        disabled={disabled}
+        onPress={onPrimaryAction}
+        style={({ pressed }) => [
+          styles.primaryAction,
+          disabled ? styles.primaryActionDisabled : null,
+          pressed && !disabled ? styles.primaryActionPressed : null
+        ]}
+      >
+        <Text style={styles.primaryActionText}>{product.actionLabel}</Text>
+      </Pressable>
+    </View>
+  )
+}
+
+function ShopSection(props: {
+  title: string
+  subtitle: string
+  products: ShopCatalogItem[]
+  selectedId: string | undefined
+  onSelect: (product: ShopCatalogItem) => void
+  getMetaLabel?: (product: ShopCatalogItem) => string
+}) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{props.title}</Text>
+        <Text style={styles.sectionSubtitle}>{props.subtitle}</Text>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.productRow}
+      >
+        {props.products.map((product) => (
+          <ShopProductCard
+            key={product.id}
+            product={product}
+            selected={product.id === props.selectedId}
+            metaLabel={props.getMetaLabel?.(product)}
+            onPress={() => props.onSelect(product)}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  )
+}
+
+function ShopProductCard(props: {
+  product: ShopCatalogItem
+  selected: boolean
+  metaLabel?: string
+  onPress: () => void
+}) {
+  const { product, selected, metaLabel, onPress } = props
+  return (
     <Pressable
-      style={({ pressed }) => [
-        itemStyles.card,
-        isEquipped ? itemStyles.cardEquipped : null,
-        pressed ? itemStyles.cardPressed : null
-      ]}
       onPress={onPress}
+      style={({ pressed }) => [
+        styles.productCard,
+        selected ? styles.productCardSelected : null,
+        pressed ? styles.productCardPressed : null
+      ]}
     >
-      <View style={[itemStyles.glyphWrap, { borderColor: rarityColor }]}>
-        <Text style={itemStyles.glyph}>{item.glyph}</Text>
+      <View style={styles.productThumb}>
+        {product.previewType === "avatar" && product.avatarItem ? (
+          <Ionicons
+            name={getAvatarIcon(product.avatarItem.type)}
+            size={24}
+            color={selected ? "#FFFFFF" : uiTheme.colors.primary}
+          />
+        ) : product.previewType === "room" && product.roomItem ? (
+          <Image
+            source={product.roomItem.asset.source}
+            resizeMode="contain"
+            style={styles.productImage}
+          />
+        ) : (
+          <Ionicons
+            name={getStatusIcon(product.statusCardItem?.category)}
+            size={24}
+            color={selected ? "#FFFFFF" : product.statusCardItem?.accentColor ?? uiTheme.colors.primary}
+          />
+        )}
       </View>
-      <Text style={itemStyles.name} numberOfLines={1}>
-        {item.name}
+      <Text style={styles.productTitle} numberOfLines={1}>
+        {product.title}
       </Text>
-      <View style={[itemStyles.rarityBadge, { backgroundColor: `${rarityColor}20` }]}>
-        <View style={[itemStyles.rarityDot, { backgroundColor: rarityColor }]} />
-        <Text style={[itemStyles.rarityText, { color: rarityColor }]}>
-          {item.rarity}
-        </Text>
-      </View>
-      {isEquipped ? (
-        <View style={itemStyles.equippedBadge}>
-          <Text style={itemStyles.equippedText}>Equipped ✓</Text>
-        </View>
-      ) : isOwned ? (
-        <View style={itemStyles.ownedBadge}>
-          <Text style={itemStyles.ownedText}>Tap to equip</Text>
-        </View>
-      ) : (
-        <View style={itemStyles.pricePill}>
-          <Text style={itemStyles.priceIcon}>◆</Text>
-          <Text style={itemStyles.priceText}>{item.priceCoins}</Text>
-        </View>
-      )}
+      <Text style={styles.productMeta} numberOfLines={1}>
+        {metaLabel ?? product.stateLabel}
+      </Text>
     </Pressable>
   )
 }
 
-// ── Styles ──────────────────────────────────────────────────
+function StatusCardPreview(props: {
+  item: StatusCardCatalogItem | undefined
+}) {
+  const { item } = props
+  const accentColor = item?.accentColor ?? uiTheme.colors.primary
+  const accentSoftColor = item?.accentSoftColor ?? uiTheme.colors.primarySoft
+  const previewLabel = item?.previewLabel ?? "Status"
+  const surfaceLabel = getStatusSurfaceLabel(item?.surface)
+
+  return (
+    <View style={styles.statusPreview}>
+      <View
+        style={[
+          styles.statusPreviewCard,
+          {
+            borderColor: accentColor,
+            backgroundColor: accentSoftColor
+          }
+        ]}
+      >
+        <View style={styles.statusPreviewTopRow}>
+          <View
+            style={[
+              styles.statusPreviewAvatarFrame,
+              {
+                borderColor: accentColor,
+                backgroundColor: accentSoftColor
+              }
+            ]}
+          >
+            <Ionicons
+              name={getStatusIcon(item?.category)}
+              size={26}
+              color={accentColor}
+            />
+          </View>
+          <View style={styles.statusPreviewIdentity}>
+            <Text style={styles.statusPreviewName} numberOfLines={1}>
+              {previewLabel}
+            </Text>
+            <Text style={styles.statusPreviewSurface} numberOfLines={1}>
+              {surfaceLabel}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.statusPreviewLine} />
+        <View style={styles.statusPreviewChips}>
+          <View
+            style={[
+              styles.statusPreviewChip,
+              {
+                borderColor: accentColor,
+                backgroundColor: accentSoftColor
+              }
+            ]}
+          >
+            <Text style={[styles.statusPreviewChipText, { color: accentColor }]}>
+              Preview only
+            </Text>
+          </View>
+          <View style={styles.statusPreviewBubble}>
+            <Text style={styles.statusPreviewBubbleText} numberOfLines={1}>
+              Not for sale yet
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function getMyItemStateLabel(product: ShopCatalogItem): string {
+  if (product.previewType === "avatar") {
+    return product.stateLabel === "Equipped" ? "Equipped" : "Unused"
+  }
+  if (product.previewType === "room") {
+    return product.placedCount && product.placedCount > 0
+      ? `${product.placedCount} placed`
+      : "Unused"
+  }
+  return product.stateLabel
+}
+
+function getAvatarIcon(
+  type: NonNullable<ShopCatalogItem["avatarItem"]>["type"]
+): keyof typeof Ionicons.glyphMap {
+  if (type === "hair") return "sparkles"
+  if (type === "top") return "shirt"
+  if (type === "bottom") return "layers"
+  if (type === "shoes") return "walk"
+  if (type === "accessory") return "glasses"
+  return "person"
+}
+
+function getStatusIcon(
+  category: StatusCardCatalogItem["category"] | undefined
+): keyof typeof Ionicons.glyphMap {
+  if (category === "frame") return "radio-button-on"
+  if (category === "aura") return "sparkles"
+  if (category === "badge") return "ribbon"
+  if (category === "pose") return "body"
+  if (category === "entranceEffect") return "flash"
+  if (category === "chatBubble") return "chatbubble-ellipses"
+  if (category === "nameplate") return "person"
+  return "sparkles"
+}
+
+function getStatusSurfaceLabel(
+  surface: StatusCardCatalogItem["surface"] | undefined
+): string {
+  if (surface === "discoverCard") return "Discover card"
+  if (surface === "profileCard") return "Profile card"
+  if (surface === "matchCard") return "Match card"
+  if (surface === "chatIdentity") return "Chat identity"
+  return "Card identity"
+}
+
+function getUnlockFailureTitle(reason: string | undefined): string {
+  if (reason === "already_owned") return "Already owned"
+  if (reason === "not_enough_coins") return "Not enough coins"
+  if (reason === "invalid_item") return "Item unavailable"
+  if (reason === "invalid_price") return "Invalid price"
+  return "Unlock unavailable"
+}
+
+function createRoomPreviewDecor(item: FurnitureItem): UserRoomDecor {
+  return {
+    roomShellId: DEFAULT_ROOM_V2_SHELL_ID,
+    placedItems: [
+      {
+        instanceId: "shop-preview-item",
+        itemId: item.id,
+        x: item.category === "wallDecor" ? 0.28 : 0.54,
+        y: item.category === "wallDecor" ? 0.5 : 0.76,
+        rotation: getDefaultFurnitureRotation(item)
+      }
+    ]
+  }
+}
+
+function getDefaultFurnitureRotation(item: FurnitureItem): RoomFurnitureRotation {
+  const rotations = item.assetsByRotation
+    ? (Object.keys(item.assetsByRotation) as RoomFurnitureRotation[])
+    : []
+  if (rotations.length === 0 || rotations.includes("front")) return "front"
+  return rotations[0]
+}
 
 const styles = StyleSheet.create({
   root: {
@@ -211,197 +617,237 @@ const styles = StyleSheet.create({
     paddingTop: uiTheme.spacing.sm
   },
   scroll: {
-    gap: uiTheme.spacing.md,
-    paddingBottom: uiTheme.spacing.xxl
-  },
-  previewCard: {
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    padding: uiTheme.spacing.lg,
-    alignItems: "center",
-    gap: uiTheme.spacing.sm,
-    overflow: "hidden",
-    position: "relative",
-    ...uiTheme.shadow.card
-  },
-  previewGlow: {
-    position: "absolute",
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: uiTheme.colors.avatarAccent,
-    top: -80
-  },
-  previewName: {
-    color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.heading,
-    fontWeight: "800"
+    gap: uiTheme.spacing.lg,
+    paddingBottom: 136
   },
   coinPill: {
+    minHeight: 36,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.xs,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: "#FEF9E7",
+    backgroundColor: "#FFF7D8",
     borderWidth: 1,
-    borderColor: "#F5E6A3"
-  },
-  coinIcon: {
-    color: "#D4A017",
-    fontSize: 14,
-    fontWeight: "800"
+    borderColor: "#F1DE98"
   },
   coinText: {
-    color: "#8B6914",
+    color: "#7B5708",
+    fontSize: uiTheme.typography.bodySmall,
+    fontWeight: "900"
+  },
+  previewCard: {
+    gap: uiTheme.spacing.md,
+    padding: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: uiTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.border,
+    overflow: "hidden",
+    ...uiTheme.shadow.card
+  },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: uiTheme.spacing.md
+  },
+  previewEyebrow: {
+    color: uiTheme.colors.primary,
+    fontSize: uiTheme.typography.caption,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  previewTitle: {
+    marginTop: 2,
+    color: uiTheme.colors.textPrimary,
+    fontSize: uiTheme.typography.heading,
+    fontWeight: "900"
+  },
+  statePill: {
+    maxWidth: 132,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.primarySoft
+  },
+  stateText: {
+    color: uiTheme.colors.chipText,
+    fontSize: uiTheme.typography.micro,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  previewStage: {
+    minHeight: 238,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: uiTheme.radius.lg,
+    backgroundColor: "#160D1E",
+    overflow: "hidden"
+  },
+  roomPreviewRenderer: {
+    width: "132%",
+    backgroundColor: "#160D1E"
+  },
+  statusPreview: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    paddingHorizontal: uiTheme.spacing.lg
+  },
+  statusPreviewCard: {
+    width: "100%",
+    maxWidth: 280,
+    gap: uiTheme.spacing.md,
+    padding: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.lg,
+    borderWidth: 1
+  },
+  statusPreviewTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: uiTheme.spacing.sm
+  },
+  statusPreviewAvatarFrame: {
+    width: 62,
+    height: 62,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 24,
+    borderWidth: 2
+  },
+  statusPreviewIdentity: {
+    flex: 1,
+    gap: 4
+  },
+  statusPreviewName: {
+    color: "#FFFFFF",
+    fontSize: uiTheme.typography.body,
+    fontWeight: "900"
+  },
+  statusPreviewSurface: {
+    color: "rgba(255, 255, 255, 0.72)",
+    fontSize: uiTheme.typography.bodySmall,
+    fontWeight: "800"
+  },
+  statusPreviewLine: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.18)"
+  },
+  statusPreviewChips: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: uiTheme.spacing.sm
+  },
+  statusPreviewChip: {
+    minHeight: 30,
+    justifyContent: "center",
+    paddingHorizontal: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.full,
+    borderWidth: 1
+  },
+  statusPreviewChipText: {
+    fontSize: uiTheme.typography.micro,
+    fontWeight: "900"
+  },
+  statusPreviewBubble: {
+    minHeight: 30,
+    justifyContent: "center",
+    paddingHorizontal: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(255, 255, 255, 0.16)"
+  },
+  statusPreviewBubbleText: {
+    color: "rgba(255, 255, 255, 0.76)",
+    fontSize: uiTheme.typography.bodySmall,
+    fontWeight: "800"
+  },
+  previewDescription: {
+    color: uiTheme.colors.textSecondary,
+    fontSize: uiTheme.typography.bodySmall,
+    fontWeight: "700",
+    lineHeight: 20
+  },
+  primaryAction: {
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.primary,
+    ...uiTheme.shadow.lift
+  },
+  primaryActionPressed: {
+    backgroundColor: uiTheme.colors.primaryPressed,
+    transform: [{ scale: 0.99 }]
+  },
+  primaryActionDisabled: {
+    opacity: 0.5
+  },
+  primaryActionText: {
+    color: "#FFFFFF",
+    fontSize: uiTheme.typography.body,
+    fontWeight: "900"
+  },
+  section: {
+    gap: uiTheme.spacing.sm
+  },
+  sectionHeader: {
+    gap: 2
+  },
+  sectionTitle: {
+    color: uiTheme.colors.textPrimary,
+    fontSize: uiTheme.typography.subheading,
+    fontWeight: "900"
+  },
+  sectionSubtitle: {
+    color: uiTheme.colors.textSecondary,
     fontSize: uiTheme.typography.bodySmall,
     fontWeight: "700"
   },
-  tabRow: {
-    flexDirection: "row",
-    gap: uiTheme.spacing.xs
+  productRow: {
+    gap: uiTheme.spacing.sm,
+    paddingRight: uiTheme.spacing.lg
   },
-  tab: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border
-  },
-  tabActive: {
-    backgroundColor: uiTheme.colors.chipBackground,
-    borderColor: "#F4A9CA"
-  },
-  tabIcon: {
-    fontSize: 18
-  },
-  tabLabel: {
-    color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.micro,
-    fontWeight: "700"
-  },
-  tabLabelActive: {
-    color: uiTheme.colors.chipText,
-    fontWeight: "800"
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: uiTheme.spacing.sm
-  }
-})
-
-const ITEM_WIDTH = "47%" as const
-
-const itemStyles = StyleSheet.create({
-  card: {
-    width: ITEM_WIDTH,
+  productCard: {
+    width: 144,
+    minHeight: 154,
+    gap: uiTheme.spacing.xs,
+    padding: uiTheme.spacing.sm,
     borderRadius: uiTheme.radius.lg,
     backgroundColor: uiTheme.colors.surface,
     borderWidth: 1,
     borderColor: uiTheme.colors.border,
-    padding: uiTheme.spacing.md,
-    alignItems: "center",
-    gap: uiTheme.spacing.xs,
     ...uiTheme.shadow.soft
   },
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.97 }]
-  },
-  cardEquipped: {
+  productCardSelected: {
     borderColor: uiTheme.colors.primary,
-    borderWidth: 2,
     backgroundColor: "#FFF7FB"
   },
-  glyphWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
+  productCardPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }]
+  },
+  productThumb: {
+    height: 76,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FAF8FC"
+    borderRadius: uiTheme.radius.md,
+    backgroundColor: uiTheme.colors.surfaceSoft,
+    overflow: "hidden"
   },
-  glyph: {
-    fontSize: 26
+  productImage: {
+    width: "86%",
+    height: "86%"
   },
-  name: {
+  productTitle: {
     color: uiTheme.colors.textPrimary,
     fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "700",
-    textAlign: "center"
+    fontWeight: "900"
   },
-  rarityBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: uiTheme.radius.full
-  },
-  rarityDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5
-  },
-  rarityText: {
-    fontSize: 10,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.4
-  },
-  ownedBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.successSoft,
-    borderWidth: 1,
-    borderColor: "rgba(58, 192, 138, 0.28)"
-  },
-  ownedText: {
-    color: uiTheme.colors.successInk,
+  productMeta: {
+    color: uiTheme.colors.textMuted,
     fontSize: uiTheme.typography.micro,
     fontWeight: "800"
   },
-  equippedBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.chipBackground,
-    borderWidth: 1,
-    borderColor: "#F4A9CA"
-  },
-  equippedText: {
-    color: uiTheme.colors.chipText,
-    fontSize: uiTheme.typography.micro,
-    fontWeight: "800"
-  },
-  pricePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: uiTheme.radius.full,
-    backgroundColor: "#FEF9E7",
-    borderWidth: 1,
-    borderColor: "#F5E6A3"
-  },
-  priceIcon: {
-    color: "#D4A017",
-    fontSize: 10,
-    fontWeight: "800"
-  },
-  priceText: {
-    color: "#8B6914",
-    fontSize: uiTheme.typography.micro,
-    fontWeight: "700"
-  }
 })

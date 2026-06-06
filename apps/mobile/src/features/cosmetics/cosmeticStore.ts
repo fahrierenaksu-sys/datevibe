@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { addInventoryCoins } from "../inventory/inventoryStore"
 import {
   COSMETIC_CATALOG,
   DEFAULT_EQUIP_STATE,
@@ -118,6 +119,7 @@ export function unequipCategory(category: CosmeticCategory): void {
 }
 
 export function addCoins(amount: number): void {
+  addInventoryCoins(amount)
   coinBalance += amount
   notify()
   void saveToStorage()
