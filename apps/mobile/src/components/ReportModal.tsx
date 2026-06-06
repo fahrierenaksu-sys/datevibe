@@ -10,6 +10,7 @@ interface ReportModalProps {
   targetUserId: string
   targetDisplayName: string
   onClose: () => void
+  onActionComplete?: () => void
 }
 
 const REASONS: { key: ReportReason; label: string; icon: string }[] = [
@@ -21,7 +22,13 @@ const REASONS: { key: ReportReason; label: string; icon: string }[] = [
 ]
 
 export function ReportModal(props: ReportModalProps) {
-  const { visible, targetUserId, targetDisplayName, onClose } = props
+  const {
+    visible,
+    targetUserId,
+    targetDisplayName,
+    onClose,
+    onActionComplete
+  } = props
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null)
   const [step, setStep] = useState<"reason" | "confirm" | "done">("reason")
 
@@ -37,7 +44,8 @@ export function ReportModal(props: ReportModalProps) {
     showToast({ title: `${targetDisplayName} blocked`, type: "info" })
     onClose()
     resetState()
-  }, [targetUserId, targetDisplayName, onClose])
+    onActionComplete?.()
+  }, [targetUserId, targetDisplayName, onClose, onActionComplete])
 
   const handleReportAndBlock = useCallback(() => {
     if (!selectedReason) return
@@ -52,8 +60,9 @@ export function ReportModal(props: ReportModalProps) {
     setTimeout(() => {
       onClose()
       resetState()
+      onActionComplete?.()
     }, 800)
-  }, [selectedReason, targetUserId, targetDisplayName, onClose])
+  }, [selectedReason, targetUserId, targetDisplayName, onClose, onActionComplete])
 
   const resetState = () => {
     setSelectedReason(null)

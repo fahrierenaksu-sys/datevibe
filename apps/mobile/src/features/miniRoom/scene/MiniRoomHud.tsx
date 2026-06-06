@@ -19,9 +19,9 @@ interface MiniRoomHudProps {
   canSendReaction: boolean
   leaveDisabled: boolean
   onLeave: () => void
+  onOpenSafety: () => void
   onRetryConnect: () => void
   onToggleMic: () => void
-  onToggleCamera: () => void
   onSendReaction: (reaction: ReactionType) => void
 }
 
@@ -32,9 +32,9 @@ export function MiniRoomHud(props: MiniRoomHudProps) {
     canSendReaction,
     leaveDisabled,
     onLeave,
+    onOpenSafety,
     onRetryConnect,
     onToggleMic,
-    onToggleCamera,
     onSendReaction
   } = props
 
@@ -82,19 +82,16 @@ export function MiniRoomHud(props: MiniRoomHudProps) {
             >
               <Text style={styles.mediaText}>{localMedia.micEnabled ? "Mic" : "Mute"}</Text>
             </Pressable>
-            <Pressable
-              onPress={onToggleCamera}
-              disabled={mediaDisabled}
-              style={({ pressed }) => [
-                styles.mediaButton,
-                localMedia.cameraEnabled ? styles.mediaButtonActive : null,
-                mediaDisabled ? styles.disabled : null,
-                pressed ? styles.pressed : null
-              ]}
-            >
-              <Text style={styles.mediaText}>{localMedia.cameraEnabled ? "Cam" : "Off"}</Text>
-            </Pressable>
           </View>
+          <Pressable
+            onPress={onOpenSafety}
+            style={({ pressed }) => [
+              styles.safetyButton,
+              pressed ? styles.pressed : null
+            ]}
+          >
+            <Text style={styles.safetyText}>Safety</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -218,6 +215,21 @@ const styles = StyleSheet.create({
   },
   mediaButtonActive: {
     backgroundColor: uiTheme.colors.primary
+  },
+  safetyButton: {
+    minHeight: 38,
+    paddingHorizontal: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 218, 233, 0.9)"
+  },
+  safetyText: {
+    color: uiTheme.colors.dangerInk,
+    fontSize: uiTheme.typography.caption,
+    fontWeight: "900"
   },
   mediaText: {
     color: "#FFFFFF",

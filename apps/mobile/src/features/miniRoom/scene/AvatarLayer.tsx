@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native"
+import { RoomAvatarRenderer2D } from "../../avatarV2/room/components/RoomAvatarRenderer2D"
 import type {
   AvatarState,
   RoomEmote,
@@ -278,6 +279,10 @@ function AvatarFigure(props: AvatarFigureProps) {
   })
 
   const bubbleTone = bubble?.tone ?? "chat"
+  const sourceLabel =
+    !isLocal && avatar.appearance.snapshotSource === "demo_partner_fallback"
+      ? "Preview avatar"
+      : undefined
 
   return (
     <View
@@ -385,16 +390,25 @@ function AvatarFigure(props: AvatarFigureProps) {
           }
         ]}
       >
-        <Image
-          source={avatar.appearance.fullBodyAsset}
-          resizeMode="contain"
-          style={styles.avatarImage}
-        />
+        {avatar.appearance.roomAvatarLayers?.length ? (
+          <RoomAvatarRenderer2D layers={avatar.appearance.roomAvatarLayers} />
+        ) : avatar.appearance.fullBodyAsset ? (
+          <Image
+            source={avatar.appearance.fullBodyAsset}
+            resizeMode="contain"
+            style={styles.avatarImage}
+          />
+        ) : null}
       </Animated.View>
       <View style={[styles.namePlate, isLocal ? styles.namePlateLocal : null]}>
         <Text style={styles.nameText} numberOfLines={1}>
           {isLocal ? "You" : avatar.displayName}
         </Text>
+        {sourceLabel ? (
+          <Text style={styles.sourceText} numberOfLines={1}>
+            {sourceLabel}
+          </Text>
+        ) : null}
       </View>
     </View>
   )
@@ -476,6 +490,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.82)",
     alignItems: "center",
@@ -490,6 +505,11 @@ const styles = StyleSheet.create({
   nameText: {
     color: "#3A2430",
     fontSize: 10,
+    fontWeight: "800"
+  },
+  sourceText: {
+    color: "rgba(58, 36, 48, 0.7)",
+    fontSize: 8,
     fontWeight: "800"
   },
   bubbleWrap: {

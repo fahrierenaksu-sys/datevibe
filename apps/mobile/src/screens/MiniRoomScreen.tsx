@@ -2,6 +2,12 @@ import type { ServerEvent } from "@datevibe/contracts"
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { StyleSheet, View } from "react-native"
+import type { CandidateAvatarSnapshot } from "../components/DiscoverCard"
+import { ReportModal } from "../components/ReportModal"
+import { ROOM_AVATAR_CATALOG } from "../features/avatarV2/room/avatarRoom.mock"
+import { projectAvatarV2ToRoomAvatarAppearance } from "../features/avatarV2/room/avatarRoomProjection"
+import { getRoomAvatarRenderLayers } from "../features/avatarV2/room/avatarRoomSelectors"
+import { useAvatarV2 } from "../features/avatarV2/state/AvatarV2Provider"
 import { useGlobalRealtime, useGlobalRealtimeEvents } from "../features/realtime/globalRealtimeProvider"
 import {
   DEFAULT_ROOM_V2_SHELL_ID,
@@ -15,6 +21,11 @@ import { MiniRoomScene } from "../features/miniRoom/scene/MiniRoomScene"
 import { useInRoomChat } from "../features/miniRoom/useInRoomChat"
 import { useMiniRoomMedia } from "../features/miniRoom/useMiniRoomMedia"
 import { useMiniRoomReactions } from "../features/miniRoom/useMiniRoomReactions"
+import { miniRoomAssets } from "../features/miniRoom/scene/miniRoomAssets"
+import type {
+  MiniRoomParticipantAvatarSnapshot,
+  MiniRoomParticipantAvatarSnapshots
+} from "../features/miniRoom/scene/miniRoomSceneTypes"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { uiTheme } from "../ui/theme"
 
@@ -27,7 +38,8 @@ export function MiniRoomScreen(props: MiniRoomScreenProps) {
   const { readyMiniRoom, participants } = route.params
   const { miniRoom, mediaSession } = readyMiniRoom
   const { userRoomDecor } = useRoomV2()
-  const { mediaState, retryConnect, toggleMic, toggleCamera } = useMiniRoomMedia({ miniRoom, mediaSession })
+  const { avatar: localAvatarV2, catalog: avatarV2Catalog } = useAvatarV2()
+  const { mediaState, retryConnect, toggleMic } = useMiniRoomMedia({ miniRoom, mediaSession })
   const { recentReactions, sendReaction, canSend } = useMiniRoomReactions({
     sessionActor,
     partnerUserId: participants.partner.userId
@@ -45,8 +57,9 @@ export function MiniRoomScreen(props: MiniRoomScreenProps) {
   const exitedRef = useRef<boolean>(false)
   const endRequestedRef = useRef<boolean>(false)
   const [endRequested, setEndRequested] = useState(false)
+  const [safetyVisible, setSafetyVisible] = useState(false)
 
-  const roomDecorScene = useMemo(
+  const hostRoomSnapshot = useMemo(
     () =>
       resolveRoomV2Scene({
         roomShellCatalog: ROOM_V2_SHELL_CATALOG,
@@ -56,6 +69,33 @@ export function MiniRoomScreen(props: MiniRoomScreenProps) {
       }),
     [userRoomDecor]
   )
+
+  const participantAvatarSnapshots = useMemo<MiniRoomParticipantAvatarSnapshots>(() => {
+    const localSnapshot = createCurrentUserAvatarSnapshot({
+      userId: participants.you.userId,
+      displayName: participants.you.displayName,
+      avatar: localAvatarV2,
+      avatarCatalog: avatarV2Catalog
+    })
+    const partnerSnapshot = createPartnerFallbackAvatarSnapshot({
+      userId: participants.partner.userId,
+      displayName: participants.partner.displayName,
+      candidateAvatarSnapshot: participants.partner.avatarSnapshot
+    })
+
+    return {
+      local: localSnapshot,
+      partner: partnerSnapshot
+    }
+  }, [
+    avatarV2Catalog,
+    localAvatarV2,
+    participants.partner.displayName,
+    participants.partner.avatarSnapshot,
+    participants.partner.userId,
+    participants.you.displayName,
+    participants.you.userId
+  ])
 
   useEffect(() => {
     if (status === "connected") {
@@ -103,45 +143,57 @@ export function MiniRoomScreen(props: MiniRoomScreenProps) {
   const { connectionStatus: lifecycleConnectionStatus, send: sendLifecycleEvent } = useGlobalRealtime()
 
   const requestEndMiniRoom = useCallback((): void => {
-    if (
-      lifecycleConnectionStatus !== "connected" ||
-      exitedRef.current ||
-      endRequestedRef.current
-    ) {
+    if (exitedRef.current || endRequestedRef.current) {
       return
     }
     endRequestedRef.current = true
     setEndRequested(true)
-    sendLifecycleEvent({
-      type: "mini_room.leave",
-      payload: {
-        miniRoomId: miniRoom.miniRoomId
-      }
-    })
-  }, [lifecycleConnectionStatus, miniRoom.miniRoomId, sendLifecycleEvent])
+    if (lifecycleConnectionStatus === "connected") {
+      sendLifecycleEvent({
+        type: "mini_room.leave",
+        payload: {
+          miniRoomId: miniRoom.miniRoomId
+        }
+      })
+    }
+    exitToDebrief()
+  }, [exitToDebrief, lifecycleConnectionStatus, miniRoom.miniRoomId, sendLifecycleEvent])
 
-  const leaveDisabled = lifecycleConnectionStatus !== "connected" || endRequested
+  const handleSafetyActionComplete = useCallback((): void => {
+    setSafetyVisible(false)
+    if (!exitedRef.current) {
+      exitToDebrief()
+    }
+  }, [exitToDebrief])
+
+  const leaveDisabled = endRequested
 
   return (
     <View style={styles.root}>
+      <ReportModal
+        visible={safetyVisible}
+        targetUserId={participants.partner.userId}
+        targetDisplayName={participants.partner.displayName}
+        onClose={() => setSafetyVisible(false)}
+        onActionComplete={handleSafetyActionComplete}
+      />
       <MiniRoomScene
         localUser={participants.you}
         partnerUser={participants.partner}
+        participantAvatarSnapshots={participantAvatarSnapshots}
         connectionStatus={status}
         localMedia={mediaState.localMedia}
-        roomDecorScene={roomDecorScene}
+        roomDecorScene={hostRoomSnapshot}
         recentReactions={recentReactions}
         canSendReaction={canSend}
         leaveDisabled={leaveDisabled}
         onLeave={requestEndMiniRoom}
+        onOpenSafety={() => setSafetyVisible(true)}
         onRetryConnect={() => {
           void retryConnect()
         }}
         onToggleMic={() => {
           void toggleMic()
-        }}
-        onToggleCamera={() => {
-          void toggleCamera()
         }}
         onSendReaction={sendReaction}
         inRoomMessages={roomChat.newMessages}
@@ -159,3 +211,65 @@ const styles = StyleSheet.create({
     backgroundColor: uiTheme.colors.nightBackground
   }
 })
+
+function createCurrentUserAvatarSnapshot(input: {
+  userId: string
+  displayName: string
+  avatar: Parameters<typeof projectAvatarV2ToRoomAvatarAppearance>[0]["avatar"]
+  avatarCatalog: Parameters<typeof projectAvatarV2ToRoomAvatarAppearance>[0]["avatarCatalog"]
+}): MiniRoomParticipantAvatarSnapshot {
+  const { appearance } = projectAvatarV2ToRoomAvatarAppearance({
+    avatar: input.avatar,
+    avatarCatalog: input.avatarCatalog,
+    roomAvatarCatalog: ROOM_AVATAR_CATALOG
+  })
+
+  return {
+    userId: input.userId,
+    displayName: input.displayName,
+    role: "local",
+    source: "avatar_v2_current_user",
+    appearance: {
+      base: "female_base_01",
+      snapshotSource: "avatar_v2_current_user",
+      roomAvatarLayers: getRoomAvatarRenderLayers({
+        appearance,
+        catalog: ROOM_AVATAR_CATALOG
+      }),
+      fullBodyAsset: miniRoomAssets.avatars.localGirl
+    }
+  }
+}
+
+function createPartnerFallbackAvatarSnapshot(input: {
+  userId: string
+  displayName: string
+  candidateAvatarSnapshot?: CandidateAvatarSnapshot
+}): MiniRoomParticipantAvatarSnapshot {
+  if (input.candidateAvatarSnapshot?.source === "remote_candidate_avatar") {
+    return {
+      userId: input.userId,
+      displayName: input.candidateAvatarSnapshot.displayName,
+      role: "partner",
+      source: "remote_participant_avatar",
+      appearance: {
+        base: "male_base_01",
+        snapshotSource: "remote_participant_avatar",
+        fullBodyAsset: miniRoomAssets.avatars.partnerBoy
+      }
+    }
+  }
+
+  return {
+    userId: input.userId,
+    displayName: input.displayName,
+    role: "partner",
+    source: "demo_partner_fallback",
+    appearance: {
+      base: "male_base_01",
+      snapshotSource: "demo_partner_fallback",
+      fullBodyAsset: miniRoomAssets.avatars.partnerBoy,
+      fallbackReason: "Partner avatar snapshot is not available in the current MiniRoom route."
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from "react-native"
+import type { RoomV2AvatarRenderLayer } from "../../roomV2/roomV2.types"
 
 export interface RoomPoint {
   x: number
@@ -67,7 +68,10 @@ export interface RoomScene {
 
 export interface AvatarAppearance {
   base: "female_base_01" | "male_base_01"
-  fullBodyAsset: ImageSourcePropType
+  snapshotSource: MiniRoomParticipantAvatarSnapshotSource
+  roomAvatarLayers?: RoomV2AvatarRenderLayer[]
+  fullBodyAsset?: ImageSourcePropType
+  fallbackReason?: string
   skinTone?: string
   hair?: string
   eyes?: string
@@ -77,6 +81,24 @@ export interface AvatarAppearance {
   bottom?: string
   shoes?: string
   accessory?: string
+}
+
+export type MiniRoomParticipantAvatarSnapshotSource =
+  | "avatar_v2_current_user"
+  | "remote_participant_avatar"
+  | "demo_partner_fallback"
+
+export interface MiniRoomParticipantAvatarSnapshot {
+  userId: string
+  displayName: string
+  role: SpawnPoint["role"]
+  source: MiniRoomParticipantAvatarSnapshotSource
+  appearance: AvatarAppearance
+}
+
+export interface MiniRoomParticipantAvatarSnapshots {
+  local: MiniRoomParticipantAvatarSnapshot
+  partner: MiniRoomParticipantAvatarSnapshot
 }
 
 export interface AvatarState {

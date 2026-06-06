@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { miniRoomAssets } from "./miniRoomAssets"
 import { cozyPinkBedroomScene } from "./roomMaps"
 import type {
   AvatarFacing,
   AvatarState,
   MiniRoomStore,
+  MiniRoomParticipantAvatarSnapshots,
   RoomEmote,
   RoomHotspot,
   RoomPoint,
@@ -21,6 +21,7 @@ interface UseMiniRoomSceneStoreInput {
     userId: string
     displayName: string
   }
+  participantAvatarSnapshots: MiniRoomParticipantAvatarSnapshots
   scene?: RoomScene
 }
 
@@ -63,34 +64,32 @@ function easeOutCubic(value: number): number {
   return 1 - Math.pow(1 - value, 3)
 }
 
-function createInitialAvatars(input: UseMiniRoomSceneStoreInput, scene: RoomScene): Record<string, AvatarState> {
+function createInitialAvatars(
+  input: UseMiniRoomSceneStoreInput,
+  scene: RoomScene
+): Record<string, AvatarState> {
   const localSpawn = scene.spawnPoints.find((point) => point.role === "local") ?? scene.spawnPoints[0]
   const partnerSpawn = scene.spawnPoints.find((point) => point.role === "partner") ?? scene.spawnPoints[1]
+  const { local, partner } = input.participantAvatarSnapshots
 
   return {
     [input.localUser.userId]: {
       userId: input.localUser.userId,
-      displayName: input.localUser.displayName,
+      displayName: local.displayName,
       x: localSpawn.x,
       y: localSpawn.y,
       facing: localSpawn.facing,
       motion: "idle",
-      appearance: {
-        base: "female_base_01",
-        fullBodyAsset: miniRoomAssets.avatars.localGirl
-      }
+      appearance: local.appearance
     },
     [input.partnerUser.userId]: {
       userId: input.partnerUser.userId,
-      displayName: input.partnerUser.displayName,
+      displayName: partner.displayName,
       x: partnerSpawn.x,
       y: partnerSpawn.y,
       facing: partnerSpawn.facing,
       motion: "idle",
-      appearance: {
-        base: "male_base_01",
-        fullBodyAsset: miniRoomAssets.avatars.partnerBoy
-      }
+      appearance: partner.appearance
     }
   }
 }
@@ -114,7 +113,14 @@ export function useMiniRoomSceneStore(input: UseMiniRoomSceneStoreInput): MiniRo
 
   useEffect(() => {
     setAvatars(createInitialAvatars(input, scene))
-  }, [input.localUser.displayName, input.localUser.userId, input.partnerUser.displayName, input.partnerUser.userId, scene])
+  }, [
+    input.localUser.displayName,
+    input.localUser.userId,
+    input.participantAvatarSnapshots,
+    input.partnerUser.displayName,
+    input.partnerUser.userId,
+    scene
+  ])
 
   useEffect(() => {
     return () => {

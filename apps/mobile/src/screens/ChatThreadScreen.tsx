@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { useChatStore } from "../features/chat/chatStore"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { ReportModal } from "../components/ReportModal"
+import { readCandidateAvatarSnapshot } from "../components/DiscoverCard"
 import { Avatar } from "../ui/avatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
@@ -83,6 +84,10 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
 
   const partnerName = partnerSummary?.displayName ?? pendingPartnerName ?? "Someone"
   const partnerUserId = partnerSummary?.userId ?? pendingPartnerId ?? ""
+  const partnerAvatarSnapshot = readCandidateAvatarSnapshot(partnerSummary, {
+    userId: partnerUserId || partnerName,
+    displayName: partnerName
+  })
 
   // Request messages from server when entering thread
   useEffect(() => {
@@ -137,10 +142,14 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
           userId: sessionActor.profile.userId,
           displayName: sessionActor.profile.displayName
         },
-        partner: { userId: partnerUserId, displayName: partnerName }
+        partner: {
+          userId: partnerUserId,
+          displayName: partnerName,
+          avatarSnapshot: partnerAvatarSnapshot
+        }
       }
     })
-  }, [navigation, partnerName, partnerUserId, sessionActor])
+  }, [navigation, partnerAvatarSnapshot, partnerName, partnerUserId, sessionActor])
 
   const handleSendInvite = useCallback((): void => {
     if (!resolvedThreadId || !currentUserId) return
@@ -223,7 +232,17 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
           }
           rightSlot={
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Avatar name={partnerName} seed={partnerUserId} size={34} ring="soft" />
+              <View style={styles.headerAvatarWrap}>
+                <Avatar
+                  name={partnerAvatarSnapshot.displayName}
+                  seed={partnerAvatarSnapshot.previewSeed}
+                  size={34}
+                  ring="soft"
+                />
+                {partnerAvatarSnapshot.source === "preview_fallback" ? (
+                  <Text style={styles.headerAvatarSource}>Preview</Text>
+                ) : null}
+              </View>
               <Pressable
                 onPress={() => setReportVisible(true)}
                 hitSlop={8}
@@ -249,7 +268,17 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
         >
           {messages.length === 0 || isPendingThread ? (
             <View style={styles.emptyChat}>
-              <Avatar name={partnerName} seed={partnerUserId} size={72} ring="soft" />
+              <Avatar
+                name={partnerAvatarSnapshot.displayName}
+                seed={partnerAvatarSnapshot.previewSeed}
+                size={72}
+                ring="soft"
+              />
+              {partnerAvatarSnapshot.source === "preview_fallback" ? (
+                <Text style={styles.emptyAvatarSource}>
+                  {partnerAvatarSnapshot.label}
+                </Text>
+              ) : null}
               <Text style={styles.emptyChatTitle}>
                 {isPendingThread ? "Opening thread..." : "Start of your conversation"}
               </Text>
@@ -292,20 +321,24 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                       ]}
                     >
                     {!isMe ? (
-                      <Avatar name={partnerName} seed={partnerUserId} size={28} />
+                      <Avatar
+                        name={partnerAvatarSnapshot.displayName}
+                        seed={partnerAvatarSnapshot.previewSeed}
+                        size={28}
+                      />
                     ) : null}
                     {isInvite ? (
                       <View style={inviteStyles.card}>
                         <View style={inviteStyles.headerRow}>
                           <View style={inviteStyles.iconCircle}>
-                            <Text style={inviteStyles.iconText}>🎥</Text>
+                            <Text style={inviteStyles.iconText}>⌂</Text>
                           </View>
                           <View style={inviteStyles.headerText}>
                             <Text style={inviteStyles.title}>
-                              {isMe ? "Odaya davet gönderdin" : `${partnerName} seni odaya davet etti`}
+                              {isMe ? "MiniRoom invite sent" : `${partnerName} invited you to MiniRoom`}
                             </Text>
                             <Text style={inviteStyles.subtitle}>
-                              Canlı mini-oda · yüz yüze konuşma
+                              Shared avatar room after mutual match
                             </Text>
                           </View>
                         </View>
@@ -316,7 +349,7 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                             pressed ? inviteStyles.joinButtonPressed : null
                           ]}
                         >
-                          <Text style={inviteStyles.joinButtonText}>Odaya Gir →</Text>
+                          <Text style={inviteStyles.joinButtonText}>Enter MiniRoom →</Text>
                         </Pressable>
                         <Text style={inviteStyles.time}>
                           {formatMessageTime(item.sentAt)}
@@ -369,7 +402,7 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                   pressed ? styles.inviteButtonPressed : null
                 ]}
               >
-                <Text style={styles.inviteButtonIcon}>🎥</Text>
+                <Text style={styles.inviteButtonIcon}>⌂</Text>
               </Pressable>
               <TextInput
                 style={styles.input}
@@ -414,6 +447,15 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1
   },
+  headerAvatarWrap: {
+    alignItems: "center",
+    gap: 2
+  },
+  headerAvatarSource: {
+    color: uiTheme.colors.textMuted,
+    fontSize: 8,
+    fontWeight: "800"
+  },
   messageListContainer: {
     flex: 1,
     paddingVertical: uiTheme.spacing.md
@@ -441,6 +483,11 @@ const styles = StyleSheet.create({
     fontSize: uiTheme.typography.subheading,
     fontWeight: "800",
     marginTop: uiTheme.spacing.sm
+  },
+  emptyAvatarSource: {
+    color: uiTheme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800"
   },
   emptyChatBody: {
     color: uiTheme.colors.textSecondary,

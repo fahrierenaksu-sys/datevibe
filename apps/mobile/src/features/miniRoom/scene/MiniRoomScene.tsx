@@ -24,7 +24,10 @@ import { MiniRoomHud } from "./MiniRoomHud"
 import { MiniRoomRoomDecorLayer } from "./MiniRoomRoomDecorLayer"
 import { RoomMapLayer } from "./RoomMapLayer"
 import { useMiniRoomSceneStore } from "./miniRoomSceneStore"
-import type { RoomPhrase } from "./miniRoomSceneTypes"
+import type {
+  MiniRoomParticipantAvatarSnapshots,
+  RoomPhrase
+} from "./miniRoomSceneTypes"
 
 interface MiniRoomSceneProps {
   localUser: {
@@ -35,6 +38,7 @@ interface MiniRoomSceneProps {
     userId: string
     displayName: string
   }
+  participantAvatarSnapshots: MiniRoomParticipantAvatarSnapshots
   connectionStatus: MiniRoomConnectionStatus
   localMedia: MiniRoomLocalMediaState
   roomDecorScene?: ResolvedRoomV2Scene
@@ -42,9 +46,9 @@ interface MiniRoomSceneProps {
   canSendReaction: boolean
   leaveDisabled: boolean
   onLeave: () => void
+  onOpenSafety: () => void
   onRetryConnect: () => void
   onToggleMic: () => void
-  onToggleCamera: () => void
   onSendReaction: (reaction: ReactionType) => void
   inRoomMessages: InRoomChatMessageEvent[]
   consumeInRoomMessage: (messageId: string) => void
@@ -67,6 +71,7 @@ export function MiniRoomScene(props: MiniRoomSceneProps) {
   const {
     localUser,
     partnerUser,
+    participantAvatarSnapshots,
     connectionStatus,
     localMedia,
     roomDecorScene,
@@ -74,16 +79,20 @@ export function MiniRoomScene(props: MiniRoomSceneProps) {
     canSendReaction,
     leaveDisabled,
     onLeave,
+    onOpenSafety,
     onRetryConnect,
     onToggleMic,
-    onToggleCamera,
     onSendReaction,
     inRoomMessages,
     consumeInRoomMessage,
     canChatSend,
     onSendRoomMessage
   } = props
-  const store = useMiniRoomSceneStore({ localUser, partnerUser })
+  const store = useMiniRoomSceneStore({
+    localUser,
+    partnerUser,
+    participantAvatarSnapshots
+  })
   const handledReactionIds = useRef(new Set<string>())
   const [stageSize, setStageSize] = useState({
     width: ROOM_STAGE_SIZE,
@@ -302,9 +311,9 @@ export function MiniRoomScene(props: MiniRoomSceneProps) {
           canSendReaction={canSendReaction}
           leaveDisabled={leaveDisabled}
           onLeave={onLeave}
+          onOpenSafety={onOpenSafety}
           onRetryConnect={onRetryConnect}
           onToggleMic={onToggleMic}
-          onToggleCamera={onToggleCamera}
           onSendReaction={handleSendReaction}
         />
       </SafeAreaView>
