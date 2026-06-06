@@ -21,23 +21,23 @@ interface WelcomeScreenProps {
 const STEPS = [
   {
     icon: "◎",
-    title: "Discover nearby",
-    body: "See who's around you right now. Avatars, not photos — it's about presence, not appearance."
+    title: "Lead with your avatar",
+    body: "Your DateVibe identity starts as an avatar, a name, and a vibe. No photo grid, no generic profile stack."
   },
   {
     icon: "✺",
-    title: "Mini rooms",
-    body: "When two people vibe, a private mini room opens. A short, real-time moment together."
+    title: "Make a room yours",
+    body: "Customize your personal room with decor you own. It is the cozy space people remember after they meet you."
   },
   {
     icon: "♡",
-    title: "Save the moment",
-    body: "After a room, decide to save or pass. Mutual saves create a private thread."
+    title: "Match into a private room",
+    body: "When mutual interest lands, the conversation moves toward a shared mini room instead of endless profile browsing."
   },
   {
     icon: "✦",
     title: "Express yourself",
-    body: "Earn coins from matches and rooms. Spend them on hats, frames, and effects in the Avatar Shop."
+    body: "Unlock avatar wearables and room decor the app can actually show. Your look and your room should feel like yours."
   }
 ]
 
@@ -120,7 +120,7 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
             ]}
           >
             <Text style={styles.primaryButtonText}>
-              {isLast ? "Get Started" : "Next"}
+              {isLast ? "Build my vibe" : "Next"}
             </Text>
           </Pressable>
 

@@ -66,10 +66,10 @@ export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
               <View style={styles.heroText}>
                 <Text style={styles.eyebrow}>Welcome to DateVibe</Text>
                 <Text style={styles.headline}>
-                  Real people.{"\n"}Right here. Right now.
+                  Your avatar.{"\n"}Your room. Your vibe.
                 </Text>
                 <Text style={styles.subhead}>
-                  We pair you with someone nearby for a short, real mini-chat. Bring your vibe.
+                  Set your name and vibe first. Your avatar and room become the way people meet you across DateVibe.
                 </Text>
               </View>
             </View>
@@ -108,7 +108,7 @@ export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
               <View style={styles.vibeGroup}>
                 <Text style={styles.vibeLabel}>Pick a vibe</Text>
                 <Text style={styles.vibeHelper}>
-                  This becomes your profile color until you add a photo.
+                  This gives your avatar-first profile its first mood. You can customize your look and room next.
                 </Text>
                 <VibeTilePicker
                   selectedId={selectedPreset}
@@ -136,12 +136,12 @@ export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.ctaText}>Start discovering</Text>
+                  <Text style={styles.ctaText}>Enter DateVibe</Text>
                 )}
               </Pressable>
 
               <Text style={styles.footnote}>
-                By continuing, you agree to DateVibe's community rules. Be kind. Be real.
+                Be kind in rooms, chats, and matches. DateVibe is built for avatar-first presence, not photo judging.
               </Text>
             </View>
           </ScrollView>
