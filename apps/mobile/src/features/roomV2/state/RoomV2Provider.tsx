@@ -9,6 +9,7 @@ import {
 } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { MOCK_USER_ROOM_V2_DECOR } from "../roomV2.mock"
+import { useInventoryStore } from "../../inventory/inventoryStore"
 import type {
   PlacedRoomItem,
   UserRoomDecor
@@ -35,10 +36,13 @@ interface RoomV2ProviderProps {
 }
 
 export function RoomV2Provider({ children }: RoomV2ProviderProps) {
+  const inventoryStore = useInventoryStore()
   const [userRoomDecor, setUserRoomDecorState] = useState<UserRoomDecor>(
     createDefaultRoomV2Decor
   )
   const [hasHydratedPersistedDecor, setHasHydratedPersistedDecor] = useState(false)
+  const ownedRoomItemIds = inventoryStore.inventory.ownedRoomItemIds
+  const ownedRoomItemIdKey = ownedRoomItemIds.join("|")
 
   useEffect(() => {
     let mounted = true
@@ -66,28 +70,48 @@ export function RoomV2Provider({ children }: RoomV2ProviderProps) {
   }, [])
 
   useEffect(() => {
+    setUserRoomDecorState((current) =>
+      sanitizeRoomV2DecorForOwnership(current, ownedRoomItemIds)
+    )
+  }, [ownedRoomItemIdKey])
+
+  useEffect(() => {
     if (!hasHydratedPersistedDecor) return
+    const sanitizedDecor = sanitizeRoomV2DecorForOwnership(
+      userRoomDecor,
+      ownedRoomItemIds
+    )
     void AsyncStorage.setItem(
       ROOM_V2_DECOR_STORAGE_KEY,
-      JSON.stringify(userRoomDecor)
+      JSON.stringify(sanitizedDecor)
     ).catch(() => {
       // Keep room editing responsive even if local persistence fails.
     })
-  }, [hasHydratedPersistedDecor, userRoomDecor])
+  }, [hasHydratedPersistedDecor, ownedRoomItemIdKey, userRoomDecor])
 
   const setUserRoomDecor = useCallback((nextDecor: UserRoomDecor): void => {
-    setUserRoomDecorState(copyRoomV2Decor(nextDecor))
-  }, [])
+    setUserRoomDecorState(sanitizeRoomV2DecorForOwnership(
+      nextDecor,
+      ownedRoomItemIds
+    ))
+  }, [ownedRoomItemIdKey])
 
   const resetRoomDecor = useCallback((): void => {
-    setUserRoomDecorState(createDefaultRoomV2Decor())
-  }, [])
+    setUserRoomDecorState(sanitizeRoomV2DecorForOwnership(
+      createDefaultRoomV2Decor(),
+      ownedRoomItemIds
+    ))
+  }, [ownedRoomItemIdKey])
 
   const addPlacedItem = useCallback((item: PlacedRoomItem): void => {
+    if (!ownedRoomItemIds.includes(item.itemId)) return
     setUserRoomDecorState((current) =>
-      appendRoomV2PlacedItem(current, item)
+      appendRoomV2PlacedItem(
+        sanitizeRoomV2DecorForOwnership(current, ownedRoomItemIds),
+        item
+      )
     )
-  }, [])
+  }, [ownedRoomItemIdKey])
 
   const updatePlacedItem = useCallback(
     (instanceId: string, patch: Partial<PlacedRoomItem>): void => {
@@ -106,14 +130,17 @@ export function RoomV2Provider({ children }: RoomV2ProviderProps) {
 
   const value = useMemo<RoomV2ContextValue>(
     () => ({
-      userRoomDecor,
+      userRoomDecor: sanitizeRoomV2DecorForOwnership(
+        userRoomDecor,
+        ownedRoomItemIds
+      ),
       setUserRoomDecor,
       resetRoomDecor,
       addPlacedItem,
       updatePlacedItem,
       removePlacedItem
     }),
-    [userRoomDecor, setUserRoomDecor, resetRoomDecor, addPlacedItem, updatePlacedItem, removePlacedItem]
+    [userRoomDecor, ownedRoomItemIdKey, setUserRoomDecor, resetRoomDecor, addPlacedItem, updatePlacedItem, removePlacedItem]
   )
 
   return (
@@ -140,6 +167,21 @@ export function copyRoomV2Decor(decor: UserRoomDecor): UserRoomDecor {
     ...decor,
     placedItems: Array.isArray(decor.placedItems)
       ? decor.placedItems.map((item) => ({ ...item }))
+      : []
+  }
+}
+
+export function sanitizeRoomV2DecorForOwnership(
+  decor: UserRoomDecor,
+  ownedRoomItemIds: string[]
+): UserRoomDecor {
+  const ownedItemIds = new Set(ownedRoomItemIds)
+  return {
+    ...decor,
+    placedItems: Array.isArray(decor.placedItems)
+      ? decor.placedItems
+        .filter((item) => ownedItemIds.has(item.itemId))
+        .map((item) => ({ ...item }))
       : []
   }
 }

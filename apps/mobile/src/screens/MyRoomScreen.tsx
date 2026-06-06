@@ -23,6 +23,7 @@ import type {
   PlacedRoomItem,
   RoomFurnitureRotation
 } from "../features/roomV2/roomV2.types"
+import { useInventoryStore } from "../features/inventory/inventoryStore"
 import type { SessionActor } from "../features/session/sessionApi"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 
@@ -36,13 +37,12 @@ type MyRoomScreenProps = MyRoomNavProps & {
 }
 
 const MY_ROOM_STAGE_CAMERA = {
-  rendererWidth: "164%"
+  rendererWidth: "174%"
 } as const
 
 export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
   const { userRoomDecor } = useRoomV2()
   const { avatar, catalog } = useAvatarV2()
-
 
   const roomScene = useMemo(
     () =>
@@ -121,13 +121,13 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
         </View>
 
         <View style={styles.actions}>
-          <Pressable style={styles.actionButton} onPress={() => navigation.navigate("WardrobeV2")}>
+          <Pressable style={styles.actionButtonPrimary} onPress={() => navigation.navigate("WardrobeV2")}>
             <Ionicons name="shirt" size={20} color="#FF4F98" />
-            <Text style={styles.actionText}>Wardrobe</Text>
+            <Text style={styles.actionTextPrimary}>Wardrobe</Text>
           </Pressable>
-          <Pressable style={styles.actionButtonPrimary} onPress={() => navigation.navigate("MyRoomV2Preview")}>
-            <Ionicons name="brush" size={20} color="#FFFFFF" />
-            <Text style={styles.actionTextPrimary}>Edit Room</Text>
+          <Pressable style={styles.actionButton} onPress={() => navigation.navigate("MyRoomV2Preview")}>
+            <Ionicons name="brush" size={20} color="#FF4F98" />
+            <Text style={styles.actionText}>Edit Room</Text>
           </Pressable>
           <Pressable style={styles.actionButton} onPress={() => navigation.navigate("RoomShop")}>
             <Ionicons name="sparkles" size={20} color="#FF4F98" />
@@ -143,15 +143,17 @@ type RoomShopScreenProps = NativeStackScreenProps<RootStackParamList, "RoomShop"
 
 export function RoomShopScreen({ navigation }: RoomShopScreenProps) {
   const { addPlacedItem } = useRoomV2()
+  const { ownsRoomItem } = useInventoryStore()
   const [lastAddedItemId, setLastAddedItemId] = useState<string | null>(null)
 
   const addFurnitureToRoom = useCallback(
     (item: FurnitureItem): void => {
+      if (!ownsRoomItem(item.id)) return
       const placedItem = createRoomShopPlacedItem(item)
       addPlacedItem(placedItem)
       setLastAddedItemId(item.id)
     },
-    [addPlacedItem]
+    [addPlacedItem, ownsRoomItem]
   )
 
   return (
@@ -182,6 +184,7 @@ export function RoomShopScreen({ navigation }: RoomShopScreenProps) {
         <View style={styles.shopGrid}>
           {ROOM_V2_FURNITURE_CATALOG.map((item) => {
             const justAdded = lastAddedItemId === item.id
+            const owned = ownsRoomItem(item.id)
             return (
               <View key={item.id} style={styles.shopCard}>
                 <FurniturePreviewImage item={item} />
@@ -192,19 +195,21 @@ export function RoomShopScreen({ navigation }: RoomShopScreenProps) {
                   {item.category}
                 </Text>
                 <Pressable
+                  disabled={!owned}
                   style={[
                     styles.addDecorButton,
-                    justAdded ? styles.addDecorButtonAdded : null
+                    justAdded ? styles.addDecorButtonAdded : null,
+                    !owned ? styles.addDecorButtonDisabled : null
                   ]}
                   onPress={() => addFurnitureToRoom(item)}
                 >
                   <Ionicons
-                    name={justAdded ? "checkmark" : "add"}
+                    name={!owned ? "lock-closed" : justAdded ? "checkmark" : "add"}
                     size={16}
                     color="#FFFFFF"
                   />
                   <Text style={styles.addDecorButtonText}>
-                    {justAdded ? "Added" : "Add"}
+                    {!owned ? "Locked" : justAdded ? "Added" : "Add"}
                   </Text>
                 </Pressable>
               </View>
@@ -291,42 +296,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.12)"
   },
-  placeholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28
-  },
-  placeholderIcon: {
-    width: 78,
-    height: 78,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)"
-  },
-  placeholderTitle: {
-    marginTop: 20,
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "900",
-    textAlign: "center"
-  },
-  placeholderCopy: {
-    marginTop: 10,
-    color: "rgba(255,255,255,0.68)",
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 20,
-    textAlign: "center"
-  },
   actions: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingTop: 14,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 10
   },
   actionButton: {
@@ -334,11 +308,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    minHeight: 52,
-    paddingHorizontal: 8,
-    borderRadius: 19,
-    backgroundColor: "#FFF1F7",
+    gap: 5,
+    minHeight: 54,
+    paddingHorizontal: 6,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 241, 247, 0.94)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.58)",
     shadowColor: "#FF4F98",
@@ -352,11 +326,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    minHeight: 52,
-    paddingHorizontal: 8,
-    borderRadius: 19,
-    backgroundColor: "#FF4F98",
+    gap: 5,
+    minHeight: 54,
+    paddingHorizontal: 6,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#FF7AB8",
     shadowColor: "#FF4F98",
     shadowOpacity: 0.28,
     shadowRadius: 16,
@@ -369,30 +345,9 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   actionTextPrimary: {
-    color: "#FFFFFF",
+    color: "#B8175E",
     fontSize: 13,
     fontWeight: "900"
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28
-  },
-  emptyTitle: {
-    marginTop: 16,
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "900",
-    textAlign: "center"
-  },
-  emptyCopy: {
-    marginTop: 10,
-    color: "rgba(255,255,255,0.68)",
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 20,
-    textAlign: "center"
   },
   shopContent: {
     paddingHorizontal: 16,
@@ -488,6 +443,9 @@ const styles = StyleSheet.create({
   addDecorButtonAdded: {
     backgroundColor: "#31B67A"
   },
+  addDecorButtonDisabled: {
+    opacity: 0.54
+  },
   addDecorButtonText: {
     color: "#FFFFFF",
     fontSize: 13,
@@ -495,14 +453,14 @@ const styles = StyleSheet.create({
   },
   stageCard: {
     marginHorizontal: 14,
-    height: 430,
+    height: 456,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    borderRadius: 30,
+    borderRadius: 32,
     backgroundColor: "#080715",
     borderWidth: 1,
-    borderColor: "rgba(255, 183, 217, 0.18)",
+    borderColor: "rgba(255, 183, 217, 0.28)",
     shadowColor: "#000000",
     shadowOpacity: 0.34,
     shadowRadius: 22,
@@ -522,11 +480,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: 86,
-    backgroundColor: "rgba(255, 111, 174, 0.09)"
+    height: 104,
+    backgroundColor: "rgba(255, 111, 174, 0.12)"
   },
   stageRenderer: {
-    backgroundColor: "#0B0815"
+    backgroundColor: "#0B0815",
+    transform: [{ translateY: 12 }]
   },
   stageHeaderPill: {
     position: "absolute",
@@ -560,32 +519,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "900"
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 14
-  },
-  statCard: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)"
-  },
-  statValue: {
-    marginTop: 6,
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "900"
-  },
-  statLabel: {
-    marginTop: 2,
-    color: "rgba(255,255,255,0.62)",
-    fontSize: 11,
-    fontWeight: "800"
   }
 })

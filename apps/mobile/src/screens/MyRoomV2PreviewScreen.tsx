@@ -1,9 +1,10 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { useMemo, useState, useCallback } from "react"
+import { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import { Pressable, StyleSheet, Text, View, Image, ScrollView, type LayoutChangeEvent, type GestureResponderEvent } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { RoomRenderer2D } from "../features/roomV2/components/RoomRenderer2D"
+import { useInventoryStore } from "../features/inventory/inventoryStore"
 import {
   DEFAULT_ROOM_V2_SHELL_ID,
   ROOM_V2_FURNITURE_CATALOG,
@@ -28,8 +29,11 @@ type MyRoomV2PreviewScreenProps = NativeStackScreenProps<
 >
 
 export function MyRoomV2PreviewScreen(props: MyRoomV2PreviewScreenProps) {
-  const { navigation } = props
+  const { navigation, route } = props
   const { userRoomDecor, setUserRoomDecor } = useRoomV2()
+  const { ownsRoomItem } = useInventoryStore()
+  const placementItemId = route.params?.placementItemId
+  const hasAppliedPlacementIntent = useRef(false)
   
   const [draftDecor, setDraftDecor] = useState(() => copyRoomV2Decor(userRoomDecor))
   
@@ -133,8 +137,12 @@ export function MyRoomV2PreviewScreen(props: MyRoomV2PreviewScreenProps) {
     hapticSuccess()
   }, [selectedInstanceId])
 
-  const handleAddItem = useCallback((itemId: string) => {
-    hapticLight()
+  const addDraftItem = useCallback((itemId: string, feedback: boolean): boolean => {
+    if (!ownsRoomItem(itemId)) {
+      if (feedback) hapticError()
+      return false
+    }
+    if (feedback) hapticLight()
     const instanceId = `${itemId}_${Date.now()}`
     setDraftDecor(current => appendRoomV2PlacedItem(current, {
       instanceId,
@@ -144,7 +152,20 @@ export function MyRoomV2PreviewScreen(props: MyRoomV2PreviewScreenProps) {
       rotation: "front"
     }))
     setSelectedInstanceId(instanceId)
-  }, [])
+    return true
+  }, [ownsRoomItem])
+
+  const handleAddItem = useCallback((itemId: string) => {
+    addDraftItem(itemId, true)
+  }, [addDraftItem])
+
+  useEffect(() => {
+    if (!placementItemId || hasAppliedPlacementIntent.current) return
+    hasAppliedPlacementIntent.current = true
+    if (addDraftItem(placementItemId, false)) {
+      hapticSuccess()
+    }
+  }, [addDraftItem, placementItemId])
 
   const handleSave = useCallback(() => {
     hapticSuccess()
@@ -233,19 +254,33 @@ export function MyRoomV2PreviewScreen(props: MyRoomV2PreviewScreenProps) {
             </Pressable>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.inventoryScroll}>
-            {ROOM_V2_FURNITURE_CATALOG.map((item) => (
-              <View key={item.id} style={styles.inventoryItemContainer}>
-                <Pressable
-                  onPress={() => handleAddItem(item.id)}
-                  style={({ pressed }) => [
-                    styles.inventoryItem,
-                    pressed && styles.inventoryItemPressed
-                  ]}
-                >
-                  <Image source={item.asset.source} style={styles.inventoryItemImage} resizeMode="contain" />
-                </Pressable>
-              </View>
-            ))}
+            {ROOM_V2_FURNITURE_CATALOG.map((item) => {
+              const owned = ownsRoomItem(item.id)
+              return (
+                <View key={item.id} style={styles.inventoryItemContainer}>
+                  <Pressable
+                    disabled={!owned}
+                    onPress={() => handleAddItem(item.id)}
+                    style={({ pressed }) => [
+                      styles.inventoryItem,
+                      !owned ? styles.inventoryItemLocked : null,
+                      pressed && owned ? styles.inventoryItemPressed : null
+                    ]}
+                  >
+                    <Image
+                      source={item.asset.source}
+                      style={styles.inventoryItemImage}
+                      resizeMode="contain"
+                    />
+                    {!owned ? (
+                      <View style={styles.inventoryItemLock}>
+                        <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                </View>
+              )
+            })}
           </ScrollView>
         </View>
       </SafeAreaView>
@@ -406,6 +441,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 10
   },
+  inventoryItemLocked: {
+    opacity: 0.46
+  },
   inventoryItemPressed: {
     backgroundColor: "rgba(255,255,255,0.12)",
     borderColor: "rgba(255,255,255,0.2)",
@@ -414,5 +452,18 @@ const styles = StyleSheet.create({
   inventoryItemImage: {
     width: "100%",
     height: "100%"
+  },
+  inventoryItemLock: {
+    position: "absolute",
+    right: 6,
+    top: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)"
   }
 })

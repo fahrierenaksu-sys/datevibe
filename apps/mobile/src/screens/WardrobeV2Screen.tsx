@@ -20,6 +20,7 @@ import type {
   AvatarItemType
 } from "../features/avatarV2/avatarV2.types"
 import { useAvatarV2 } from "../features/avatarV2/state/AvatarV2Provider"
+import { buildAvatarShopCatalogItem } from "../features/shop/shopCatalog"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { hapticError, hapticLight, hapticSuccess } from "../ui/haptics"
 import { uiTheme } from "../ui/theme"
@@ -42,7 +43,7 @@ const CATEGORY_ICONS: Record<AvatarItemType, keyof typeof Ionicons.glyphMap> = {
 export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
   const { navigation } = props
   const [activeType, setActiveType] = useState<AvatarItemType>("hair")
-  const { avatar, catalog, canEquipItem, equipItem } = useAvatarV2()
+  const { avatar, catalog, inventory, canEquipItem, equipItem } = useAvatarV2()
 
   const activeItems = useMemo(
     () => getAvatarV2ItemsByType(catalog, activeType),
@@ -143,6 +144,11 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
 
           <View style={styles.grid}>
             {activeItems.map((item) => {
+              const catalogItem = buildAvatarShopCatalogItem({
+                item,
+                avatar,
+                inventory
+              })
               const canEquip = canEquipItem(item)
               const locked = !canEquip
               const equipped = isAvatarV2ItemEquipped(avatar, item)
@@ -180,11 +186,7 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                     ]}
                     numberOfLines={1}
                   >
-                    {equipped
-                      ? "Equipped"
-                      : locked
-                        ? `${item.mockPriceCoins?.toLocaleString() ?? "Locked"} coins`
-                        : "Owned"}
+                    {catalogItem.stateLabel}
                   </Text>
                 </Pressable>
               )

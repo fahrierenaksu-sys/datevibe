@@ -86,6 +86,8 @@ export interface FurnitureItem {
   blocksMovement?: boolean
   interactionType?: FurnitureInteractionType
   seatPoints?: RoomSeatPoint[]
+  ownedByDefault?: boolean
+  locked?: boolean
 }
 
 export interface PlacedRoomItem {

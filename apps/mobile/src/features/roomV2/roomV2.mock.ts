@@ -37,7 +37,8 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     height: 0.29,
     footprint: { width: 0.13, height: 0.08 },
     blocksMovement: true,
-    interactionType: "seat"
+    interactionType: "seat",
+    ownedByDefault: true
   },
   {
     id: "room_v2_table_round",
@@ -49,7 +50,8 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     height: 0.2,
     footprint: { width: 0.12, height: 0.08 },
     blocksMovement: true,
-    interactionType: "decor"
+    interactionType: "decor",
+    ownedByDefault: true
   },
   {
     id: "room_v2_lamp_heart",
@@ -59,7 +61,8 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     layer: "furniture",
     width: 0.08,
     height: 0.28,
-    interactionType: "decor"
+    interactionType: "decor",
+    ownedByDefault: true
   },
   {
     id: "room_v2_cozy_bed",
@@ -72,7 +75,8 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     anchor: { x: 0.5, y: 0.85 },
     footprint: { width: 0.3, height: 0.2 },
     blocksMovement: true,
-    interactionType: "seat"
+    interactionType: "seat",
+    locked: true
   },
   {
     id: "room_v2_cute_bookshelf",
@@ -85,7 +89,8 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     anchor: { x: 0.5, y: 0.88 },
     footprint: { width: 0.18, height: 0.08 },
     blocksMovement: true,
-    interactionType: "decor"
+    interactionType: "decor",
+    locked: true
   },
   {
     id: "room_v2_heart_rug",
@@ -97,7 +102,8 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     height: 0.15,
     anchor: { x: 0.5, y: 0.75 },
     blocksMovement: false,
-    interactionType: "decor"
+    interactionType: "decor",
+    ownedByDefault: true
   },
   {
     id: "room_v2_side_table",
@@ -110,7 +116,8 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     anchor: { x: 0.5, y: 0.85 },
     footprint: { width: 0.12, height: 0.08 },
     blocksMovement: true,
-    interactionType: "decor"
+    interactionType: "decor",
+    locked: true
   }
 ]
 
@@ -139,31 +146,10 @@ export const MOCK_USER_ROOM_V2_DECOR: UserRoomDecor = {
       rotation: "front"
     },
     {
-      instanceId: "room_v2_placed_bed_01",
-      itemId: "room_v2_cozy_bed",
-      x: 0.75,
-      y: 0.50,
-      rotation: "front"
-    },
-    {
-      instanceId: "room_v2_placed_bookshelf_01",
-      itemId: "room_v2_cute_bookshelf",
-      x: 0.25,
-      y: 0.50,
-      rotation: "front"
-    },
-    {
       instanceId: "room_v2_placed_rug_01",
       itemId: "room_v2_heart_rug",
       x: 0.75,
       y: 0.60,
-      rotation: "front"
-    },
-    {
-      instanceId: "room_v2_placed_sidetable_01",
-      itemId: "room_v2_side_table",
-      x: 0.85,
-      y: 0.75,
       rotation: "front"
     }
   ]
