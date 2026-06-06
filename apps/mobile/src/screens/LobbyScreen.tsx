@@ -60,8 +60,6 @@ import {
   TopBar
 } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
-import { useChatStore } from "../features/chat/chatStore"
-import { BottomNav, type BottomNavKey } from "../ui/bottomNav"
 import { isDemoMode } from "../features/demo/demoStore"
 import { DemoLobbyView } from "./DemoLobbyView"
 
@@ -169,7 +167,6 @@ export function LobbyScreen(props: LobbyScreenProps) {
   const myUserId = sessionActor.profile.userId
   const myDisplayName = sessionActor.profile.displayName
   const { saved: savedConnections, skipped: skippedConnections } = useSavedConnections()
-  const { threads: chatThreads, totalUnreadCount } = useChatStore()
   const [seenThisSessionUserIds, setSeenThisSessionUserIds] = useState<Set<string>>(
     () => new Set()
   )
@@ -754,7 +751,6 @@ export function LobbyScreen(props: LobbyScreenProps) {
     () => nearbyUsers.filter((u) => !u.blocked).length,
     [nearbyUsers]
   )
-  const savedCount = savedConnections.length
   const discoverableCount = discoverDeck.length
   const pendingInviteCount = pendingInvites.length
   const pendingInviteRemainingSeconds =
@@ -780,19 +776,6 @@ export function LobbyScreen(props: LobbyScreenProps) {
       : nearbyCount > 0
         ? "You've seen everyone nearby for now"
         : null
-
-  const handleBottomNavPress = useCallback(
-    (key: BottomNavKey): void => {
-      if (key === "saved") {
-        navigation.navigate("SavedConnections")
-      } else if (key === "chats") {
-        navigation.navigate("Inbox")
-      } else if (key === "profile") {
-        navigation.navigate("You")
-      }
-    },
-    [navigation]
-  )
 
   // ── Discover Filters ──────────────────────────────────────
   const [filtersVisible, setFiltersVisible] = useState(false)
@@ -852,7 +835,7 @@ export function LobbyScreen(props: LobbyScreenProps) {
         >
           <TopBar
             title="Vibe Match"
-            subtitle="Live nearby"
+            subtitle="Nearby now"
             titleAlign="start"
             leftSlot={<BrandMark size={40} />}
             rightSlot={
@@ -998,7 +981,7 @@ export function LobbyScreen(props: LobbyScreenProps) {
                 hitSlop={6}
               >
                 <Text style={styles.demoButtonText}>
-                  ✨ Demo · Meet Irmak
+                  Preview MiniRoom flow
                 </Text>
               </Pressable>
             </>
@@ -1068,13 +1051,6 @@ export function LobbyScreen(props: LobbyScreenProps) {
           ) : null}
 
         </ScrollView>
-
-        <BottomNav
-          currentKey="discover"
-          savedCount={savedCount}
-          chatCount={totalUnreadCount || chatThreads.length}
-          onPress={handleBottomNavPress}
-        />
       </SafeAreaView>
 
       <DiscoverFiltersBottomSheet

@@ -32,7 +32,7 @@ export function ConnectionBanner(props: ConnectionBannerProps) {
   if (status === "connected" || status === "idle") return null
 
   const isError = status === "disconnected" || status === "error"
-  const label = isError ? "Reconnecting…" : "Connecting…"
+  const label = isError ? "Reconnecting to the room…" : "Connecting to the room…"
   const bg = isError ? uiTheme.colors.warning : uiTheme.colors.primarySoft
   const dotColor = isError ? "#B45309" : uiTheme.colors.primary
   const textColor = isError ? "#78350F" : uiTheme.colors.primaryDeep

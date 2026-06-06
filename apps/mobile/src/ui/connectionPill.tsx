@@ -48,7 +48,7 @@ const visualByStatus: Record<ConnectionPillStatus, PillVisual> = {
     nightText: "#7CE3B7"
   },
   disconnected: {
-    label: "Offline",
+    label: "Sync paused",
     dot: uiTheme.colors.danger,
     bg: uiTheme.colors.dangerSoft,
     text: uiTheme.colors.dangerInk,
@@ -56,7 +56,7 @@ const visualByStatus: Record<ConnectionPillStatus, PillVisual> = {
     nightText: "#FFA5B0"
   },
   error: {
-    label: "Offline",
+    label: "Sync paused",
     dot: uiTheme.colors.danger,
     bg: uiTheme.colors.dangerSoft,
     text: uiTheme.colors.dangerInk,

@@ -6,6 +6,7 @@ import { useChatStore } from "../features/chat/chatStore"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { Avatar } from "../ui/avatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
+import { MyAvatar } from "../ui/myAvatar"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 import { useSessionState } from "../features/session/useSessionState"
@@ -91,7 +92,7 @@ export function InboxScreen(props: InboxScreenProps) {
               const rawLastBody = thread.lastMessage?.body
               const lastBody =
                 rawLastBody?.trim() === "__room_invite__"
-                  ? "🎥 Odaya davet"
+                  ? "MiniRoom invite"
                   : rawLastBody
               const lastTime = formatTimeAgo(thread.lastMessage?.sentAt)
 
@@ -165,7 +166,7 @@ function EmptyInbox(props: EmptyInboxProps) {
     <View style={emptyStyles.card}>
       <View style={emptyStyles.glow} pointerEvents="none" />
       {props.myDisplayName ? (
-        <Avatar
+        <MyAvatar
           name={props.myDisplayName}
           seed={props.myUserId ?? props.myDisplayName}
           size={80}

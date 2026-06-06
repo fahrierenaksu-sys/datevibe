@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { MatchResultModal } from "../components/MatchResultModal"
+import type { CandidateAvatarSnapshot } from "../components/DiscoverCard"
 import { addCoins } from "../features/cosmetics/cosmeticStore"
 import { checkDailyReward } from "../features/rewards/dailyReward"
 import { MOBILE_WS_BASE_URL } from "../config/env"
@@ -19,7 +20,8 @@ import {
   applyChatThreadListed,
   findThreadForPartner,
   getThreads,
-  resetChatStore
+  resetChatStore,
+  useChatStore
 } from "../features/chat/chatStore"
 import { recordMutualConnection } from "../features/connections/savedConnectionsStore"
 import {
@@ -57,6 +59,7 @@ import { uiTheme } from "../ui/theme"
 import { ToastContainer, showToast } from "../ui/toast"
 import { BrandMark } from "../ui/brandMark"
 import { SoftBlobBackground } from "../ui/backgrounds"
+import { BottomNav, type BottomNavKey } from "../ui/bottomNav"
 
 export interface ReadyMiniRoomRouteParam {
   miniRoom: MiniRoom
@@ -65,7 +68,11 @@ export interface ReadyMiniRoomRouteParam {
 
 export interface MiniRoomParticipantsRouteParam {
   you: { userId: string; displayName: string }
-  partner: { userId: string; displayName: string }
+  partner: {
+    userId: string
+    displayName: string
+    avatarSnapshot?: CandidateAvatarSnapshot
+  }
 }
 
 export type RootStackParamList = {
@@ -92,7 +99,9 @@ export type RootStackParamList = {
   CosmeticShop: undefined
   ProfileEdit: undefined
   WardrobeV2: undefined
-  MyRoomV2Preview: undefined
+  MyRoomV2Preview: {
+    placementItemId?: string
+  } | undefined
   RoomV2Preview: undefined
   RoomShop: undefined
   Settings: undefined
@@ -107,6 +116,16 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 const navigationRef = createNavigationContainerRef<RootStackParamList>()
+
+function getBottomNavKeyForRoute(
+  routeName: keyof RootStackParamList | undefined
+): BottomNavKey | null {
+  if (routeName === "Lobby") return "discover"
+  if (routeName === "Inbox") return "chats"
+  if (routeName === "MyRoom") return "myroom"
+  if (routeName === "CosmeticShop") return "shop"
+  return null
+}
 
 interface GlobalMatchState {
   miniRoomId: string
@@ -126,6 +145,10 @@ export function RootNavigator() {
   const [globalMatch, setGlobalMatch] = useState<GlobalMatchState | null>(null)
   const handledMatchIdsRef = useRef(new Set<string>())
   const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null)
+  const [currentRouteName, setCurrentRouteName] = useState<
+    keyof RootStackParamList | undefined
+  >()
+  const { totalUnreadCount } = useChatStore()
 
   // Check if user has completed onboarding
   useEffect(() => {
@@ -183,6 +206,26 @@ export function RootNavigator() {
     setGlobalMatch(null)
     if (navigationRef.isReady()) {
       navigationRef.navigate("Inbox")
+    }
+  }, [])
+
+  const syncCurrentRouteName = useCallback((): void => {
+    setCurrentRouteName(
+      navigationRef.getCurrentRoute()?.name as keyof RootStackParamList | undefined
+    )
+  }, [])
+
+  const handleBottomNavPress = useCallback((key: BottomNavKey): void => {
+    setGlobalMatch(null)
+    if (!navigationRef.isReady()) return
+    if (key === "discover") {
+      navigationRef.navigate("Lobby")
+    } else if (key === "chats") {
+      navigationRef.navigate("Inbox")
+    } else if (key === "myroom") {
+      navigationRef.navigate("MyRoom")
+    } else if (key === "shop") {
+      navigationRef.navigate("CosmeticShop")
     }
   }, [])
 
@@ -318,205 +361,224 @@ export function RootNavigator() {
     )
   }
 
+  const currentBottomNavKey = sessionActor
+    ? getBottomNavKeyForRoute(currentRouteName)
+    : null
+
   return (
-    <>
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator screenOptions={{ contentStyle: styles.screenContent }}>
-        {sessionActor ? (
-          <>
+    <View style={styles.navigatorShell}>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={syncCurrentRouteName}
+        onStateChange={syncCurrentRouteName}
+      >
+        <Stack.Navigator screenOptions={{ contentStyle: styles.screenContent }}>
+          {sessionActor ? (
+            <>
+              <Stack.Screen
+                name="Lobby"
+                options={{ title: "Discover", headerShown: false }}
+              >
+                {() => (
+                  <LobbyScreen
+                    sessionActor={sessionActor}
+                    onResetSession={clearSessionActor}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="MiniRoom"
+                options={{ headerShown: false }}
+              >
+                {(screenProps) => (
+                  <MiniRoomScreen {...screenProps} sessionActor={sessionActor} />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="ProfilePreview"
+                component={ProfilePreviewScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="RoomDebrief"
+                options={{ headerShown: false, gestureEnabled: false }}
+              >
+                {(screenProps) => (
+                  <RoomDebriefScreen
+                    {...screenProps}
+                    sessionActor={sessionActor}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="SavedConnections"
+                component={SavedConnectionsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Inbox"
+                component={InboxScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="MyRoom"
+                options={{ headerShown: false }}
+              >
+                {(screenProps) => (
+                  <MyRoomScreen
+                    {...screenProps}
+                    sessionActor={sessionActor}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="WardrobeV2"
+                component={WardrobeV2Screen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="MyRoomV2Preview"
+                component={MyRoomV2PreviewScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="RoomV2Preview"
+                component={RoomV2PreviewScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="RoomShop"
+                component={RoomShopScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ChatThread"
+                options={{ headerShown: false }}
+              >
+                {(screenProps) => (
+                  <ChatThreadScreen
+                    {...screenProps}
+                    route={{
+                      ...screenProps.route,
+                      params: {
+                        ...screenProps.route.params,
+                        sendChatMessage,
+                        requestMessages
+                      }
+                    }}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="You"
+                options={{ headerShown: false }}
+              >
+                {(screenProps) => (
+                  <YouScreen
+                    {...screenProps}
+                    sessionActor={sessionActor}
+                    onResetSession={clearSessionActor}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="CosmeticShop"
+                component={CosmeticShopScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ProfileEdit"
+                options={{ headerShown: false }}
+              >
+                {(screenProps) => (
+                  <ProfileEditScreen
+                    {...screenProps}
+                    currentDisplayName={sessionActor!.profile.displayName}
+                    currentAge={sessionActor!.profile.age}
+                    currentUserId={sessionActor!.profile.userId}
+                    onSave={(displayName, age) => {
+                      // Client-side update — future: call server API
+                      sessionActor!.profile.displayName = displayName
+                      if (age !== undefined) sessionActor!.profile.age = age
+                    }}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{ headerShown: false }}
+              />
+            </>
+          ) : hasSeenWelcome === false ? (
             <Stack.Screen
-              name="Lobby"
-              options={{ title: "Discover", headerShown: false }}
+              name="Welcome"
+              options={{ headerShown: false }}
             >
               {() => (
-                <LobbyScreen
-                  sessionActor={sessionActor}
-                  onResetSession={clearSessionActor}
+                <WelcomeScreen onComplete={completeWelcome} />
+              )}
+            </Stack.Screen>
+          ) : (
+            <Stack.Screen
+              name="SessionBootstrap"
+              options={{ headerShown: false }}
+            >
+              {() => (
+                <SessionBootstrapScreen
+                  isSubmitting={isBootstrapping}
+                  errorMessage={errorMessage}
+                  onBootstrap={bootstrapSessionActor}
                 />
               )}
             </Stack.Screen>
-            <Stack.Screen
-              name="MiniRoom"
-              options={{ headerShown: false }}
-            >
-              {(screenProps) => (
-                <MiniRoomScreen {...screenProps} sessionActor={sessionActor} />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="ProfilePreview"
-              component={ProfilePreviewScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="RoomDebrief"
-              options={{ headerShown: false, gestureEnabled: false }}
-            >
-              {(screenProps) => (
-                <RoomDebriefScreen
-                  {...screenProps}
-                  sessionActor={sessionActor}
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="SavedConnections"
-              component={SavedConnectionsScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Inbox"
-              component={InboxScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="MyRoom"
-              options={{ headerShown: false }}
-            >
-              {(screenProps) => (
-                <MyRoomScreen
-                  {...screenProps}
-                  sessionActor={sessionActor}
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="WardrobeV2"
-              component={WardrobeV2Screen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="MyRoomV2Preview"
-              component={MyRoomV2PreviewScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="RoomV2Preview"
-              component={RoomV2PreviewScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="RoomShop"
-              component={RoomShopScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ChatThread"
-              options={{ headerShown: false }}
-            >
-              {(screenProps) => (
-                <ChatThreadScreen
-                  {...screenProps}
-                  route={{
-                    ...screenProps.route,
-                    params: {
-                      ...screenProps.route.params,
-                      sendChatMessage,
-                      requestMessages
+          )}
+        </Stack.Navigator>
+        {sessionActor ? (
+          <MatchResultModal
+            visible={globalMatch !== null}
+            currentUserName={sessionActor.profile.displayName}
+            matchedUserName={globalMatch?.matchedUserName ?? ""}
+            matchedUserId={globalMatch?.matchedUserId}
+            onClose={dismissGlobalMatch}
+            onViewSaved={goSavedShelf}
+            onKeepDiscovering={goLobby}
+            onSendMessage={
+              globalMatch?.matchedUserId
+                ? () => {
+                    const thread = findThreadForPartner(globalMatch.matchedUserId!)
+                    if (thread) {
+                      goChat({ threadId: thread.threadId })
+                    } else {
+                      // Thread not synced yet, navigate with partner intent
+                      goChat({
+                        partnerId: globalMatch.matchedUserId,
+                        partnerName: globalMatch.matchedUserName
+                      })
                     }
-                  }}
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="You"
-              options={{ headerShown: false }}
-            >
-              {(screenProps) => (
-                <YouScreen
-                  {...screenProps}
-                  sessionActor={sessionActor}
-                  onResetSession={clearSessionActor}
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="CosmeticShop"
-              component={CosmeticShopScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ProfileEdit"
-              options={{ headerShown: false }}
-            >
-              {(screenProps) => (
-                <ProfileEditScreen
-                  {...screenProps}
-                  currentDisplayName={sessionActor!.profile.displayName}
-                  currentAge={sessionActor!.profile.age}
-                  currentUserId={sessionActor!.profile.userId}
-                  onSave={(displayName, age) => {
-                    // Client-side update — future: call server API
-                    sessionActor!.profile.displayName = displayName
-                    if (age !== undefined) sessionActor!.profile.age = age
-                  }}
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="Settings"
-              component={SettingsScreen}
-              options={{ headerShown: false }}
-            />
-          </>
-        ) : hasSeenWelcome === false ? (
-          <Stack.Screen
-            name="Welcome"
-            options={{ headerShown: false }}
-          >
-            {() => (
-              <WelcomeScreen onComplete={completeWelcome} />
-            )}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen
-            name="SessionBootstrap"
-            options={{ headerShown: false }}
-          >
-            {() => (
-              <SessionBootstrapScreen
-                isSubmitting={isBootstrapping}
-                errorMessage={errorMessage}
-                onBootstrap={bootstrapSessionActor}
-              />
-            )}
-          </Stack.Screen>
-        )}
-      </Stack.Navigator>
-      {sessionActor ? (
-        <MatchResultModal
-          visible={globalMatch !== null}
-          currentUserName={sessionActor.profile.displayName}
-          matchedUserName={globalMatch?.matchedUserName ?? ""}
-          matchedUserId={globalMatch?.matchedUserId}
-          onClose={dismissGlobalMatch}
-          onViewSaved={goSavedShelf}
-          onKeepDiscovering={goLobby}
-          onSendMessage={
-            globalMatch?.matchedUserId
-              ? () => {
-                  const thread = findThreadForPartner(globalMatch.matchedUserId!)
-                  if (thread) {
-                    goChat({ threadId: thread.threadId })
-                  } else {
-                    // Thread not synced yet, navigate with partner intent
-                    goChat({ 
-                      partnerId: globalMatch.matchedUserId, 
-                      partnerName: globalMatch.matchedUserName 
-                    })
                   }
-                }
-              : undefined
-          }
+                : undefined
+            }
+          />
+        ) : null}
+      </NavigationContainer>
+      {currentBottomNavKey ? (
+        <BottomNav
+          currentKey={currentBottomNavKey}
+          chatCount={totalUnreadCount}
+          onPress={handleBottomNavPress}
         />
       ) : null}
-    </NavigationContainer>
-    <ToastContainer />
-    </>
+      <ToastContainer />
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  navigatorShell: {
+    flex: 1,
+    backgroundColor: uiTheme.colors.background
+  },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
