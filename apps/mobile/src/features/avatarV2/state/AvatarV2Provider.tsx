@@ -10,9 +10,9 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import {
   AVATAR_V2_CATALOG,
-  AVATAR_V2_INVENTORY,
   DEFAULT_AVATAR_V2
 } from "../avatarV2.mock"
+import { useInventoryStore } from "../../inventory/inventoryStore"
 import {
   canEquipAvatarV2Item,
   equipAvatarV2Item,
@@ -41,6 +41,7 @@ interface AvatarV2ProviderProps {
 }
 
 export function AvatarV2Provider({ children }: AvatarV2ProviderProps) {
+  const localInventory = useInventoryStore()
   const [avatar, setAvatar] = useState<UserAvatar>(() =>
     resolveAvatarV2(DEFAULT_AVATAR_V2, AVATAR_V2_CATALOG)
   )
@@ -81,9 +82,16 @@ export function AvatarV2Provider({ children }: AvatarV2ProviderProps) {
     })
   }, [avatar, hasHydratedPersistedAvatar])
 
+  const avatarInventory = useMemo<AvatarInventory>(
+    () => ({
+      ownedItemIds: localInventory.inventory.ownedAvatarItemIds
+    }),
+    [localInventory.inventory.ownedAvatarItemIds]
+  )
+
   const canEquipItem = useCallback((item: AvatarCatalogItem): boolean => {
-    return canEquipAvatarV2Item(AVATAR_V2_INVENTORY, item)
-  }, [])
+    return canEquipAvatarV2Item(avatarInventory, item)
+  }, [avatarInventory])
 
   const equipItem = useCallback(
     (item: AvatarCatalogItem): boolean => {
@@ -98,11 +106,11 @@ export function AvatarV2Provider({ children }: AvatarV2ProviderProps) {
     () => ({
       avatar,
       catalog: AVATAR_V2_CATALOG,
-      inventory: AVATAR_V2_INVENTORY,
+      inventory: avatarInventory,
       canEquipItem,
       equipItem
     }),
-    [avatar, canEquipItem, equipItem]
+    [avatar, avatarInventory, canEquipItem, equipItem]
   )
 
   return (

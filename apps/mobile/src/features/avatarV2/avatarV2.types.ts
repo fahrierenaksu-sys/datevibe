@@ -27,7 +27,6 @@ export interface AvatarCatalogItem {
   sortOrder: number
   layerOrder: number
   assets: Partial<Record<AvatarAnimationState, AvatarLayerAssetRef>>
-  mockPriceCoins?: number
   isDefault?: boolean
   ownedByDefault?: boolean
   locked?: boolean

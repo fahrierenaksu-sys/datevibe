@@ -1,13 +1,13 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { STATUS_CARD_FOUNDATION_CATALOG } from "../features/shop/shopCatalog"
 import type { SessionActor } from "../features/session/sessionApi"
 import type { RootStackParamList } from "../navigation/RootNavigator"
-import { Avatar } from "../ui/avatar"
 import { MyAvatar } from "../ui/myAvatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
 import { BrandMark } from "../ui/brandMark"
-import { TopBar, ActionButtonCircle, TagChip } from "../ui/primitives"
+import { TopBar, ActionButtonCircle } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 import { VIBE_PRESETS } from "../ui/vibeTilePicker"
 
@@ -15,6 +15,10 @@ type YouScreenProps = NativeStackScreenProps<RootStackParamList, "You"> & {
   sessionActor: SessionActor
   onResetSession: () => void
 }
+
+const PREVIEW_NAMEPLATE_ITEM = STATUS_CARD_FOUNDATION_CATALOG.find(
+  (item) => item.category === "nameplate"
+)
 
 export function YouScreen(props: YouScreenProps) {
   const { navigation, sessionActor, onResetSession } = props
@@ -53,6 +57,30 @@ export function YouScreen(props: YouScreenProps) {
               size={172}
               ring="strong"
             />
+            {PREVIEW_NAMEPLATE_ITEM ? (
+              <View
+                style={[
+                  styles.nameplatePreview,
+                  {
+                    backgroundColor: PREVIEW_NAMEPLATE_ITEM.accentSoftColor,
+                    borderColor: PREVIEW_NAMEPLATE_ITEM.accentColor
+                  }
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.nameplatePreviewText,
+                    { color: PREVIEW_NAMEPLATE_ITEM.accentColor }
+                  ]}
+                  numberOfLines={1}
+                >
+                  {PREVIEW_NAMEPLATE_ITEM.name}
+                </Text>
+                <Text style={styles.nameplatePreviewMeta} numberOfLines={1}>
+                  Preview only
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Identity */}
@@ -69,28 +97,19 @@ export function YouScreen(props: YouScreenProps) {
 
           {/* Info cards */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Identity</Text>
+            <Text style={styles.infoLabel}>Avatar Identity</Text>
             <Text style={styles.infoBody}>
-              Your avatar and name are how others see you in the lobby and during
-              mini-rooms. Photos are intentionally absent — DateVibe is
-              avatar-first.
+              Your AvatarV2 look, name, and vibe are how people recognize you
+              in Discover, My Room, and post-match rooms.
             </Text>
           </View>
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Session</Text>
-            <View style={styles.sessionRow}>
-              <Text style={styles.sessionKey}>User ID</Text>
-              <Text style={styles.sessionValue} numberOfLines={1}>
-                {profile.userId.slice(-12)}
-              </Text>
-            </View>
-            <View style={styles.sessionRow}>
-              <Text style={styles.sessionKey}>Expires</Text>
-              <Text style={styles.sessionValue}>
-                {formatExpiry(sessionActor.session.expiresAt)}
-              </Text>
-            </View>
+            <Text style={styles.infoLabel}>My Room</Text>
+            <Text style={styles.infoBody}>
+              Your saved room is part of your presence. Decor you place in My
+              Room is what people should see when room experiences open up.
+            </Text>
           </View>
 
           <View style={styles.infoCard}>
@@ -98,7 +117,9 @@ export function YouScreen(props: YouScreenProps) {
               <BrandMark size={28} />
               <View style={styles.brandTextStack}>
                 <Text style={styles.brandName}>DateVibe</Text>
-                <Text style={styles.brandTagline}>Real people. Right here. Right now.</Text>
+                <Text style={styles.brandTagline}>
+                  Avatar-first matching, then a private room after mutual interest.
+                </Text>
               </View>
             </View>
           </View>
@@ -111,7 +132,7 @@ export function YouScreen(props: YouScreenProps) {
               pressed ? { opacity: 0.85 } : null
             ]}
           >
-            <Text style={styles.customizeText}>✦ My Room</Text>
+            <Text style={styles.customizeText}>My Room</Text>
           </Pressable>
 
           <Pressable
@@ -121,7 +142,7 @@ export function YouScreen(props: YouScreenProps) {
               pressed ? { opacity: 0.85 } : null
             ]}
           >
-            <Text style={styles.customizeText}>✦ Customize Avatar</Text>
+            <Text style={styles.customizeText}>Wardrobe & Shop</Text>
           </Pressable>
 
           <Pressable
@@ -131,7 +152,7 @@ export function YouScreen(props: YouScreenProps) {
               pressed ? { opacity: 0.85 } : null
             ]}
           >
-            <Text style={styles.editProfileText}>✎ Edit Profile</Text>
+            <Text style={styles.editProfileText}>Edit Profile</Text>
           </Pressable>
 
           <Pressable
@@ -141,7 +162,7 @@ export function YouScreen(props: YouScreenProps) {
               pressed ? { opacity: 0.85 } : null
             ]}
           >
-            <Text style={styles.editProfileText}>⚙ Settings</Text>
+            <Text style={styles.editProfileText}>Settings</Text>
           </Pressable>
 
           <Pressable
@@ -157,17 +178,6 @@ export function YouScreen(props: YouScreenProps) {
       </SafeAreaView>
     </View>
   )
-}
-
-function formatExpiry(expiresAt: string): string {
-  const ts = Date.parse(expiresAt)
-  if (!Number.isFinite(ts)) return "Unknown"
-  const remaining = Math.max(0, ts - Date.now())
-  const hours = Math.floor(remaining / 3_600_000)
-  const minutes = Math.floor((remaining % 3_600_000) / 60_000)
-  if (hours > 0) return `${hours}h ${minutes}m remaining`
-  if (minutes > 0) return `${minutes}m remaining`
-  return "Expiring soon"
 }
 
 const styles = StyleSheet.create({
@@ -215,6 +225,30 @@ const styles = StyleSheet.create({
     backgroundColor: "#FCE4F1",
     right: -40,
     bottom: -50
+  },
+  nameplatePreview: {
+    position: "absolute",
+    bottom: uiTheme.spacing.md,
+    alignSelf: "center",
+    maxWidth: "84%",
+    minHeight: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: uiTheme.spacing.xs,
+    paddingHorizontal: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.full,
+    borderWidth: 1
+  },
+  nameplatePreviewText: {
+    flexShrink: 1,
+    fontSize: uiTheme.typography.bodySmall,
+    fontWeight: "900"
+  },
+  nameplatePreviewMeta: {
+    color: "rgba(32, 22, 42, 0.66)",
+    fontSize: uiTheme.typography.micro,
+    fontWeight: "900",
+    textTransform: "uppercase"
   },
   identityBlock: {
     gap: uiTheme.spacing.xxs,
@@ -267,22 +301,6 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.textSecondary,
     fontSize: uiTheme.typography.bodySmall,
     lineHeight: 21
-  },
-  sessionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  sessionKey: {
-    color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "700"
-  },
-  sessionValue: {
-    color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "600",
-    maxWidth: "60%"
   },
   brandRow: {
     flexDirection: "row",

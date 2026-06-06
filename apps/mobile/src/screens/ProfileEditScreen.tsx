@@ -87,16 +87,19 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
             <Text style={styles.previewName}>
               {displayName || "Your Name"}
             </Text>
+            <Text style={styles.previewHint}>
+              This is the name beside your avatar in Discover and room moments.
+            </Text>
           </View>
 
           {/* Fields */}
           <View style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>Display Name</Text>
+            <Text style={styles.fieldLabel}>Avatar Name</Text>
             <TextInput
               style={styles.input}
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="How should others see you?"
+              placeholder="How should people meet you?"
               placeholderTextColor={uiTheme.colors.textMuted}
               maxLength={30}
               autoCapitalize="words"
@@ -113,7 +116,7 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
               style={styles.input}
               value={ageText}
               onChangeText={setAgeText}
-              placeholder="Optional — must be 18+"
+              placeholder="Optional, shown on your profile"
               placeholderTextColor={uiTheme.colors.textMuted}
               keyboardType="number-pad"
               maxLength={2}
@@ -121,6 +124,9 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
             {!ageValid ? (
               <Text style={styles.errorHint}>Must be between 18 and 99</Text>
             ) : null}
+            <Text style={styles.fieldHint}>
+              Your avatar, room, and vibe carry the expression; keep profile details simple.
+            </Text>
           </View>
 
           {/* Save */}
@@ -182,6 +188,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800"
   },
+  previewHint: {
+    color: uiTheme.colors.textSecondary,
+    fontSize: uiTheme.typography.caption,
+    lineHeight: 18,
+    textAlign: "center"
+  },
   fieldCard: {
     gap: uiTheme.spacing.xs,
     padding: uiTheme.spacing.md,
@@ -210,6 +222,11 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.danger,
     fontSize: uiTheme.typography.caption,
     fontWeight: "700"
+  },
+  fieldHint: {
+    color: uiTheme.colors.textMuted,
+    fontSize: uiTheme.typography.caption,
+    lineHeight: 18
   },
   saveButton: {
     alignSelf: "center",

@@ -150,7 +150,6 @@ export const AVATAR_V2_CATALOG: AvatarCatalogItem[] = [
     sortOrder: 90,
     layerOrder: AVATAR_V2_LAYER_ORDER.top,
     assets: { idle_front: avatarV2LayerAssets.top01 },
-    mockPriceCoins: 280,
     locked: true
   }
 ]

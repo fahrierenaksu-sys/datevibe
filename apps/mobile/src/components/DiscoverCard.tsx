@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react"
 import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 import type { RealtimeConnectionStatus } from "../features/realtime/realtimeClient"
 import { Avatar } from "../ui/avatar"
+import { MyAvatar } from "../ui/myAvatar"
 import { TagChip } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 
@@ -45,6 +46,7 @@ function useBreathingPulse(active: boolean) {
 export interface DiscoverCardProps {
   displayName: string
   userId: string
+  avatarSnapshot?: CandidateAvatarSnapshot
   headline: string
   distanceLabel: string
   vibeTags: string[]
@@ -52,10 +54,81 @@ export interface DiscoverCardProps {
   isOnline: boolean
 }
 
+export type CandidateAvatarSnapshotSource =
+  | "remote_candidate_avatar"
+  | "preview_fallback"
+
+export interface CandidateAvatarSnapshot {
+  kind: "candidate_avatar_snapshot"
+  userId: string
+  displayName: string
+  source: CandidateAvatarSnapshotSource
+  previewSeed: string
+  label: string
+}
+
+export function createCandidateAvatarSnapshot(input: {
+  userId: string
+  displayName: string
+  avatarSnapshot?: CandidateAvatarSnapshot | null
+}): CandidateAvatarSnapshot {
+  if (
+    input.avatarSnapshot &&
+    input.avatarSnapshot.kind === "candidate_avatar_snapshot" &&
+    input.avatarSnapshot.userId === input.userId
+  ) {
+    return input.avatarSnapshot
+  }
+
+  return {
+    kind: "candidate_avatar_snapshot",
+    userId: input.userId,
+    displayName: input.displayName,
+    source: "preview_fallback",
+    previewSeed: input.userId,
+    label: "Preview avatar"
+  }
+}
+
+export function readCandidateAvatarSnapshot(
+  value: unknown,
+  fallback: { userId: string; displayName: string }
+): CandidateAvatarSnapshot {
+  const candidate = value as { avatarSnapshot?: unknown } | null | undefined
+  const avatarSnapshot =
+    candidate && typeof candidate === "object"
+      ? candidate.avatarSnapshot
+      : undefined
+
+  return createCandidateAvatarSnapshot({
+    ...fallback,
+    avatarSnapshot: isCandidateAvatarSnapshot(avatarSnapshot)
+      ? avatarSnapshot
+      : null
+  })
+}
+
+function isCandidateAvatarSnapshot(
+  value: unknown
+): value is CandidateAvatarSnapshot {
+  if (!value || typeof value !== "object") return false
+  const snapshot = value as CandidateAvatarSnapshot
+  return (
+    snapshot.kind === "candidate_avatar_snapshot" &&
+    typeof snapshot.userId === "string" &&
+    typeof snapshot.displayName === "string" &&
+    typeof snapshot.previewSeed === "string" &&
+    typeof snapshot.label === "string" &&
+    (snapshot.source === "remote_candidate_avatar" ||
+      snapshot.source === "preview_fallback")
+  )
+}
+
 export function DiscoverCard(props: DiscoverCardProps) {
   const {
     displayName,
     userId,
+    avatarSnapshot,
     headline,
     distanceLabel,
     vibeTags,
@@ -64,6 +137,11 @@ export function DiscoverCard(props: DiscoverCardProps) {
   } = props
 
   const breathScale = useBreathingPulse(isOnline)
+  const resolvedAvatarSnapshot = createCandidateAvatarSnapshot({
+    userId,
+    displayName,
+    avatarSnapshot
+  })
 
   return (
     <View style={cardStyles.card}>
@@ -84,7 +162,17 @@ export function DiscoverCard(props: DiscoverCardProps) {
           pointerEvents="none"
         />
         <View style={cardStyles.heroGlowSecondary} pointerEvents="none" />
-        <Avatar name={displayName} seed={userId} size={172} ring="strong" />
+        <Avatar
+          name={resolvedAvatarSnapshot.displayName}
+          seed={resolvedAvatarSnapshot.previewSeed}
+          size={172}
+          ring="strong"
+        />
+        <View style={cardStyles.avatarSourcePill}>
+          <Text style={cardStyles.avatarSourceText}>
+            {resolvedAvatarSnapshot.label}
+          </Text>
+        </View>
         <View style={cardStyles.distancePill}>
           <View
             style={[
@@ -156,7 +244,12 @@ export function EmptyDiscoverCard(props: EmptyDiscoverCardProps) {
       <View style={cardStyles.heroBlock}>
         <View style={cardStyles.heroGlow} pointerEvents="none" />
         <View style={cardStyles.heroGlowSecondary} pointerEvents="none" />
-        <Avatar name={myDisplayName} seed={myUserId} size={132} ring="soft" />
+        <MyAvatar
+          name={myDisplayName}
+          seed={myUserId}
+          size={132}
+          ring="soft"
+        />
       </View>
       <Text style={cardStyles.emptyTitle}>{title}</Text>
       <Text style={cardStyles.emptyBody}>{body}</Text>
@@ -238,6 +331,23 @@ const cardStyles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.92)",
     borderWidth: 1,
     borderColor: uiTheme.colors.border
+  },
+  avatarSourcePill: {
+    position: "absolute",
+    bottom: 54,
+    alignSelf: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(32, 22, 42, 0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)"
+  },
+  avatarSourceText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.2
   },
   distanceDot: {
     width: 6,

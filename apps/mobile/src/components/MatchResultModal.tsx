@@ -11,6 +11,11 @@ import {
   View
 } from "react-native"
 import { Avatar } from "../ui/avatar"
+import { MyAvatar } from "../ui/myAvatar"
+import {
+  createCandidateAvatarSnapshot,
+  type CandidateAvatarSnapshot
+} from "./DiscoverCard"
 import { PrimaryButton, SecondaryButton } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 
@@ -19,6 +24,7 @@ interface MatchResultModalProps {
   currentUserName: string
   matchedUserName: string
   matchedUserId?: string
+  matchedAvatarSnapshot?: CandidateAvatarSnapshot
   onClose: () => void
   onViewSaved: () => void
   onKeepDiscovering: () => void
@@ -148,6 +154,7 @@ export function MatchResultModal(props: MatchResultModalProps) {
     currentUserName,
     matchedUserName,
     matchedUserId,
+    matchedAvatarSnapshot,
     onClose,
     onViewSaved,
     onKeepDiscovering,
@@ -156,6 +163,11 @@ export function MatchResultModal(props: MatchResultModalProps) {
 
   const scaleAnim = useRef(new Animated.Value(0)).current
   const heartPulse = useRef(new Animated.Value(1)).current
+  const resolvedMatchedAvatarSnapshot = createCandidateAvatarSnapshot({
+    userId: matchedUserId ?? matchedUserName,
+    displayName: matchedUserName,
+    avatarSnapshot: matchedAvatarSnapshot
+  })
 
   const runEntrance = useCallback(() => {
     scaleAnim.setValue(0)
@@ -228,7 +240,7 @@ export function MatchResultModal(props: MatchResultModalProps) {
 
           <View style={styles.connectionRow}>
             <View style={styles.avatarColumn}>
-              <Avatar
+              <MyAvatar
                 name={currentUserName}
                 seed={currentUserName}
                 size={84}
@@ -252,11 +264,14 @@ export function MatchResultModal(props: MatchResultModalProps) {
 
             <View style={styles.avatarColumn}>
               <Avatar
-                name={matchedUserName}
-                seed={matchedUserId ?? matchedUserName}
+                name={resolvedMatchedAvatarSnapshot.displayName}
+                seed={resolvedMatchedAvatarSnapshot.previewSeed}
                 size={84}
                 ring="strong"
               />
+              <Text style={styles.avatarSourceText}>
+                {resolvedMatchedAvatarSnapshot.label}
+              </Text>
               <Text style={styles.avatarName}>{matchedUserName}</Text>
             </View>
           </View>
@@ -382,6 +397,12 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.textSecondary,
     fontSize: uiTheme.typography.bodySmall,
     fontWeight: "600",
+    textAlign: "center"
+  },
+  avatarSourceText: {
+    color: uiTheme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
     textAlign: "center"
   },
   heartConnector: {

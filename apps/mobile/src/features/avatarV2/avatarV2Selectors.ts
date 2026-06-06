@@ -43,10 +43,9 @@ export function canEquipAvatarV2Item(
   inventory: AvatarInventory,
   item: AvatarCatalogItem
 ): boolean {
-  // First slice rule: selectable items are either starter-owned in the mock
-  // catalog or explicitly present in the mock inventory. Locked items are
-  // visible for shop affordance, but no purchase flow exists in this slice.
-  return item.locked !== true && isAvatarV2ItemOwned(inventory, item)
+  // Inventory is the ownership source-of-truth. Items can be merchandised as
+  // locked in the catalog, but become equipable once inventory owns them.
+  return isAvatarV2ItemOwned(inventory, item)
 }
 
 export function isAvatarV2ItemEquipped(

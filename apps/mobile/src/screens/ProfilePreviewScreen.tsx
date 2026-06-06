@@ -1,9 +1,14 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import {
+  createCandidateAvatarSnapshot,
+  type CandidateAvatarSnapshot
+} from "../components/DiscoverCard"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { Avatar } from "../ui/avatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
+import { MyAvatar } from "../ui/myAvatar"
 import {
   ActionButtonCircle,
   CardWrapper,
@@ -28,6 +33,7 @@ export interface ProfileCue {
 export interface ProfilePreviewData {
   userId: string
   displayName: string
+  avatarSnapshot?: CandidateAvatarSnapshot
   headline: string
   vibeLine: string
   tags: string[]
@@ -49,6 +55,11 @@ type ProfilePreviewScreenProps = NativeStackScreenProps<
 export function ProfilePreviewScreen(props: ProfilePreviewScreenProps) {
   const { navigation, route } = props
   const { profile } = route.params
+  const avatarSnapshot = createCandidateAvatarSnapshot({
+    userId: profile.userId,
+    displayName: profile.displayName,
+    avatarSnapshot: profile.avatarSnapshot
+  })
 
   const promptCards = profile.prompts.slice(0, 2)
   const likeDisabled = profile.isSelf || profile.blocked || !profile.canInvite
@@ -88,16 +99,32 @@ export function ProfilePreviewScreen(props: ProfilePreviewScreenProps) {
           <View style={styles.heroCard}>
             <View style={styles.stagePill}>
               <View style={styles.stageDot} />
-              <Text style={styles.stagePillText}>Live profile</Text>
+              <Text style={styles.stagePillText}>
+                {profile.isSelf ? "Your profile" : "Profile preview"}
+              </Text>
             </View>
             <View style={styles.heroGlow} pointerEvents="none" />
             <View style={styles.heroGlowSecondary} pointerEvents="none" />
-            <Avatar
-              name={profile.displayName}
-              seed={profile.userId}
-              size={196}
-              ring="strong"
-            />
+            {profile.isSelf ? (
+              <MyAvatar
+                name={profile.displayName}
+                seed={profile.userId}
+                size={196}
+                ring="strong"
+              />
+            ) : (
+              <>
+                <Avatar
+                  name={avatarSnapshot.displayName}
+                  seed={avatarSnapshot.previewSeed}
+                  size={196}
+                  ring="strong"
+                />
+                <View style={styles.avatarSourcePill}>
+                  <Text style={styles.avatarSourceText}>{avatarSnapshot.label}</Text>
+                </View>
+              </>
+            )}
           </View>
 
           <View style={styles.identityBlock}>
@@ -209,6 +236,23 @@ const styles = StyleSheet.create({
   stagePillText: {
     color: "#FFFFFF",
     fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.2
+  },
+  avatarSourcePill: {
+    position: "absolute",
+    bottom: uiTheme.spacing.md,
+    alignSelf: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(32, 22, 42, 0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)"
+  },
+  avatarSourceText: {
+    color: "#FFFFFF",
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.2
   },
