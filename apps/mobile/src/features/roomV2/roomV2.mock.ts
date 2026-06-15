@@ -14,15 +14,69 @@ export const ROOM_V2_SHELL_CATALOG: RoomShell[] = [
     name: "DateVibe World Shell V1",
     asset: roomV2Assets.shells.datevibeWorldShellV1,
     canvasSize: { width: 1254, height: 714 },
-    // Temporary conservative rectangular floor approximation for this shell.
-    // Floor polygons, wall zones, avatar standing zones, and richer shell
-    // metadata are deferred until the foundation geometry is validated.
+    myRoomCamera: {
+      compactRendererWidth: "190%",
+      regularRendererWidth: "182%",
+      rendererTranslateY: -36,
+      stageHeightRatio: 0.45,
+      minStageHeight: 390,
+      maxStageHeight: 430
+    },
+    miniRoomCamera: {
+      rendererWidth: "176%",
+      rendererTranslateY: -10,
+      backgroundColor: "#F8ECF2"
+    },
+    // Rectangular bounds stay useful for edit placement and lane snapping.
     placeableArea: {
       minX: 0.22,
       maxX: 0.78,
       minY: 0.45,
       maxY: 0.88
-    }
+    },
+    walkablePolygon: [
+      { x: 0.48, y: 0.42 },
+      { x: 0.8, y: 0.55 },
+      { x: 0.83, y: 0.72 },
+      { x: 0.7, y: 0.9 },
+      { x: 0.3, y: 0.9 },
+      { x: 0.17, y: 0.72 },
+      { x: 0.2, y: 0.55 }
+    ],
+    placementLanes: [
+      {
+        id: "room_v2_world_lane_wall",
+        label: "Wall line",
+        y: 0.54,
+        minX: 0.26,
+        maxX: 0.74,
+        snapRadius: 0.035
+      },
+      {
+        id: "room_v2_world_lane_mid",
+        label: "Middle",
+        y: 0.66,
+        minX: 0.24,
+        maxX: 0.76,
+        snapRadius: 0.045
+      },
+      {
+        id: "room_v2_world_lane_social",
+        label: "Social",
+        y: 0.76,
+        minX: 0.25,
+        maxX: 0.75,
+        snapRadius: 0.045
+      },
+      {
+        id: "room_v2_world_lane_front",
+        label: "Front",
+        y: 0.86,
+        minX: 0.28,
+        maxX: 0.72,
+        snapRadius: 0.04
+      }
+    ]
   }
 ]
 
@@ -38,6 +92,14 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     footprint: { width: 0.13, height: 0.08 },
     blocksMovement: true,
     interactionType: "seat",
+    seatPoints: [
+      {
+        id: "front_edge",
+        x: 0,
+        y: -0.24,
+        facing: "front"
+      }
+    ],
     ownedByDefault: true
   },
   {
@@ -76,6 +138,14 @@ export const ROOM_V2_FURNITURE_CATALOG: FurnitureItem[] = [
     footprint: { width: 0.3, height: 0.2 },
     blocksMovement: true,
     interactionType: "seat",
+    seatPoints: [
+      {
+        id: "left_edge",
+        x: -0.18,
+        y: -0.36,
+        facing: "left"
+      }
+    ],
     locked: true
   },
   {

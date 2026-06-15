@@ -1,4 +1,4 @@
-import type { ImageSourcePropType } from "react-native"
+import type { DimensionValue, ImageSourcePropType } from "react-native"
 
 export type RoomLayer =
   | "background"
@@ -19,6 +19,54 @@ export const ROOM_LAYER_ORDER: Record<RoomLayer, number> = {
 
 export type RoomFurnitureRotation = "front" | "back" | "left" | "right"
 
+export type RoomV2AvatarMotionState =
+  | "idle"
+  | "walking"
+  | "sitting"
+  | "waving"
+  | "dancing"
+
+export type RoomV2AvatarAssetResolutionKind =
+  | "exact"
+  | "sameStateFront"
+  | "idleSameDirection"
+  | "idleFront"
+  | "baseAsset"
+
+export type RoomV2AvatarMotionTreatment =
+  | "animatedMotionAssets"
+  | "exactMotionAssets"
+  | "runtimeLocomotion"
+  | "runtimeGesture"
+  | "idleBaseAsset"
+  | "idleFallback"
+
+export type RoomV2AvatarMotionAssetIssueId =
+  | "missing_exact_layers"
+  | "missing_animation_frames"
+  | "insufficient_animation_frames"
+  | "mixed_frame_counts"
+  | "mixed_frame_durations"
+  | "mixed_rigs"
+  | "mixed_fit_profiles"
+
+export interface RoomV2AvatarMotionAssetDiagnostics {
+  requestedState: RoomV2AvatarMotionState
+  requestedDirection: RoomFurnitureRotation
+  layerCount: number
+  exactLayerCount: number
+  animatedLayerCount: number
+  frameCounts: number[]
+  frameDurationMsValues: number[]
+  minimumFrameCount: number
+  rigIds: string[]
+  fitProfileIds: string[]
+  issueIds: RoomV2AvatarMotionAssetIssueId[]
+  supportsExactMotion: boolean
+  supportsAnimatedMotion: boolean
+  isProductionReady: boolean
+}
+
 export type FurnitureCategory =
   | "seating"
   | "table"
@@ -35,6 +83,16 @@ export interface RoomV2AssetRef {
   source: ImageSourcePropType
 }
 
+export interface RoomV2AvatarAssetSequence {
+  frames: [RoomV2AssetRef, ...RoomV2AssetRef[]]
+  frameDurationMs: number
+  loop?: boolean
+}
+
+export type RoomV2AvatarMotionAsset =
+  | RoomV2AssetRef
+  | RoomV2AvatarAssetSequence
+
 export interface RoomCanvasSize {
   width: number
   height: number
@@ -45,6 +103,35 @@ export interface RoomBounds {
   maxX: number
   minY: number
   maxY: number
+}
+
+export interface RoomWalkablePolygonPoint {
+  x: number
+  y: number
+}
+
+export interface RoomPlacementLane {
+  id: string
+  y: number
+  label?: string
+  minX?: number
+  maxX?: number
+  snapRadius?: number
+}
+
+export interface RoomShellMyRoomCamera {
+  compactRendererWidth: DimensionValue
+  regularRendererWidth: DimensionValue
+  rendererTranslateY: number
+  stageHeightRatio: number
+  minStageHeight: number
+  maxStageHeight: number
+}
+
+export interface RoomShellMiniRoomCamera {
+  rendererWidth: DimensionValue
+  rendererTranslateY: number
+  backgroundColor: string
 }
 
 export interface RoomAnchor {
@@ -69,7 +156,11 @@ export interface RoomShell {
   name: string
   asset: RoomV2AssetRef
   canvasSize: RoomCanvasSize
+  myRoomCamera?: RoomShellMyRoomCamera
+  miniRoomCamera?: RoomShellMiniRoomCamera
   placeableArea?: RoomBounds
+  walkablePolygon?: RoomWalkablePolygonPoint[]
+  placementLanes?: RoomPlacementLane[]
 }
 
 export interface FurnitureItem {
@@ -136,6 +227,15 @@ export interface RoomV2AvatarRenderLayer {
   type: string
   layerOrder: number
   asset: RoomV2AssetRef
+  animation?: RoomV2AvatarAssetSequence
+  requestedState?: RoomV2AvatarMotionState
+  requestedDirection?: RoomFurnitureRotation
+  resolvedState?: RoomV2AvatarMotionState
+  resolvedDirection?: RoomFurnitureRotation
+  usingFallbackAsset?: boolean
+  assetResolutionKind?: RoomV2AvatarAssetResolutionKind
+  rigId?: string
+  fitProfileId?: string
 }
 
 export interface RoomV2AvatarRenderItem extends RoomV2RenderItemBase {
@@ -144,7 +244,8 @@ export interface RoomV2AvatarRenderItem extends RoomV2RenderItemBase {
   name?: string
   layers: RoomV2AvatarRenderLayer[]
   direction?: RoomFurnitureRotation
-  state?: "idle"
+  state?: RoomV2AvatarMotionState
+  motionTreatment?: RoomV2AvatarMotionTreatment
   // Future metadata only: chat/reaction rendering is intentionally out of
   // scope for the first room-world proof.
   chatBubbleAnchor?: RoomAnchor
