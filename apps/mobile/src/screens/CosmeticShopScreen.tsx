@@ -609,19 +609,19 @@ function getDefaultFurnitureRotation(item: FurnitureItem): RoomFurnitureRotation
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: uiTheme.colors.background
+    backgroundColor: uiTheme.colors.background,
   },
   safe: {
     flex: 1,
     paddingHorizontal: uiTheme.spacing.lg,
-    paddingTop: uiTheme.spacing.sm
+    paddingTop: uiTheme.spacing.sm,
   },
   scroll: {
     gap: uiTheme.spacing.lg,
-    paddingBottom: 136
+    paddingBottom: 136,
   },
   coinPill: {
-    minHeight: 36,
+    minHeight: 38,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -629,84 +629,80 @@ const styles = StyleSheet.create({
     borderRadius: uiTheme.radius.full,
     backgroundColor: "#FFF7D8",
     borderWidth: 1,
-    borderColor: "#F1DE98"
+    borderColor: "#F1DE98",
   },
   coinText: {
+    ...uiTheme.font.bodySmall,
     color: "#7B5708",
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   previewCard: {
     gap: uiTheme.spacing.md,
-    padding: uiTheme.spacing.md,
+    padding: uiTheme.spacing.lg,
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.surface,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
+    borderColor: uiTheme.colors.glassBorder,
     overflow: "hidden",
-    ...uiTheme.shadow.card
+    ...uiTheme.shadow.deep,
   },
   previewHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: uiTheme.spacing.md
+    gap: uiTheme.spacing.md,
   },
   previewEyebrow: {
+    ...uiTheme.font.overline,
     color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "900",
-    textTransform: "uppercase"
   },
   previewTitle: {
+    ...uiTheme.font.heading,
     marginTop: 2,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.heading,
-    fontWeight: "900"
   },
   statePill: {
     maxWidth: 132,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.primarySoft
+    backgroundColor: uiTheme.colors.primarySoft,
   },
   stateText: {
+    ...uiTheme.font.micro,
     color: uiTheme.colors.chipText,
-    fontSize: uiTheme.typography.micro,
-    fontWeight: "900",
-    textAlign: "center"
+    textAlign: "center",
   },
   previewStage: {
     minHeight: 238,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: uiTheme.radius.lg,
+    borderRadius: uiTheme.radius.xl,
     backgroundColor: "#160D1E",
-    overflow: "hidden"
+    overflow: "hidden",
   },
   roomPreviewRenderer: {
     width: "132%",
-    backgroundColor: "#160D1E"
+    backgroundColor: "#160D1E",
   },
   statusPreview: {
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
-    paddingHorizontal: uiTheme.spacing.lg
+    paddingHorizontal: uiTheme.spacing.lg,
   },
   statusPreviewCard: {
     width: "100%",
     maxWidth: 280,
     gap: uiTheme.spacing.md,
     padding: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.lg,
-    borderWidth: 1
+    borderRadius: uiTheme.radius.xl,
+    borderWidth: 1,
   },
   statusPreviewTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: uiTheme.spacing.sm
+    gap: uiTheme.spacing.sm,
   },
   statusPreviewAvatarFrame: {
     width: 62,
@@ -714,140 +710,134 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 24,
-    borderWidth: 2
+    borderWidth: 2,
   },
   statusPreviewIdentity: {
     flex: 1,
-    gap: 4
+    gap: 4,
   },
   statusPreviewName: {
+    ...uiTheme.font.bodyBold,
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
-    fontWeight: "900"
   },
   statusPreviewSurface: {
+    ...uiTheme.font.bodySmall,
     color: "rgba(255, 255, 255, 0.72)",
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   statusPreviewLine: {
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.18)"
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
   },
   statusPreviewChips: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: uiTheme.spacing.sm
+    gap: uiTheme.spacing.sm,
   },
   statusPreviewChip: {
     minHeight: 30,
     justifyContent: "center",
     paddingHorizontal: uiTheme.spacing.sm,
     borderRadius: uiTheme.radius.full,
-    borderWidth: 1
+    borderWidth: 1,
   },
   statusPreviewChipText: {
-    fontSize: uiTheme.typography.micro,
-    fontWeight: "900"
+    ...uiTheme.font.micro,
   },
   statusPreviewBubble: {
     minHeight: 30,
     justifyContent: "center",
     paddingHorizontal: uiTheme.spacing.sm,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: "rgba(255, 255, 255, 0.16)"
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
   },
   statusPreviewBubbleText: {
+    ...uiTheme.font.bodySmall,
     color: "rgba(255, 255, 255, 0.76)",
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   previewDescription: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
     fontWeight: "700",
-    lineHeight: 20
+    lineHeight: 20,
   },
   primaryAction: {
-    minHeight: 52,
+    minHeight: 54,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: uiTheme.radius.full,
     backgroundColor: uiTheme.colors.primary,
-    ...uiTheme.shadow.lift
+    ...uiTheme.shadow.glow,
   },
   primaryActionPressed: {
     backgroundColor: uiTheme.colors.primaryPressed,
-    transform: [{ scale: 0.99 }]
+    transform: [{ scale: 0.99 }],
   },
   primaryActionDisabled: {
-    opacity: 0.5
+    opacity: 0.5,
   },
   primaryActionText: {
+    ...uiTheme.font.bodyBold,
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
-    fontWeight: "900"
   },
   section: {
-    gap: uiTheme.spacing.sm
+    gap: uiTheme.spacing.sm,
   },
   sectionHeader: {
-    gap: 2
+    gap: 3,
   },
   sectionTitle: {
+    ...uiTheme.font.subheading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "900"
   },
   sectionSubtitle: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "700"
   },
   productRow: {
     gap: uiTheme.spacing.sm,
-    paddingRight: uiTheme.spacing.lg
+    paddingRight: uiTheme.spacing.lg,
   },
   productCard: {
-    width: 144,
-    minHeight: 154,
+    width: 148,
+    minHeight: 158,
     gap: uiTheme.spacing.xs,
     padding: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    ...uiTheme.shadow.soft
+    borderColor: uiTheme.colors.glassBorder,
+    ...uiTheme.shadow.float,
   },
   productCardSelected: {
     borderColor: uiTheme.colors.primary,
-    backgroundColor: "#FFF7FB"
+    backgroundColor: "#FFF7FB",
   },
   productCardPressed: {
     opacity: 0.82,
-    transform: [{ scale: 0.98 }]
+    transform: [{ scale: 0.97 }],
   },
   productThumb: {
-    height: 76,
+    height: 80,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: uiTheme.radius.md,
+    borderRadius: uiTheme.radius.lg,
     backgroundColor: uiTheme.colors.surfaceSoft,
-    overflow: "hidden"
+    overflow: "hidden",
   },
   productImage: {
     width: "86%",
-    height: "86%"
+    height: "86%",
   },
   productTitle: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   productMeta: {
+    ...uiTheme.font.micro,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.micro,
-    fontWeight: "800"
   },
 })
