@@ -12,7 +12,7 @@ import { MatchResultModal } from "../components/MatchResultModal"
 import type { CandidateAvatarSnapshot } from "../components/DiscoverCard"
 import { addCoins } from "../features/cosmetics/cosmeticStore"
 import { checkDailyReward } from "../features/rewards/dailyReward"
-import { MOBILE_WS_BASE_URL } from "../config/env"
+import { MOBILE_WS_BASE_URL, IS_DATEVIBE_MEDIA_DEMO_MODE } from "../config/env"
 import {
   applyChatMessageListed,
   applyChatMessageReceived,
@@ -262,7 +262,9 @@ export function RootNavigator() {
     // Handle invalid session close code
     const unsubscribeInvalidSession = subscribeToStatus((_status, meta) => {
       if (meta?.closeCode === 1008) {
-        void clearSessionActor()
+        if (!IS_DATEVIBE_MEDIA_DEMO_MODE) {
+          void clearSessionActor()
+        }
       }
     })
 
@@ -594,7 +596,7 @@ const styles = StyleSheet.create({
   },
   splashTagline: {
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "600",
     letterSpacing: 0.3
   },

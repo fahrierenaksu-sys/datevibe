@@ -1,11 +1,19 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { useCallback, useMemo } from "react"
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { useCallback, useEffect, useMemo, useRef } from "react"
+import {
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useChatStore } from "../features/chat/chatStore"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { Avatar } from "../ui/avatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
+import { LinearGradient } from "../ui/linearGradient"
 import { MyAvatar } from "../ui/myAvatar"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
@@ -26,6 +34,135 @@ function formatTimeAgo(isoDate: string | undefined): string {
   const days = Math.floor(hours / 24)
   return days === 1 ? "1d" : `${days}d`
 }
+
+/* ── Animated conversation card ─────────────────────────────── */
+
+interface ConversationCardProps {
+  partnerName: string
+  partnerUserId: string
+  lastBody: string | undefined
+  lastTime: string
+  hasUnread: boolean
+  onPress: () => void
+}
+
+function ConversationCard(props: ConversationCardProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const pulseAnim = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    if (!props.hasUnread) return
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.45,
+          duration: 1000,
+          useNativeDriver: true
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true
+        })
+      ])
+    )
+    pulse.start()
+    return () => pulse.stop()
+  }, [props.hasUnread, pulseAnim])
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4
+    }).start()
+  }, [scaleAnim])
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4
+    }).start()
+  }, [scaleAnim])
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        style={cardStyles.card}
+        onPress={props.onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        {/* Gradient left accent */}
+        <LinearGradient
+          colors={uiTheme.gradients.primary}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={cardStyles.leftAccent}
+        />
+
+        {/* Avatar with online dot */}
+        <View style={cardStyles.avatarWrap}>
+          <Avatar
+            name={props.partnerName}
+            seed={props.partnerUserId}
+            size={56}
+            ring="soft"
+          />
+          <View style={cardStyles.onlineDotOuter}>
+            <View style={cardStyles.onlineDot} />
+          </View>
+        </View>
+
+        <View style={cardStyles.body}>
+          <View style={cardStyles.nameRow}>
+            <Text style={cardStyles.name} numberOfLines={1}>
+              {props.partnerName}
+            </Text>
+            {props.lastTime ? (
+              <Text style={cardStyles.time}>{props.lastTime}</Text>
+            ) : null}
+          </View>
+          {props.lastBody ? (
+            <Text style={cardStyles.preview} numberOfLines={2}>
+              {props.lastBody}
+            </Text>
+          ) : (
+            <Text style={cardStyles.previewEmpty}>
+              No messages yet
+            </Text>
+          )}
+        </View>
+
+        <View style={cardStyles.chevronWrap}>
+          {props.hasUnread ? (
+            <View style={cardStyles.unreadWrap}>
+              <Animated.View
+                style={[
+                  cardStyles.unreadGlow,
+                  { transform: [{ scale: pulseAnim }] }
+                ]}
+              />
+              <LinearGradient
+                colors={uiTheme.gradients.primary}
+                style={cardStyles.unreadDot}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+            </View>
+          ) : (
+            <Text style={cardStyles.chevron}>›</Text>
+          )}
+        </View>
+      </Pressable>
+    </Animated.View>
+  )
+}
+
+/* ── Main InboxScreen ───────────────────────────────────────── */
 
 export function InboxScreen(props: InboxScreenProps) {
   const { navigation } = props
@@ -69,6 +206,13 @@ export function InboxScreen(props: InboxScreenProps) {
           <Text style={styles.headerSubhead}>
             Threads from mutual connections.
           </Text>
+          {/* Gradient underline */}
+          <LinearGradient
+            colors={[uiTheme.colors.primary, uiTheme.colors.primarySoft, "transparent"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.headerUnderline}
+          />
         </View>
 
         <ScrollView
@@ -97,47 +241,15 @@ export function InboxScreen(props: InboxScreenProps) {
               const lastTime = formatTimeAgo(thread.lastMessage?.sentAt)
 
               return (
-                <Pressable
+                <ConversationCard
                   key={thread.threadId}
-                  style={({ pressed }) => [
-                    cardStyles.card,
-                    pressed ? cardStyles.cardPressed : null
-                  ]}
+                  partnerName={partnerName}
+                  partnerUserId={partnerUserId}
+                  lastBody={lastBody}
+                  lastTime={lastTime}
+                  hasUnread={getThreadUnreadCount(thread.threadId) > 0}
                   onPress={() => openThread(thread.threadId)}
-                >
-                  <Avatar
-                    name={partnerName}
-                    seed={partnerUserId}
-                    size={52}
-                    ring="soft"
-                  />
-                  <View style={cardStyles.body}>
-                    <View style={cardStyles.nameRow}>
-                      <Text style={cardStyles.name} numberOfLines={1}>
-                        {partnerName}
-                      </Text>
-                      {lastTime ? (
-                        <Text style={cardStyles.time}>{lastTime}</Text>
-                      ) : null}
-                    </View>
-                    {lastBody ? (
-                      <Text style={cardStyles.preview} numberOfLines={2}>
-                        {lastBody}
-                      </Text>
-                    ) : (
-                      <Text style={cardStyles.previewEmpty}>
-                        No messages yet
-                      </Text>
-                    )}
-                  </View>
-                  <View style={cardStyles.chevronWrap}>
-                    {getThreadUnreadCount(thread.threadId) > 0 ? (
-                      <View style={cardStyles.unreadDot} />
-                    ) : (
-                      <Text style={cardStyles.chevron}>›</Text>
-                    )}
-                  </View>
-                </Pressable>
+                />
               )
             })
           )}
@@ -147,6 +259,8 @@ export function InboxScreen(props: InboxScreenProps) {
   )
 }
 
+/* ── Empty Inbox ────────────────────────────────────────────── */
+
 interface EmptyInboxProps {
   isLoading: boolean
   myDisplayName?: string
@@ -155,16 +269,50 @@ interface EmptyInboxProps {
 }
 
 function EmptyInbox(props: EmptyInboxProps) {
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(24)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: uiTheme.animation.durationEntrance,
+        useNativeDriver: true
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: uiTheme.animation.durationEntrance,
+        useNativeDriver: true
+      })
+    ]).start()
+  }, [fadeAnim, slideAnim])
+
   if (props.isLoading) {
     return (
-      <View style={emptyStyles.card}>
+      <Animated.View
+        style={[
+          emptyStyles.card,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+        ]}
+      >
         <Text style={emptyStyles.body}>Loading conversations…</Text>
-      </View>
+      </Animated.View>
     )
   }
   return (
-    <View style={emptyStyles.card}>
-      <View style={emptyStyles.glow} pointerEvents="none" />
+    <Animated.View
+      style={[
+        emptyStyles.card,
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+      ]}
+    >
+      {/* Gradient glow orb */}
+      <LinearGradient
+        colors={[uiTheme.colors.accentGlowStrong, uiTheme.colors.primarySoft, "transparent"]}
+        style={emptyStyles.glow}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
       {props.myDisplayName ? (
         <MyAvatar
           name={props.myDisplayName}
@@ -182,16 +330,25 @@ function EmptyInbox(props: EmptyInboxProps) {
         <Pressable
           onPress={props.onGoDiscover}
           style={({ pressed }) => [
-            emptyStyles.ctaButton,
+            emptyStyles.ctaOuter,
             pressed ? { opacity: 0.85 } : null
           ]}
         >
-          <Text style={emptyStyles.ctaText}>Go Discover →</Text>
+          <LinearGradient
+            colors={uiTheme.gradients.warm}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={emptyStyles.ctaGradient}
+          >
+            <Text style={emptyStyles.ctaText}>Go Discover →</Text>
+          </LinearGradient>
         </Pressable>
       ) : null}
-    </View>
+    </Animated.View>
   )
 }
+
+/* ── Styles ─────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   root: {
@@ -213,26 +370,26 @@ const styles = StyleSheet.create({
     paddingBottom: uiTheme.spacing.md
   },
   eyebrow: {
-    color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase"
+    ...uiTheme.font.overline,
+    color: uiTheme.colors.primary
   },
   headerTitle: {
-    color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.title,
-    fontWeight: "800",
-    letterSpacing: -0.4
+    ...uiTheme.font.title,
+    color: uiTheme.colors.textPrimary
   },
   headerSubhead: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    lineHeight: 21,
     marginTop: 2
   },
+  headerUnderline: {
+    height: 3,
+    borderRadius: 2,
+    width: "40%",
+    marginTop: uiTheme.spacing.xs
+  },
   scroll: {
-    gap: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.sm + 2,
     paddingBottom: uiTheme.spacing.xxl
   }
 })
@@ -243,14 +400,42 @@ const cardStyles = StyleSheet.create({
     alignItems: "center",
     gap: uiTheme.spacing.md,
     padding: uiTheme.spacing.md,
+    paddingLeft: uiTheme.spacing.md + 4,
     borderRadius: uiTheme.radius.xl,
     backgroundColor: uiTheme.colors.surface,
     borderWidth: 1,
     borderColor: uiTheme.colors.border,
-    ...uiTheme.shadow.soft
+    overflow: "hidden",
+    position: "relative",
+    ...uiTheme.shadow.float
   },
-  cardPressed: {
-    backgroundColor: uiTheme.colors.surfaceMuted
+  leftAccent: {
+    position: "absolute",
+    left: 0,
+    top: 8,
+    bottom: 8,
+    width: 2.5,
+    borderRadius: 2
+  },
+  avatarWrap: {
+    position: "relative"
+  },
+  onlineDotOuter: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: uiTheme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: uiTheme.colors.success
   },
   body: {
     flex: 1,
@@ -265,39 +450,48 @@ const cardStyles = StyleSheet.create({
   name: {
     flex: 1,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "800",
-    letterSpacing: -0.2
+    ...uiTheme.font.subheading
   },
   time: {
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "600"
+    ...uiTheme.font.caption
   },
   preview: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    lineHeight: 19
+    ...uiTheme.font.bodySmall
   },
   previewEmpty: {
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontStyle: "italic"
   },
   chevronWrap: {
-    width: 20,
-    alignItems: "center"
+    width: 22,
+    alignItems: "center",
+    justifyContent: "center"
   },
   chevron: {
     color: uiTheme.colors.textMuted,
     fontSize: 22,
     fontWeight: "700"
   },
+  unreadWrap: {
+    width: 14,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  unreadGlow: {
+    position: "absolute",
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: uiTheme.colors.accentGlow
+  },
   unreadDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
-    backgroundColor: uiTheme.colors.primary
+    borderRadius: 5
   }
 })
 
@@ -313,41 +507,44 @@ const emptyStyles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
-    ...uiTheme.shadow.soft
+    ...uiTheme.shadow.float
   },
   glow: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: uiTheme.colors.primarySoft,
-    top: -80,
-    right: -60,
-    opacity: 0.55
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    top: -100,
+    right: -80,
+    opacity: 0.6
   },
   title: {
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
+    ...uiTheme.font.subheading,
     fontWeight: "800",
     textAlign: "center"
   },
   body: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     textAlign: "center",
-    lineHeight: 21,
     paddingHorizontal: uiTheme.spacing.sm
   },
-  ctaButton: {
+  ctaOuter: {
     marginTop: uiTheme.spacing.xs,
+    borderRadius: uiTheme.radius.full,
+    overflow: "hidden"
+  },
+  ctaGradient: {
     paddingHorizontal: uiTheme.spacing.xl,
     paddingVertical: uiTheme.spacing.sm,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.primary
+    alignItems: "center",
+    justifyContent: "center"
   },
   ctaText: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "800"
   }
 })

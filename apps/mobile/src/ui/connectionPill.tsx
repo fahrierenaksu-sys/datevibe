@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native"
+import { useEffect, useRef } from "react"
+import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 import { uiTheme } from "./theme"
 
 export type ConnectionPillStatus =
@@ -72,9 +73,55 @@ export function ConnectionPill(props: ConnectionPillProps) {
   const backgroundColor = isDark ? visual.nightBg : visual.bg
   const textColor = isDark ? visual.nightText : visual.text
 
+  const pulseAnim = useRef(new Animated.Value(1)).current
+  const isConnected = status === "connected"
+
+  useEffect(() => {
+    if (!isConnected) {
+      pulseAnim.setValue(1)
+      return
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.6,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [isConnected, pulseAnim])
+
   return (
     <View style={[styles.pill, { backgroundColor }]}>
-      <View style={[styles.dot, { backgroundColor: visual.dot }]} />
+      <View style={styles.dotWrap}>
+        {isConnected ? (
+          <Animated.View
+            style={[
+              styles.dotPulse,
+              {
+                backgroundColor: visual.dot,
+                opacity: pulseAnim.interpolate({
+                  inputRange: [1, 1.6],
+                  outputRange: [0.4, 0],
+                }),
+                transform: [{ scale: pulseAnim }],
+              }
+            ]}
+            pointerEvents="none"
+          />
+        ) : null}
+        <View style={[styles.dot, { backgroundColor: visual.dot }]} />
+      </View>
       <Text style={[styles.label, { color: textColor }]}>{visual.label}</Text>
     </View>
   )
@@ -85,18 +132,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: uiTheme.radius.full
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: uiTheme.radius.full,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)",
+  },
+  dotWrap: {
+    width: 8,
+    height: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  dotPulse: {
+    position: "absolute",
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   label: {
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.4
+    ...uiTheme.font.micro,
   }
 })

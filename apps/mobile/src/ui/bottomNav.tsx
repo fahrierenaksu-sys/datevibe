@@ -1,8 +1,10 @@
+import { useRef } from "react"
 import { Ionicons } from "@expo/vector-icons"
-import { Pressable, StyleSheet, Text, View } from "react-native"
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { uiTheme } from "./theme"
 import { hapticLight } from "./haptics"
+import { LinearGradient } from "./linearGradient"
 
 export type BottomNavKey = "discover" | "chats" | "myroom" | "shop"
 
@@ -36,6 +38,97 @@ export interface BottomNavProps {
   onPress: (key: BottomNavKey) => void
 }
 
+function NavTab(props: {
+  item: BottomNavItem
+  isCurrent: boolean
+  showBadge: boolean
+  chatCount: number
+  onPress: () => void
+}) {
+  const { item, isCurrent, showBadge, chatCount, onPress } = props
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const iconName = isCurrent ? item.activeIcon : item.icon
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.88,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
+
+  return (
+    <Animated.View style={[styles.bottomNavItemOuter, { transform: [{ scale: scaleAnim }] }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${item.label} tab`}
+        accessibilityState={{ selected: isCurrent }}
+        style={[
+          styles.bottomNavItem,
+          isCurrent ? styles.bottomNavItemActive : null,
+        ]}
+        disabled={isCurrent}
+        onPress={() => {
+          hapticLight()
+          onPress()
+        }}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        hitSlop={6}
+      >
+        {isCurrent ? (
+          <View style={styles.activeIconWrap}>
+            <LinearGradient
+              colors={uiTheme.gradients.primary as [string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.activeIconGradient}
+            />
+            <Ionicons
+              name={iconName}
+              size={22}
+              color={uiTheme.colors.primary}
+              style={styles.iconZ}
+            />
+          </View>
+        ) : (
+          <View style={styles.bottomNavIconWrap}>
+            <Ionicons
+              name={iconName}
+              size={22}
+              color={uiTheme.colors.textMuted}
+            />
+          </View>
+        )}
+        {showBadge ? (
+          <View style={styles.bottomNavBadge}>
+            <Text style={styles.bottomNavBadgeText}>
+              {chatCount > 99 ? "99+" : chatCount}
+            </Text>
+          </View>
+        ) : null}
+        <Text
+          style={[
+            styles.bottomNavLabel,
+            isCurrent ? styles.bottomNavLabelActive : null
+          ]}
+        >
+          {item.label}
+        </Text>
+        {isCurrent ? <View style={styles.activeIndicator} /> : null}
+      </Pressable>
+    </Animated.View>
+  )
+}
+
 export function BottomNav(props: BottomNavProps) {
   const { currentKey, chatCount, onPress } = props
   const insets = useSafeAreaInsets()
@@ -49,45 +142,15 @@ export function BottomNav(props: BottomNavProps) {
       {BOTTOM_NAV_ITEMS.map((item) => {
         const isCurrent = item.key === currentKey
         const showBadge = item.key === "chats" && chatCount > 0
-        const iconName = isCurrent ? item.activeIcon : item.icon
         return (
-          <Pressable
+          <NavTab
             key={item.key}
-            style={({ pressed }) => [
-              styles.bottomNavItem,
-              isCurrent ? styles.bottomNavItemActive : null,
-              pressed && !isCurrent ? styles.bottomNavItemPressed : null
-            ]}
-            disabled={isCurrent}
-            onPress={() => {
-              hapticLight()
-              onPress(item.key)
-            }}
-            hitSlop={6}
-          >
-            <View style={styles.bottomNavIconWrap}>
-              <Ionicons
-                name={iconName}
-                size={22}
-                color={isCurrent ? uiTheme.colors.primary : uiTheme.colors.textMuted}
-              />
-              {showBadge ? (
-                <View style={styles.bottomNavBadge}>
-                  <Text style={styles.bottomNavBadgeText}>
-                    {chatCount > 99 ? "99+" : chatCount}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            <Text
-              style={[
-                styles.bottomNavLabel,
-                isCurrent ? styles.bottomNavLabelActive : null
-              ]}
-            >
-              {item.label}
-            </Text>
-          </Pressable>
+            item={item}
+            isCurrent={isCurrent}
+            showBadge={showBadge}
+            chatCount={chatCount}
+            onPress={() => onPress(item.key)}
+          />
         )
       })}
     </View>
@@ -96,60 +159,92 @@ export function BottomNav(props: BottomNavProps) {
 
 const styles = StyleSheet.create({
   bottomNav: {
-    marginHorizontal: uiTheme.spacing.lg,
+    marginHorizontal: 12,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    borderRadius: uiTheme.radius.xxl,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    paddingHorizontal: uiTheme.spacing.sm,
-    paddingVertical: uiTheme.spacing.sm,
+    borderColor: uiTheme.colors.glassBorder,
+    borderRadius: 32,
+    backgroundColor: uiTheme.colors.glassStrong,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
     flexDirection: "row",
     justifyContent: "space-between",
-    ...uiTheme.shadow.card
+    ...uiTheme.shadow.float,
+  },
+  bottomNavItemOuter: {
+    flex: 1,
   },
   bottomNavItem: {
     flex: 1,
     alignItems: "center",
-    gap: 3,
-    minHeight: 46,
+    gap: 2,
+    minHeight: 48,
     paddingVertical: uiTheme.spacing.xs,
-    borderRadius: uiTheme.radius.lg
+    borderRadius: 24,
+    position: "relative",
   },
   bottomNavItemActive: {
-    backgroundColor: uiTheme.colors.primarySoft
+    backgroundColor: uiTheme.colors.primarySoft,
   },
-  bottomNavItemPressed: {
-    backgroundColor: uiTheme.colors.surfaceMuted
+  activeIconWrap: {
+    position: "relative",
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeIconGradient: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    opacity: 0.15,
+  },
+  iconZ: {
+    zIndex: 1,
   },
   bottomNavIconWrap: {
-    position: "relative"
+    position: "relative",
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
   bottomNavLabel: {
-    fontSize: uiTheme.typography.micro,
+    fontSize: 10,
     fontWeight: "700",
     color: uiTheme.colors.textMuted,
-    letterSpacing: 0
+    letterSpacing: 0.2,
   },
   bottomNavLabelActive: {
-    color: uiTheme.colors.primary,
+    color: uiTheme.colors.primaryDeep,
     fontWeight: "800"
+  },
+  activeIndicator: {
+    position: "absolute",
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: uiTheme.colors.primary,
   },
   bottomNavBadge: {
     position: "absolute",
-    top: -5,
-    right: -10,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: 2,
+    right: "22%",
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: uiTheme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: uiTheme.colors.surface
+    borderWidth: 2,
+    borderColor: uiTheme.colors.surface,
+    zIndex: 5,
+    ...uiTheme.shadow.glowSubtle,
   },
   bottomNavBadgeText: {
     color: "#FFFFFF",
     fontSize: 9,
-    fontWeight: "800"
+    fontWeight: "900"
   }
 })

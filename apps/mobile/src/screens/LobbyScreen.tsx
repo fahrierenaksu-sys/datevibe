@@ -1066,119 +1066,121 @@ export function LobbyScreen(props: LobbyScreenProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: uiTheme.colors.background
+    backgroundColor: uiTheme.colors.background,
   },
   safe: {
-    flex: 1
+    flex: 1,
   },
   scroll: {
     paddingHorizontal: uiTheme.spacing.lg,
     paddingTop: uiTheme.spacing.sm,
     paddingBottom: uiTheme.spacing.xl,
-    gap: uiTheme.spacing.lg
+    gap: uiTheme.spacing.lg,
   },
   topActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: uiTheme.spacing.xs
+    gap: uiTheme.spacing.xs,
   },
   filterButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: uiTheme.colors.secondary,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    position: "relative"
+    borderColor: uiTheme.colors.glassBorder,
+    position: "relative",
+    ...uiTheme.shadow.soft,
   },
   filterButtonText: {
     fontSize: 16,
     color: uiTheme.colors.secondaryText,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   filterBadge: {
     position: "absolute",
     top: -4,
     right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: uiTheme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: uiTheme.colors.surface
+    borderWidth: 2,
+    borderColor: uiTheme.colors.surface,
   },
   filterBadgeText: {
     color: "#FFFFFF",
     fontSize: 9,
-    fontWeight: "800"
+    fontWeight: "900",
   },
   actionRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: uiTheme.spacing.lg,
-    marginTop: uiTheme.spacing.xs
+    gap: uiTheme.spacing.xl,
+    marginTop: uiTheme.spacing.sm,
   },
   cardTransition: {
-    width: "100%"
+    width: "100%",
   },
   swipeWrapper: {
     position: "relative",
-    width: "100%"
+    width: "100%",
   },
   swipeStamp: {
     position: "absolute",
     top: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: uiTheme.radius.md,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: uiTheme.radius.lg,
     borderWidth: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.92)"
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    ...uiTheme.shadow.float,
   },
   swipeStampLike: {
     left: 22,
     transform: [{ rotate: "-14deg" }],
-    borderColor: uiTheme.colors.success
+    borderColor: uiTheme.colors.success,
   },
   swipeStampLikeText: {
     color: uiTheme.colors.success,
     fontSize: 26,
     fontWeight: "900",
-    letterSpacing: 2
+    letterSpacing: 2,
   },
   swipeStampPass: {
     right: 22,
     transform: [{ rotate: "14deg" }],
-    borderColor: uiTheme.colors.danger
+    borderColor: uiTheme.colors.danger,
   },
   swipeStampPassText: {
     color: uiTheme.colors.danger,
     fontSize: 26,
     fontWeight: "900",
-    letterSpacing: 2
+    letterSpacing: 2,
   },
   demoButton: {
     alignSelf: "center",
     marginTop: uiTheme.spacing.xs,
-    paddingHorizontal: uiTheme.spacing.md,
+    paddingHorizontal: uiTheme.spacing.lg,
     paddingVertical: uiTheme.spacing.sm,
     borderRadius: uiTheme.radius.full,
     borderWidth: 1,
-    borderColor: uiTheme.colors.borderStrong,
-    backgroundColor: uiTheme.colors.surface
+    borderColor: uiTheme.colors.glassBorder,
+    backgroundColor: uiTheme.colors.glass,
+    ...uiTheme.shadow.soft,
   },
   demoButtonPressed: {
-    backgroundColor: uiTheme.colors.surfaceMuted
+    backgroundColor: uiTheme.colors.surfaceMuted,
   },
   demoButtonText: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.4
+    letterSpacing: 0.4,
   },
   feedbackPill: {
     alignSelf: "center",
@@ -1186,89 +1188,86 @@ const styles = StyleSheet.create({
     paddingVertical: uiTheme.spacing.sm,
     borderRadius: uiTheme.radius.full,
     borderWidth: 1,
-    marginTop: -uiTheme.spacing.xs
+    marginTop: -uiTheme.spacing.xs,
   },
   feedbackPillSoft: {
-    backgroundColor: uiTheme.colors.surfaceMuted,
-    borderColor: uiTheme.colors.border
+    backgroundColor: uiTheme.colors.glass,
+    borderColor: uiTheme.colors.glassBorder,
   },
   feedbackPillWarm: {
     backgroundColor: uiTheme.colors.primarySoft,
-    borderColor: "#FAD0E3"
+    borderColor: "#FAD0E3",
   },
   feedbackText: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.2
+    letterSpacing: 0.2,
   },
   feedbackTextWarm: {
-    color: uiTheme.colors.primaryDeep
+    color: uiTheme.colors.primaryDeep,
   },
   pendingInviteStrip: {
     flexDirection: "row",
     alignItems: "center",
     gap: uiTheme.spacing.sm,
-    paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
+    paddingHorizontal: uiTheme.spacing.lg,
+    paddingVertical: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    ...uiTheme.shadow.soft
+    borderColor: uiTheme.colors.glassBorder,
+    ...uiTheme.shadow.float,
   },
   pendingInviteIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: uiTheme.colors.primarySoft
+    backgroundColor: uiTheme.colors.primarySoft,
   },
   pendingInviteIconText: {
     color: uiTheme.colors.primary,
-    fontSize: 15,
-    fontWeight: "900"
+    fontSize: 16,
+    fontWeight: "900",
   },
   pendingInviteCopy: {
     flex: 1,
-    gap: 2
+    gap: 2,
   },
   pendingInviteTitle: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   pendingInviteBody: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
     lineHeight: 17,
-    fontWeight: "600"
   },
   pendingInviteTime: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.primaryDeep,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
     minWidth: 28,
-    textAlign: "right"
+    textAlign: "right",
   },
   nearbyHintRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginTop: -uiTheme.spacing.xs
+    marginTop: -uiTheme.spacing.xs,
   },
   nearbyDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: uiTheme.colors.success
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: uiTheme.colors.success,
   },
   nearbyHint: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
     fontWeight: "700",
-    letterSpacing: 0.3
-  }
+    letterSpacing: 0.3,
+  },
 })
