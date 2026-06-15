@@ -16,7 +16,6 @@ import {
 } from "../features/avatarV2/avatarV2Selectors"
 import { AvatarPreview2D } from "../features/avatarV2/components/AvatarPreview2D"
 import { ROOM_AVATAR_CATALOG } from "../features/avatarV2/room/avatarRoom.mock"
-import { getRoomAvatarProductionMotionAudit } from "../features/avatarV2/room/avatarRoomProductionMotion"
 import { projectAvatarV2ToRoomAvatarAppearance } from "../features/avatarV2/room/avatarRoomProjection"
 import { getRoomAvatarMotionReadinessSummary } from "../features/avatarV2/room/avatarRoomSelectors"
 import type {
@@ -82,12 +81,6 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
       catalog: ROOM_AVATAR_CATALOG
     }),
     [roomAvatarAppearance]
-  )
-  const productionMotionAudit = useMemo(
-    () => getRoomAvatarProductionMotionAudit({
-      catalog: ROOM_AVATAR_CATALOG
-    }),
-    []
   )
   const readinessTone = getReadinessTone(roomMotionReadiness.level)
   const readinessCopy = getWardrobeReadinessCopy(roomMotionReadiness.level)
@@ -280,26 +273,6 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                     </View>
                   ))}
                 </View>
-              </View>
-              <View style={styles.motionProductionGate}>
-                <Ionicons
-                  name={
-                    productionMotionAudit.isFirstMotionSliceReadyForDefaultPresets
-                      ? "checkmark-circle"
-                      : "construct"
-                  }
-                  size={13}
-                  color={
-                    productionMotionAudit.isFirstMotionSliceReadyForDefaultPresets
-                      ? "#8FFFD1"
-                      : "#FFD1E3"
-                  }
-                />
-                <Text style={styles.motionProductionGateText} numberOfLines={1}>
-                  {productionMotionAudit.firstMissingAssetPlan
-                    ? `Next strip ${productionMotionAudit.firstMissingAssetPlan.expectedStripFileName} · ${productionMotionAudit.firstMissingAssetPlan.minimumFrameCount} frame`
-                    : `Default rig set ${productionMotionAudit.readyRequirementCount}/${productionMotionAudit.totalRequirementCount}`}
-                </Text>
               </View>
               {roomMotionReadiness.missingRequirementLabels.length > 0 ? (
                 <Text style={styles.roomReadinessNext} numberOfLines={1}>
