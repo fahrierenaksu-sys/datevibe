@@ -12,6 +12,10 @@ import type {
   AvatarItemType,
   UserAvatar
 } from "../avatarV2.types"
+import type {
+  RoomFurnitureRotation,
+  RoomV2AvatarMotionState
+} from "../../roomV2/roomV2.types"
 
 interface AvatarPreview2DProps {
   avatar?: Partial<UserAvatar>
@@ -28,6 +32,7 @@ export function AvatarPreview2D(props: AvatarPreview2DProps) {
   const {
     avatar,
     catalog = AVATAR_V2_CATALOG,
+    animationState = "idle_front",
     size = 220,
     stageHeight = 286,
     selectedType,
@@ -40,12 +45,15 @@ export function AvatarPreview2D(props: AvatarPreview2DProps) {
       avatarCatalog: catalog,
       roomAvatarCatalog: ROOM_AVATAR_CATALOG
     })
+    const roomMotion = getRoomAvatarMotionFromPreviewState(animationState)
 
     return getRoomAvatarRenderLayers({
       appearance,
-      catalog: ROOM_AVATAR_CATALOG
+      catalog: ROOM_AVATAR_CATALOG,
+      direction: roomMotion.direction,
+      state: roomMotion.state
     })
-  }, [avatar, catalog])
+  }, [animationState, avatar, catalog])
 
   const avatarHeight = size / (256 / 384)
 
@@ -68,6 +76,24 @@ export function AvatarPreview2D(props: AvatarPreview2DProps) {
       ) : null}
     </View>
   )
+}
+
+function getRoomAvatarMotionFromPreviewState(
+  animationState: AvatarAnimationState
+): {
+  state: RoomV2AvatarMotionState
+  direction: RoomFurnitureRotation
+} {
+  switch (animationState) {
+    case "walk_front":
+      return { state: "walking", direction: "front" }
+    case "sit_front":
+      return { state: "sitting", direction: "front" }
+    case "wave_front":
+      return { state: "waving", direction: "front" }
+    case "idle_front":
+      return { state: "idle", direction: "front" }
+  }
 }
 
 const styles = StyleSheet.create({
@@ -123,7 +149,7 @@ const styles = StyleSheet.create({
   metaText: {
     maxWidth: 170,
     color: "rgba(255,255,255,0.78)",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "800",
     textTransform: "capitalize"
   }

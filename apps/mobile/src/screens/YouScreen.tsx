@@ -7,6 +7,7 @@ import type { RootStackParamList } from "../navigation/RootNavigator"
 import { MyAvatar } from "../ui/myAvatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
 import { BrandMark } from "../ui/brandMark"
+import { LinearGradient } from "../ui/linearGradient"
 import { TopBar, ActionButtonCircle } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 import { VIBE_PRESETS } from "../ui/vibeTilePicker"
@@ -48,44 +49,63 @@ export function YouScreen(props: YouScreenProps) {
           showsVerticalScrollIndicator={false}
         >
           {/* Hero avatar card */}
-          <View style={styles.heroCard}>
-            <View style={styles.heroGlow} pointerEvents="none" />
-            <View style={styles.heroGlowSecondary} pointerEvents="none" />
-            <MyAvatar
-              name={profile.displayName}
-              seed={profile.userId}
-              size={172}
-              ring="strong"
-            />
-            {PREVIEW_NAMEPLATE_ITEM ? (
-              <View
-                style={[
-                  styles.nameplatePreview,
-                  {
-                    backgroundColor: PREVIEW_NAMEPLATE_ITEM.accentSoftColor,
-                    borderColor: PREVIEW_NAMEPLATE_ITEM.accentColor
-                  }
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.nameplatePreviewText,
-                    { color: PREVIEW_NAMEPLATE_ITEM.accentColor }
-                  ]}
-                  numberOfLines={1}
-                >
-                  {PREVIEW_NAMEPLATE_ITEM.name}
-                </Text>
-                <Text style={styles.nameplatePreviewMeta} numberOfLines={1}>
-                  Preview only
-                </Text>
+          <View style={styles.heroCardOuter}>
+            <LinearGradient
+              colors={["#FBF8FD", "#FFF2F8", "#FFE2EE"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroCard}
+            >
+              <View style={styles.heroGlow} pointerEvents="none" />
+              <View style={styles.heroGlowSecondary} pointerEvents="none" />
+              {/* Gradient glow behind avatar */}
+              <View style={styles.avatarGlowWrap} pointerEvents="none">
+                <LinearGradient
+                  colors={["rgba(255,79,152,0.28)", "rgba(255,126,179,0.12)", "transparent"]}
+                  style={styles.avatarGlowGradient}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                />
               </View>
-            ) : null}
+              <MyAvatar
+                name={profile.displayName}
+                seed={profile.userId}
+                size={172}
+                ring="strong"
+              />
+              {PREVIEW_NAMEPLATE_ITEM ? (
+                <View
+                  style={[
+                    styles.nameplatePreview,
+                    {
+                      backgroundColor: PREVIEW_NAMEPLATE_ITEM.accentSoftColor,
+                      borderColor: PREVIEW_NAMEPLATE_ITEM.accentColor
+                    }
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.nameplatePreviewText,
+                      { color: PREVIEW_NAMEPLATE_ITEM.accentColor }
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {PREVIEW_NAMEPLATE_ITEM.name}
+                  </Text>
+                  <Text style={styles.nameplatePreviewMeta} numberOfLines={1}>
+                    Preview only
+                  </Text>
+                </View>
+              ) : null}
+            </LinearGradient>
           </View>
 
           {/* Identity */}
           <View style={styles.identityBlock}>
-            <Text style={styles.nameText}>{profile.displayName}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.nameText}>{profile.displayName}</Text>
+              <Text style={styles.verifiedBadge}>✦</Text>
+            </View>
             {profile.age ? (
               <Text style={styles.ageText}>{profile.age} years old</Text>
             ) : null}
@@ -96,30 +116,40 @@ export function YouScreen(props: YouScreenProps) {
           </View>
 
           {/* Info cards */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Avatar Identity</Text>
-            <Text style={styles.infoBody}>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionCardHeader}>
+              <Text style={styles.sectionIcon}>👤</Text>
+              <Text style={styles.sectionLabel}>Avatar Identity</Text>
+              <Text style={styles.sectionChevron}>›</Text>
+            </View>
+            <Text style={styles.sectionBody}>
               Your AvatarV2 look, name, and vibe are how people recognize you
               in Discover, My Room, and post-match rooms.
             </Text>
           </View>
 
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>My Room</Text>
-            <Text style={styles.infoBody}>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionCardHeader}>
+              <Text style={styles.sectionIcon}>🏠</Text>
+              <Text style={styles.sectionLabel}>My Room</Text>
+              <Text style={styles.sectionChevron}>›</Text>
+            </View>
+            <Text style={styles.sectionBody}>
               Your saved room is part of your presence. Decor you place in My
               Room is what people should see when room experiences open up.
             </Text>
           </View>
 
-          <View style={styles.infoCard}>
-            <View style={styles.brandRow}>
-              <BrandMark size={28} />
-              <View style={styles.brandTextStack}>
-                <Text style={styles.brandName}>DateVibe</Text>
-                <Text style={styles.brandTagline}>
-                  Avatar-first matching, then a private room after mutual interest.
-                </Text>
+          <View style={styles.brandCard}>
+            <View style={styles.brandCardInner}>
+              <View style={styles.brandRow}>
+                <BrandMark size={28} />
+                <View style={styles.brandTextStack}>
+                  <Text style={styles.brandName}>DateVibe</Text>
+                  <Text style={styles.brandTagline}>
+                    Avatar-first matching, then a private room after mutual interest.
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -128,41 +158,59 @@ export function YouScreen(props: YouScreenProps) {
           <Pressable
             onPress={() => navigation.navigate("MyRoom")}
             style={({ pressed }) => [
-              styles.customizeButton,
-              pressed ? { opacity: 0.85 } : null
+              styles.gradientButtonWrap,
+              pressed ? { opacity: 0.85, transform: [{ scale: uiTheme.animation.scalePress }] } : null
             ]}
           >
-            <Text style={styles.customizeText}>My Room</Text>
+            <LinearGradient
+              colors={uiTheme.gradients.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientButton}
+            >
+              <Text style={styles.gradientButtonIcon}>🏠</Text>
+              <Text style={styles.gradientButtonText}>My Room</Text>
+            </LinearGradient>
           </Pressable>
 
           <Pressable
             onPress={() => navigation.navigate("CosmeticShop")}
             style={({ pressed }) => [
-              styles.customizeButton,
-              pressed ? { opacity: 0.85 } : null
+              styles.gradientButtonWrap,
+              pressed ? { opacity: 0.85, transform: [{ scale: uiTheme.animation.scalePress }] } : null
             ]}
           >
-            <Text style={styles.customizeText}>Wardrobe & Shop</Text>
+            <LinearGradient
+              colors={uiTheme.gradients.warm}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientButton}
+            >
+              <Text style={styles.gradientButtonIcon}>👗</Text>
+              <Text style={styles.gradientButtonText}>Wardrobe & Shop</Text>
+            </LinearGradient>
           </Pressable>
 
           <Pressable
             onPress={() => navigation.navigate("ProfileEdit")}
             style={({ pressed }) => [
-              styles.editProfileButton,
-              pressed ? { opacity: 0.85 } : null
+              styles.utilityButton,
+              pressed ? { opacity: 0.85, transform: [{ scale: uiTheme.animation.scalePress }] } : null
             ]}
           >
-            <Text style={styles.editProfileText}>Edit Profile</Text>
+            <Text style={styles.utilityButtonIcon}>✏️</Text>
+            <Text style={styles.utilityButtonText}>Edit Profile</Text>
           </Pressable>
 
           <Pressable
             onPress={() => navigation.navigate("Settings")}
             style={({ pressed }) => [
-              styles.editProfileButton,
-              pressed ? { opacity: 0.85 } : null
+              styles.utilityButton,
+              pressed ? { opacity: 0.85, transform: [{ scale: uiTheme.animation.scalePress }] } : null
             ]}
           >
-            <Text style={styles.editProfileText}>Settings</Text>
+            <Text style={styles.utilityButtonIcon}>⚙️</Text>
+            <Text style={styles.utilityButtonText}>Settings</Text>
           </Pressable>
 
           <Pressable
@@ -197,34 +245,51 @@ const styles = StyleSheet.create({
     gap: uiTheme.spacing.md,
     paddingBottom: uiTheme.spacing.xxl
   },
-  heroCard: {
-    height: 280,
+
+  /* ── Hero ───────────────────────────────────── */
+  heroCardOuter: {
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: "#ECE9EE",
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border,
+    overflow: "hidden",
+    ...uiTheme.shadow.deep
+  },
+  heroCard: {
+    height: 300,
+    borderRadius: uiTheme.radius.xl,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
     position: "relative",
-    ...uiTheme.shadow.card
+    borderWidth: 1,
+    borderColor: uiTheme.colors.border
   },
   heroGlow: {
     position: "absolute",
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    backgroundColor: uiTheme.colors.avatarAccent,
-    top: -60
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: "rgba(234,219,245,0.7)",
+    top: -80
   },
   heroGlowSecondary: {
     position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "rgba(252,228,241,0.65)",
+    right: -50,
+    bottom: -60
+  },
+  avatarGlowWrap: {
+    position: "absolute",
     width: 220,
     height: 220,
-    borderRadius: 110,
-    backgroundColor: "#FCE4F1",
-    right: -40,
-    bottom: -50
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  avatarGlowGradient: {
+    width: 220,
+    height: 220,
+    borderRadius: 110
   },
   nameplatePreview: {
     position: "absolute",
@@ -241,28 +306,40 @@ const styles = StyleSheet.create({
   },
   nameplatePreviewText: {
     flexShrink: 1,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.caption,
     fontWeight: "900"
   },
   nameplatePreviewMeta: {
     color: "rgba(32, 22, 42, 0.66)",
-    fontSize: uiTheme.typography.micro,
+    ...uiTheme.font.micro,
     fontWeight: "900",
     textTransform: "uppercase"
   },
+
+  /* ── Identity ──────────────────────────────── */
   identityBlock: {
     gap: uiTheme.spacing.xxs,
     paddingHorizontal: 2
   },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
   nameText: {
     color: uiTheme.colors.textPrimary,
-    fontSize: 34,
-    fontWeight: "800",
-    letterSpacing: 0
+    fontSize: 36,
+    fontWeight: "900",
+    letterSpacing: -0.6
+  },
+  verifiedBadge: {
+    color: uiTheme.colors.primary,
+    fontSize: 20,
+    fontWeight: "800"
   },
   ageText: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     fontWeight: "600"
   },
   vibeRow: {
@@ -278,10 +355,12 @@ const styles = StyleSheet.create({
   },
   vibeLabel: {
     color: uiTheme.colors.primaryDeep,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.label,
     fontWeight: "800"
   },
-  infoCard: {
+
+  /* ── Section cards ─────────────────────────── */
+  sectionCard: {
     gap: uiTheme.spacing.xs,
     padding: uiTheme.spacing.md,
     borderRadius: uiTheme.radius.lg,
@@ -290,17 +369,46 @@ const styles = StyleSheet.create({
     borderColor: uiTheme.colors.border,
     ...uiTheme.shadow.soft
   },
-  infoLabel: {
+  sectionCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: uiTheme.spacing.sm
+  },
+  sectionIcon: {
+    fontSize: 18
+  },
+  sectionLabel: {
+    flex: 1,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
+    ...uiTheme.font.captionBold,
     letterSpacing: 0.6,
     textTransform: "uppercase"
   },
-  infoBody: {
+  sectionChevron: {
+    color: uiTheme.colors.textMuted,
+    fontSize: 22,
+    fontWeight: "600"
+  },
+  sectionBody: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    lineHeight: 21
+    ...uiTheme.font.bodySmall,
+    lineHeight: 21,
+    paddingLeft: 28
+  },
+
+  /* ── Brand card with gradient border ────────── */
+  brandCard: {
+    borderRadius: uiTheme.radius.lg + 2,
+    padding: 2,
+    backgroundColor: uiTheme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: "rgba(255,79,152,0.18)",
+    ...uiTheme.shadow.soft
+  },
+  brandCardInner: {
+    padding: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.lg,
+    backgroundColor: uiTheme.colors.surface
   },
   brandRow: {
     flexDirection: "row",
@@ -313,57 +421,79 @@ const styles = StyleSheet.create({
   },
   brandName: {
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.bodyBold,
     fontWeight: "800"
   },
   brandTagline: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "600"
   },
+
+  /* ── Gradient action buttons ───────────────── */
+  gradientButtonWrap: {
+    borderRadius: uiTheme.radius.full,
+    overflow: "hidden",
+    ...uiTheme.shadow.glowSubtle
+  },
+  gradientButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: uiTheme.spacing.sm,
+    paddingVertical: uiTheme.spacing.md,
+    paddingHorizontal: uiTheme.spacing.xl,
+    borderRadius: uiTheme.radius.full
+  },
+  gradientButtonIcon: {
+    fontSize: 18
+  },
+  gradientButtonText: {
+    color: uiTheme.colors.textInverted,
+    ...uiTheme.font.bodyBold,
+    fontWeight: "800"
+  },
+
+  /* ── Utility buttons ───────────────────────── */
+  utilityButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: uiTheme.spacing.sm,
+    paddingHorizontal: uiTheme.spacing.xl,
+    paddingVertical: uiTheme.spacing.sm + 2,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.border,
+    ...uiTheme.shadow.soft
+  },
+  utilityButtonIcon: {
+    fontSize: 16
+  },
+  utilityButtonText: {
+    color: uiTheme.colors.textSecondary,
+    ...uiTheme.font.bodySmall,
+    fontWeight: "700"
+  },
+
+  /* ── Sign out ──────────────────────────────── */
   signOutButton: {
     alignSelf: "center",
-    paddingHorizontal: uiTheme.spacing.xl,
-    paddingVertical: uiTheme.spacing.sm,
+    paddingHorizontal: uiTheme.spacing.xxl,
+    paddingVertical: uiTheme.spacing.md,
     borderRadius: uiTheme.radius.full,
     backgroundColor: uiTheme.colors.dangerSoft,
     borderWidth: 1,
-    borderColor: "#F7C9D1"
+    borderColor: "#F7C9D1",
+    marginTop: uiTheme.spacing.sm
   },
   signOutButtonPressed: {
     opacity: 0.8
   },
   signOutText: {
     color: uiTheme.colors.dangerInk,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "700"
-  },
-  customizeButton: {
-    alignSelf: "center",
-    paddingHorizontal: uiTheme.spacing.xl,
-    paddingVertical: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.chipBackground,
-    borderWidth: 1,
-    borderColor: "#F4A9CA"
-  },
-  customizeText: {
-    color: uiTheme.colors.chipText,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "800"
-  },
-  editProfileButton: {
-    alignSelf: "center",
-    paddingHorizontal: uiTheme.spacing.xl,
-    paddingVertical: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border
-  },
-  editProfileText: {
-    color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "700"
   }
 })

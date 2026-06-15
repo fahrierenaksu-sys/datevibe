@@ -1,4 +1,7 @@
-import type { RoomV2AssetRef } from "../../roomV2/roomV2.types"
+import type {
+  RoomV2AssetRef,
+  RoomV2AvatarAssetSequence
+} from "../../roomV2/roomV2.types"
 
 // Room avatar v1 assets use one 256x384 transparent canvas, one centerline,
 // and one shared feet baseline so clothing layers can stack without offsets.
@@ -8,6 +11,16 @@ const roomAvatarAsset = (
 ): RoomV2AssetRef => ({
   key,
   source
+})
+
+export const roomAvatarAssetSequence = (
+  frames: RoomV2AvatarAssetSequence["frames"],
+  frameDurationMs = 120,
+  loop = true
+): RoomV2AvatarAssetSequence => ({
+  frames,
+  frameDurationMs,
+  loop
 })
 
 export const roomAvatarLayerAssets = {

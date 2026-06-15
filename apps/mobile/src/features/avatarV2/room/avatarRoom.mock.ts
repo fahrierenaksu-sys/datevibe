@@ -44,7 +44,7 @@ export const DEFAULT_ROOM_AVATAR_MALE: RoomAvatarAppearance = {
   accessoryIds: []
 }
 
-export const ROOM_AVATAR_CATALOG: RoomAvatarCatalogItem[] = [
+const ROOM_AVATAR_CATALOG_ITEMS: RoomAvatarCatalogItem[] = [
   {
     id: DEFAULT_ROOM_AVATAR_FEMALE.hairBackId!,
     type: "hairBack",
@@ -228,3 +228,21 @@ export const ROOM_AVATAR_CATALOG: RoomAvatarCatalogItem[] = [
     asset: roomAvatarLayerAssets.shoesFemalesCreamSneakersV2
   }
 ]
+
+export const ROOM_AVATAR_CATALOG: RoomAvatarCatalogItem[] =
+  ROOM_AVATAR_CATALOG_ITEMS.map(withIdleFrontMotionAsset)
+
+function withIdleFrontMotionAsset(
+  item: RoomAvatarCatalogItem
+): RoomAvatarCatalogItem {
+  return {
+    ...item,
+    assetsByMotion: {
+      ...item.assetsByMotion,
+      idle: {
+        ...item.assetsByMotion?.idle,
+        front: item.assetsByMotion?.idle?.front ?? item.asset
+      }
+    }
+  }
+}

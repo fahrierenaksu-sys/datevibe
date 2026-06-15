@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { MyAvatar } from "../ui/myAvatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
+import { LinearGradient } from "../ui/linearGradient"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 import { hapticMedium } from "../ui/haptics"
@@ -35,6 +37,7 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
     currentAge ? String(currentAge) : ""
   )
   const [saved, setSaved] = useState(false)
+  const saveScaleAnim = useRef(new Animated.Value(1)).current
 
   const parsedAge = Number.parseInt(ageText, 10)
   const ageValid = ageText === "" || (parsedAge >= 18 && parsedAge <= 99)
@@ -53,6 +56,22 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
     setSaved(true)
     setTimeout(() => navigation.goBack(), 600)
   }, [ageText, canSave, displayName, hasChanges, navigation, onSave, parsedAge])
+
+  const handleSavePressIn = () => {
+    Animated.spring(saveScaleAnim, {
+      toValue: uiTheme.animation.scalePress,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handleSavePressOut = () => {
+    Animated.spring(saveScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
 
   return (
     <View style={styles.root}>
@@ -77,11 +96,17 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
         >
           {/* Preview */}
           <View style={styles.previewCard}>
+            <LinearGradient
+              colors={uiTheme.gradients.heroBackground as [string, ...string[]]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
             <View style={styles.previewGlow} pointerEvents="none" />
             <MyAvatar
               name={displayName || "?"}
               seed={currentUserId}
-              size={100}
+              size={110}
               ring="strong"
             />
             <Text style={styles.previewName}>
@@ -106,7 +131,10 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
               autoCorrect={false}
             />
             {!nameValid && displayName.length > 0 ? (
-              <Text style={styles.errorHint}>At least 2 characters</Text>
+              <View style={styles.errorRow}>
+                <Text style={styles.errorDot}>●</Text>
+                <Text style={styles.errorHint}>At least 2 characters</Text>
+              </View>
             ) : null}
           </View>
 
@@ -122,7 +150,10 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
               maxLength={2}
             />
             {!ageValid ? (
-              <Text style={styles.errorHint}>Must be between 18 and 99</Text>
+              <View style={styles.errorRow}>
+                <Text style={styles.errorDot}>●</Text>
+                <Text style={styles.errorHint}>Must be between 18 and 99</Text>
+              </View>
             ) : null}
             <Text style={styles.fieldHint}>
               Your avatar, room, and vibe carry the expression; keep profile details simple.
@@ -130,19 +161,33 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
           </View>
 
           {/* Save */}
-          <Pressable
-            onPress={handleSave}
-            disabled={!canSave || !hasChanges}
-            style={({ pressed }) => [
-              styles.saveButton,
-              (!canSave || !hasChanges) ? styles.saveButtonDisabled : null,
-              pressed ? styles.saveButtonPressed : null
-            ]}
-          >
-            <Text style={styles.saveButtonText}>
-              {saved ? "Saved ✓" : "Save Changes"}
-            </Text>
-          </Pressable>
+          <Animated.View style={[styles.saveWrap, { transform: [{ scale: saveScaleAnim }] }]}>
+            <Pressable
+              onPress={handleSave}
+              onPressIn={handleSavePressIn}
+              onPressOut={handleSavePressOut}
+              disabled={!canSave || !hasChanges}
+              style={[
+                styles.saveButton,
+                (!canSave || !hasChanges) ? styles.saveButtonDisabled : null,
+              ]}
+            >
+              <LinearGradient
+                colors={
+                  canSave && hasChanges
+                    ? uiTheme.gradients.primary as [string, string]
+                    : [uiTheme.colors.primaryDisabled, uiTheme.colors.primaryDisabled]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.saveButtonGradient}
+              >
+                <Text style={styles.saveButtonText}>
+                  {saved ? "Saved ✓" : "Save Changes"}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -152,99 +197,108 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: uiTheme.colors.background
+    backgroundColor: uiTheme.colors.background,
   },
   safe: {
     flex: 1,
     paddingHorizontal: uiTheme.spacing.lg,
-    paddingTop: uiTheme.spacing.sm
+    paddingTop: uiTheme.spacing.sm,
   },
   content: {
     flex: 1,
-    gap: uiTheme.spacing.md
+    gap: uiTheme.spacing.md,
   },
   previewCard: {
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.surface,
     borderWidth: 1,
     borderColor: uiTheme.colors.border,
-    padding: uiTheme.spacing.lg,
+    padding: uiTheme.spacing.xl,
     alignItems: "center",
     gap: uiTheme.spacing.sm,
     overflow: "hidden",
     position: "relative",
-    ...uiTheme.shadow.card
+    ...uiTheme.shadow.deep,
   },
   previewGlow: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
     backgroundColor: uiTheme.colors.avatarAccent,
-    top: -60
+    top: -80,
   },
   previewName: {
+    ...uiTheme.font.title,
     color: uiTheme.colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "800"
+    fontSize: 26,
   },
   previewHint: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
     lineHeight: 18,
-    textAlign: "center"
+    textAlign: "center",
   },
   fieldCard: {
     gap: uiTheme.spacing.xs,
-    padding: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
+    padding: uiTheme.spacing.lg,
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    ...uiTheme.shadow.soft
+    borderColor: uiTheme.colors.glassBorder,
+    ...uiTheme.shadow.soft,
   },
   fieldLabel: {
-    color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-    textTransform: "uppercase"
+    ...uiTheme.font.overline,
+    color: uiTheme.colors.primary,
   },
   input: {
+    ...uiTheme.font.bodyMedium,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.body,
-    fontWeight: "600",
     paddingVertical: uiTheme.spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: uiTheme.colors.border
+    borderBottomWidth: 1.5,
+    borderBottomColor: uiTheme.colors.border,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  errorDot: {
+    color: uiTheme.colors.danger,
+    fontSize: 6,
   },
   errorHint: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.danger,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   fieldHint: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    lineHeight: 18
+    lineHeight: 18,
+  },
+  saveWrap: {
+    alignSelf: "center",
+    marginTop: uiTheme.spacing.sm,
   },
   saveButton: {
-    alignSelf: "center",
+    borderRadius: uiTheme.radius.full,
+    overflow: "hidden",
+    ...uiTheme.shadow.glow,
+  },
+  saveButtonGradient: {
     paddingHorizontal: uiTheme.spacing.xxl,
     paddingVertical: uiTheme.spacing.md,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.primary,
-    marginTop: uiTheme.spacing.sm
+    alignItems: "center",
+    justifyContent: "center",
   },
   saveButtonDisabled: {
-    opacity: 0.45
-  },
-  saveButtonPressed: {
-    opacity: 0.85
+    opacity: 0.5,
+    shadowOpacity: 0,
   },
   saveButtonText: {
+    ...uiTheme.font.bodyBold,
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
-    fontWeight: "800"
-  }
+  },
 })

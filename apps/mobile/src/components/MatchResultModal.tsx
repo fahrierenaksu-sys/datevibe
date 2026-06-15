@@ -10,9 +10,9 @@ import {
   Vibration,
   View
 } from "react-native"
-import { Avatar } from "../ui/avatar"
 import { MyAvatar } from "../ui/myAvatar"
 import {
+  CandidateAvatarPreview,
   createCandidateAvatarSnapshot,
   type CandidateAvatarSnapshot
 } from "./DiscoverCard"
@@ -263,11 +263,10 @@ export function MatchResultModal(props: MatchResultModalProps) {
             </View>
 
             <View style={styles.avatarColumn}>
-              <Avatar
-                name={resolvedMatchedAvatarSnapshot.displayName}
-                seed={resolvedMatchedAvatarSnapshot.previewSeed}
-                size={84}
-                ring="strong"
+              <CandidateAvatarPreview
+                snapshot={resolvedMatchedAvatarSnapshot}
+                size={96}
+                stage="match"
               />
               <Text style={styles.avatarSourceText}>
                 {resolvedMatchedAvatarSnapshot.label}
@@ -309,54 +308,55 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: uiTheme.spacing.lg
+    paddingHorizontal: uiTheme.spacing.lg,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(28, 16, 34, 0.56)"
+    backgroundColor: "rgba(28, 16, 34, 0.62)",
   },
   modalCard: {
     width: "100%",
-    borderRadius: uiTheme.radius.xl,
+    borderRadius: uiTheme.radius.xxl,
     backgroundColor: uiTheme.colors.surface,
     borderWidth: 1,
     borderColor: uiTheme.colors.border,
-    paddingHorizontal: uiTheme.spacing.lg,
+    paddingHorizontal: uiTheme.spacing.xl,
     paddingTop: uiTheme.spacing.xxl,
-    paddingBottom: uiTheme.spacing.lg,
+    paddingBottom: uiTheme.spacing.xl,
     gap: uiTheme.spacing.md,
     overflow: "visible",
-    ...uiTheme.shadow.card
+    ...uiTheme.shadow.deep,
   },
   closeButton: {
     position: "absolute",
     right: uiTheme.spacing.md,
     top: uiTheme.spacing.md,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: uiTheme.colors.secondary,
-    zIndex: 20
+    backgroundColor: uiTheme.colors.glass,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.glassBorder,
+    zIndex: 20,
   },
   closeButtonText: {
     color: uiTheme.colors.secondaryText,
     fontSize: 15,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   headline: {
+    ...uiTheme.font.display,
     color: uiTheme.colors.textPrimary,
-    fontSize: 34,
     textAlign: "center",
-    fontWeight: "800"
+    fontSize: 34,
   },
   supportText: {
+    ...uiTheme.font.body,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.body,
     textAlign: "center",
-    lineHeight: 23,
-    paddingHorizontal: uiTheme.spacing.sm
+    paddingHorizontal: uiTheme.spacing.sm,
   },
   confirmedPill: {
     alignSelf: "center",
@@ -368,71 +368,70 @@ const styles = StyleSheet.create({
     borderRadius: uiTheme.radius.full,
     backgroundColor: uiTheme.colors.successSoft,
     borderWidth: 1,
-    borderColor: "rgba(58, 192, 138, 0.28)"
+    borderColor: "rgba(58, 192, 138, 0.28)",
   },
   confirmedDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: uiTheme.colors.success
+    backgroundColor: uiTheme.colors.success,
   },
   confirmedText: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.successInk,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.2
+    letterSpacing: 0.2,
   },
   connectionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: uiTheme.spacing.sm
+    paddingHorizontal: uiTheme.spacing.sm,
   },
   avatarColumn: {
     alignItems: "center",
     width: 96,
-    gap: uiTheme.spacing.xs
+    gap: uiTheme.spacing.xs,
   },
   avatarName: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
     fontWeight: "600",
-    textAlign: "center"
+    textAlign: "center",
   },
   avatarSourceText: {
+    ...uiTheme.font.micro,
     color: uiTheme.colors.textMuted,
-    fontSize: 10,
-    fontWeight: "800",
-    textAlign: "center"
+    textAlign: "center",
   },
   heartConnector: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    marginHorizontal: uiTheme.spacing.xs
+    marginHorizontal: uiTheme.spacing.xs,
   },
   connectorLine: {
     flex: 1,
-    height: 1,
-    backgroundColor: "#F1D7E6"
+    height: 1.5,
+    backgroundColor: "#F1D7E6",
   },
   heartBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "#FFE7F3",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#F7BCD8",
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    ...uiTheme.shadow.glow,
   },
   heartText: {
     color: uiTheme.colors.primary,
-    fontSize: 18,
-    fontWeight: "800"
+    fontSize: 20,
+    fontWeight: "800",
   },
   actions: {
     gap: uiTheme.spacing.sm,
-    marginTop: uiTheme.spacing.sm
-  }
+    marginTop: uiTheme.spacing.md,
+  },
 })
