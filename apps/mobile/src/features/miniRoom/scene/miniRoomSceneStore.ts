@@ -1,4 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  deriveRoomWorldFacing,
+  type RoomWorldGeometry
+} from "../../roomWorld/roomWorldGeometry"
+import {
+  createRoomWorldGeometryFromRoomV2Scene,
+  createRoomWorldHotspotsFromRoomV2Scene
+} from "../../roomWorld/roomWorldRoomV2Projection"
+import {
+  createRoomWorldGeometryFromMiniRoomScene,
+  createRoomWorldHotspotsFromMiniRoomScene
+} from "../../roomWorld/roomWorldMiniRoomProjection"
+import {
+  createRoomWorldMovementPlan,
+  getRoomWorldMovementFrame,
+  getRoomWorldMovementFramePose,
+  getRoomWorldMovementSegmentStartPose,
+  isRoomWorldTargetOccupied,
+  ROOM_WORLD_AVATAR_COLLISION_CLEARANCE,
+  ROOM_WORLD_MINI_ROOM_MOVEMENT_TIMING,
+  resolveRoomWorldInteractiveTarget,
+  type RoomWorldOccupant
+} from "../../roomWorld/roomWorldRuntime"
+import { getRoomV2AvatarMotionAssetDiagnostics } from "../../roomV2/roomV2AvatarMotion"
+import type { ResolvedRoomV2Scene } from "../../roomV2/roomV2.types"
 import { cozyPinkBedroomScene } from "./roomMaps"
 import type {
   AvatarFacing,
@@ -23,53 +48,40 @@ interface UseMiniRoomSceneStoreInput {
   }
   participantAvatarSnapshots: MiniRoomParticipantAvatarSnapshots
   scene?: RoomScene
+  roomDecorScene?: ResolvedRoomV2Scene
 }
 
-const MIN_MOVEMENT_DURATION_MS = 260
-const MAX_MOVEMENT_DURATION_MS = 820
 const BUBBLE_LIFETIME_MS = 5_500
 const EMOTE_LIFETIME_MS = 1_400
 const PROXIMITY_CLOSE_DISTANCE = 0.18
-
-function pointInPolygon(point: RoomPoint, polygon: RoomPoint[]): boolean {
-  let inside = false
-  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current++) {
-    const currentPoint = polygon[current]
-    const previousPoint = polygon[previous]
-    const crosses =
-      currentPoint.y > point.y !== previousPoint.y > point.y &&
-      point.x <
-        ((previousPoint.x - currentPoint.x) * (point.y - currentPoint.y)) /
-          (previousPoint.y - currentPoint.y) +
-          currentPoint.x
-    if (crosses) inside = !inside
+const ROOM_V2_MINI_ROOM_SPAWN_SEEDS = {
+  local: {
+    x: 0.38,
+    y: 0.76,
+    facing: "right" as AvatarFacing
+  },
+  partner: {
+    x: 0.62,
+    y: 0.74,
+    facing: "left" as AvatarFacing
   }
-  return inside
-}
-
-function isWalkable(scene: RoomScene, point: RoomPoint): boolean {
-  return scene.map.walkableAreas.some((area) => pointInPolygon(point, area.points))
-}
+} as const
 
 function deriveFacing(from: RoomPoint, to: RoomPoint): AvatarFacing {
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  if (Math.abs(dx) > Math.abs(dy)) {
-    return dx >= 0 ? "right" : "left"
-  }
-  return dy >= 0 ? "front" : "back"
-}
-
-function easeOutCubic(value: number): number {
-  return 1 - Math.pow(1 - value, 3)
+  return deriveRoomWorldFacing(from, to)
 }
 
 function createInitialAvatars(
   input: UseMiniRoomSceneStoreInput,
-  scene: RoomScene
+  scene: RoomScene,
+  geometry: RoomWorldGeometry,
+  usesRoomV2Scene: boolean
 ): Record<string, AvatarState> {
-  const localSpawn = scene.spawnPoints.find((point) => point.role === "local") ?? scene.spawnPoints[0]
-  const partnerSpawn = scene.spawnPoints.find((point) => point.role === "partner") ?? scene.spawnPoints[1]
+  const { localSpawn, partnerSpawn } = createInitialSpawnPair({
+    scene,
+    geometry,
+    usesRoomV2Scene
+  })
   const { local, partner } = input.participantAvatarSnapshots
 
   return {
@@ -100,8 +112,27 @@ interface MoveOptions {
 
 export function useMiniRoomSceneStore(input: UseMiniRoomSceneStoreInput): MiniRoomStore {
   const scene = input.scene ?? cozyPinkBedroomScene
+  const usesRoomV2Scene = Boolean(input.roomDecorScene?.shell)
+  const geometry = useMemo(
+    () => usesRoomV2Scene && input.roomDecorScene
+      ? createRoomWorldGeometryFromRoomV2Scene(input.roomDecorScene)
+      : createRoomWorldGeometryFromMiniRoomScene(scene),
+    [input.roomDecorScene, scene, usesRoomV2Scene]
+  )
+  const roomWorldHotspots = useMemo(
+    () => usesRoomV2Scene && input.roomDecorScene
+      ? createRoomWorldHotspotsFromRoomV2Scene(input.roomDecorScene)
+      : createRoomWorldHotspotsFromMiniRoomScene(scene),
+    [input.roomDecorScene, scene, usesRoomV2Scene]
+  )
+  const hotspots = useMemo(
+    () => usesRoomV2Scene
+      ? createMiniRoomHotspotsFromRoomWorldHotspots(roomWorldHotspots)
+      : scene.hotspots,
+    [roomWorldHotspots, scene.hotspots, usesRoomV2Scene]
+  )
   const [avatars, setAvatars] = useState<Record<string, AvatarState>>(() =>
-    createInitialAvatars(input, scene)
+    createInitialAvatars(input, scene, geometry, usesRoomV2Scene)
   )
   const [bubbles, setBubbles] = useState<SpeechBubble[]>([])
   const [emotes, setEmotes] = useState<RoomEmote[]>([])
@@ -112,14 +143,16 @@ export function useMiniRoomSceneStore(input: UseMiniRoomSceneStoreInput): MiniRo
   const bubbleCounterRef = useRef(0)
 
   useEffect(() => {
-    setAvatars(createInitialAvatars(input, scene))
+    setAvatars(createInitialAvatars(input, scene, geometry, usesRoomV2Scene))
   }, [
+    geometry,
     input.localUser.displayName,
     input.localUser.userId,
     input.participantAvatarSnapshots,
     input.partnerUser.displayName,
     input.partnerUser.userId,
-    scene
+    scene,
+    usesRoomV2Scene
   ])
 
   useEffect(() => {
@@ -144,96 +177,143 @@ export function useMiniRoomSceneStore(input: UseMiniRoomSceneStoreInput): MiniRo
 
   const runMovement = useCallback(
     (point: RoomPoint, options?: MoveOptions): boolean => {
-      if (!isWalkable(scene, point)) return false
+      const localAvatar = avatars[input.localUser.userId]
+      if (!localAvatar) return false
+      const occupants = createMiniRoomOccupants(avatars)
+      if (
+        options?.hotspot?.kind === "seat" &&
+        isRoomWorldTargetOccupied({
+          target: point,
+          occupants,
+          movingOccupantId: input.localUser.userId
+        })
+      ) {
+        return false
+      }
+      const target = resolveRoomWorldInteractiveTarget({
+        geometry,
+        target: point,
+        occupants,
+        movingOccupantId: input.localUser.userId,
+        clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE
+      })
+      if (!target) return false
+      const plan = createRoomWorldMovementPlan({
+        geometry,
+        from: localAvatar,
+        to: target,
+        clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE,
+        timing: ROOM_WORLD_MINI_ROOM_MOVEMENT_TIMING,
+        occupants,
+        movingOccupantId: input.localUser.userId
+      })
+      if (!plan) return false
+
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current)
       }
 
       const localUserId = input.localUser.userId
-      const startedAt = Date.now()
-      let start: RoomPoint | null = null
-      let durationMs = MAX_MOVEMENT_DURATION_MS
 
-      setPressedPoint(point)
-      setAvatars((current) => {
-        const avatar = current[localUserId]
-        if (!avatar) return current
-        start = { x: avatar.x, y: avatar.y }
-        const distance = Math.hypot(point.x - avatar.x, point.y - avatar.y)
-        durationMs = Math.min(
-          MAX_MOVEMENT_DURATION_MS,
-          Math.max(MIN_MOVEMENT_DURATION_MS, distance * 1_900)
-        )
-        return {
-          ...current,
-          [localUserId]: {
-            ...avatar,
-            targetX: point.x,
-            targetY: point.y,
-            facing: deriveFacing(avatar, point),
-            motion: "walking",
-            seatedHotspotId: undefined
-          }
-        }
-      })
+      setPressedPoint(target)
 
-      const tick = () => {
-        if (!start) return
-        const elapsed = Date.now() - startedAt
-        const progress = Math.min(1, elapsed / durationMs)
-        const eased = easeOutCubic(progress)
-        const next = {
-          x: start.x + (point.x - start.x) * eased,
-          y: start.y + (point.y - start.y) * eased
-        }
+      const animatePathSegment = (pathIndex: number): void => {
+        const segment = plan.segments[pathIndex]
+        const segmentStartPose = getRoomWorldMovementSegmentStartPose(segment)
+        const startedAt = Date.now()
 
         setAvatars((current) => {
           const avatar = current[localUserId]
           if (!avatar) return current
-          if (progress < 1) {
-            return {
-              ...current,
-              [localUserId]: {
-                ...avatar,
-                x: next.x,
-                y: next.y,
-                motion: "walking",
-                targetX: point.x,
-                targetY: point.y
-              }
-            }
-          }
-          const arrivalFacing = options?.hotspot?.facingOnArrival ?? avatar.facing
-          const arrivalMotion: AvatarState["motion"] =
-            options?.hotspot?.kind === "seat" ? "sitting" : "idle"
           return {
             ...current,
             [localUserId]: {
               ...avatar,
-              x: next.x,
-              y: next.y,
-              motion: arrivalMotion,
-              facing: arrivalFacing,
-              targetX: undefined,
-              targetY: undefined,
-              seatedHotspotId:
-                options?.hotspot?.kind === "seat" ? options.hotspot.id : undefined
+              targetX: target.x,
+              targetY: target.y,
+              facing: segmentStartPose.facing,
+              motion: segmentStartPose.motion,
+              seatedHotspotId: undefined
             }
           }
         })
 
-        if (progress < 1) {
-          animationFrameRef.current = requestAnimationFrame(tick)
-        } else {
+        const tick = () => {
+          const frame = getRoomWorldMovementFrame({
+            segment,
+            startedAt,
+            now: Date.now()
+          })
+
+          setAvatars((current) => {
+            const avatar = current[localUserId]
+            if (!avatar) return current
+            const arrivalFacing = options?.hotspot?.facingOnArrival ?? avatar.facing
+            const canSit =
+              options?.hotspot?.kind === "seat" &&
+              getRoomV2AvatarMotionAssetDiagnostics({
+                layers: avatar.appearance.roomAvatarLayers,
+                requestedState: "sitting",
+                requestedDirection: arrivalFacing
+              }).isProductionReady
+            const runtimePose = getRoomWorldMovementFramePose({
+              frame,
+              segment,
+              arrival: {
+                facing: arrivalFacing,
+                motion: canSit ? "sitting" : "idle"
+              }
+            })
+            if (!frame.isComplete || !segment.isFinal) {
+              return {
+                ...current,
+                [localUserId]: {
+                  ...avatar,
+                  x: runtimePose.x,
+                  y: runtimePose.y,
+                  facing: runtimePose.facing,
+                  motion: runtimePose.motion,
+                  targetX: target.x,
+                  targetY: target.y
+                }
+              }
+            }
+            return {
+              ...current,
+              [localUserId]: {
+                ...avatar,
+                x: runtimePose.x,
+                y: runtimePose.y,
+                motion: runtimePose.motion,
+                facing: runtimePose.facing,
+                targetX: undefined,
+                targetY: undefined,
+                seatedHotspotId: canSit ? options?.hotspot?.id : undefined
+              }
+            }
+          })
+
+          if (!frame.isComplete) {
+            animationFrameRef.current = requestAnimationFrame(tick)
+            return
+          }
+
+          if (!segment.isFinal) {
+            animatePathSegment(pathIndex + 1)
+            return
+          }
+
           animationFrameRef.current = null
           setTimeout(() => setPressedPoint(undefined), 180)
         }
+
+        animationFrameRef.current = requestAnimationFrame(tick)
       }
 
-      animationFrameRef.current = requestAnimationFrame(tick)
+      animatePathSegment(0)
       return true
     },
-    [input.localUser.userId, scene]
+    [avatars, geometry, input.localUser.userId]
   )
 
   const moveLocalAvatar = useCallback(
@@ -246,13 +326,16 @@ export function useMiniRoomSceneStore(input: UseMiniRoomSceneStoreInput): MiniRo
 
   const moveLocalAvatarToHotspot = useCallback(
     (hotspotId: string): boolean => {
-      const hotspot = scene.hotspots.find((entry) => entry.id === hotspotId)
+      const hotspot = hotspots.find((entry) => entry.id === hotspotId)
       if (!hotspot) return false
-      const target = hotspot.approachPoint ?? { x: hotspot.x, y: hotspot.y }
+      const roomWorldHotspot = roomWorldHotspots.find((entry) => entry.id === hotspotId)
+      const target = roomWorldHotspot
+        ? { x: roomWorldHotspot.x, y: roomWorldHotspot.y }
+        : hotspot.approachPoint ?? { x: hotspot.x, y: hotspot.y }
       setSelectedHotspotId(hotspotId)
       return runMovement(target, { hotspot })
     },
-    [runMovement, scene.hotspots]
+    [hotspots, roomWorldHotspots, runMovement]
   )
 
   const addSpeechBubble = useCallback<MiniRoomStore["addSpeechBubble"]>((bubble) => {
@@ -358,6 +441,7 @@ export function useMiniRoomSceneStore(input: UseMiniRoomSceneStoreInput): MiniRo
 
   return {
     scene,
+    hotspots,
     avatars,
     bubbles,
     emotes,
@@ -368,4 +452,95 @@ export function useMiniRoomSceneStore(input: UseMiniRoomSceneStoreInput): MiniRo
     sayPhrase,
     addEmote
   }
+}
+
+function createMiniRoomOccupants(
+  avatars: Record<string, AvatarState>
+): RoomWorldOccupant[] {
+  return Object.values(avatars).map((avatar) => ({
+    id: avatar.userId,
+    x: avatar.targetX ?? avatar.x,
+    y: avatar.targetY ?? avatar.y,
+    blocksMovement: true
+  }))
+}
+
+function createInitialSpawnPair(input: {
+  scene: RoomScene
+  geometry: RoomWorldGeometry
+  usesRoomV2Scene: boolean
+}): {
+  localSpawn: {
+    x: number
+    y: number
+    facing: AvatarFacing
+  }
+  partnerSpawn: {
+    x: number
+    y: number
+    facing: AvatarFacing
+  }
+} {
+  const fallbackLocal =
+    input.scene.spawnPoints.find((point) => point.role === "local") ??
+    input.scene.spawnPoints[0]
+  const fallbackPartner =
+    input.scene.spawnPoints.find((point) => point.role === "partner") ??
+    input.scene.spawnPoints[1] ??
+    fallbackLocal
+
+  if (!input.usesRoomV2Scene) {
+    return {
+      localSpawn: fallbackLocal,
+      partnerSpawn: fallbackPartner
+    }
+  }
+
+  const localTarget = resolveRoomWorldInteractiveTarget({
+    geometry: input.geometry,
+    target: ROOM_V2_MINI_ROOM_SPAWN_SEEDS.local,
+    clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE
+  }) ?? ROOM_V2_MINI_ROOM_SPAWN_SEEDS.local
+  const partnerTarget = resolveRoomWorldInteractiveTarget({
+    geometry: input.geometry,
+    target: ROOM_V2_MINI_ROOM_SPAWN_SEEDS.partner,
+    occupants: [
+      {
+        id: "local_spawn",
+        x: localTarget.x,
+        y: localTarget.y,
+        blocksMovement: true
+      }
+    ],
+    clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE
+  }) ?? ROOM_V2_MINI_ROOM_SPAWN_SEEDS.partner
+
+  return {
+    localSpawn: {
+      ...localTarget,
+      facing: ROOM_V2_MINI_ROOM_SPAWN_SEEDS.local.facing
+    },
+    partnerSpawn: {
+      ...partnerTarget,
+      facing: ROOM_V2_MINI_ROOM_SPAWN_SEEDS.partner.facing
+    }
+  }
+}
+
+function createMiniRoomHotspotsFromRoomWorldHotspots(
+  hotspots: ReturnType<typeof createRoomWorldHotspotsFromRoomV2Scene>
+): RoomHotspot[] {
+  return hotspots.map((hotspot) => ({
+    id: hotspot.id,
+    kind: hotspot.kind === "seat" ? "seat" : "stand",
+    x: hotspot.x,
+    y: hotspot.y,
+    approachPoint: {
+      x: hotspot.x,
+      y: hotspot.y
+    },
+    facingOnArrival: hotspot.facing,
+    padWidth: hotspot.kind === "seat" ? 0.18 : 0.14,
+    padHeight: hotspot.kind === "seat" ? 0.08 : 0.07
+  }))
 }

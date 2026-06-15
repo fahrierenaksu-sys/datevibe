@@ -14,24 +14,29 @@ export function MiniRoomRoomDecorLayer(props: MiniRoomRoomDecorLayerProps) {
   if (!scene.shell) {
     return null
   }
+  const camera = scene.shell.miniRoomCamera ?? MINI_ROOM_DECOR_CAMERA_FALLBACK
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={styles.decorCamera}>
+      <View
+        style={[
+          styles.decorCamera,
+          { backgroundColor: camera.backgroundColor }
+        ]}
+      >
         <RoomRenderer2D
           shell={scene.shell}
           renderItems={scene.renderItems}
           testID="mini-room-saved-room-decor"
-          style={styles.decorRenderer}
+          style={[
+            styles.decorRenderer,
+            {
+              width: camera.rendererWidth,
+              transform: [{ translateY: camera.rendererTranslateY }]
+            }
+          ]}
         />
       </View>
-
-      <View style={styles.topGlow} pointerEvents="none" />
-      <View style={styles.floorPool} pointerEvents="none" />
-      <View style={styles.vignetteTop} pointerEvents="none" />
-      <View style={styles.vignetteBottom} pointerEvents="none" />
-      <View style={styles.vignetteLeft} pointerEvents="none" />
-      <View style={styles.vignetteRight} pointerEvents="none" />
 
       {interaction.pressedPoint ? (
         <View
@@ -51,65 +56,21 @@ export function MiniRoomRoomDecorLayer(props: MiniRoomRoomDecorLayerProps) {
   )
 }
 
+const MINI_ROOM_DECOR_CAMERA_FALLBACK = {
+  rendererWidth: "176%" as const,
+  rendererTranslateY: 0,
+  backgroundColor: "#F8ECF2"
+}
+
 const styles = StyleSheet.create({
   decorCamera: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
-    backgroundColor: "#F8ECF2"
+    overflow: "hidden"
   },
   decorRenderer: {
     width: "176%"
-  },
-  topGlow: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "28%",
-    backgroundColor: "rgba(255, 229, 244, 0.22)"
-  },
-  floorPool: {
-    position: "absolute",
-    left: "14%",
-    right: "14%",
-    bottom: "12%",
-    height: "20%",
-    borderRadius: 180,
-    backgroundColor: "rgba(94, 43, 71, 0.05)"
-  },
-  vignetteTop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 42,
-    backgroundColor: "rgba(30, 12, 23, 0.18)"
-  },
-  vignetteBottom: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: "rgba(30, 12, 23, 0.22)"
-  },
-  vignetteLeft: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 26,
-    backgroundColor: "rgba(30, 12, 23, 0.16)"
-  },
-  vignetteRight: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    right: 0,
-    width: 26,
-    backgroundColor: "rgba(30, 12, 23, 0.16)"
   },
   tapTarget: {
     position: "absolute",

@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +18,7 @@ import { ReportModal } from "../components/ReportModal"
 import { readCandidateAvatarSnapshot } from "../components/DiscoverCard"
 import { Avatar } from "../ui/avatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
+import { LinearGradient } from "../ui/linearGradient"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { TypingIndicator } from "../ui/typingIndicator"
 import { uiTheme } from "../ui/theme"
@@ -61,6 +63,7 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
   const [inputText, setInputText] = useState("")
   const scrollViewRef = useRef<ScrollView>(null)
   const [reportVisible, setReportVisible] = useState(false)
+  const sendScaleAnim = useRef(new Animated.Value(1)).current
 
   const thread = useMemo(() => {
     if (threadId) return threads.find((t) => t.threadId === threadId)
@@ -158,8 +161,6 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
       senderUserId: currentUserId,
       body: ROOM_INVITE_SENTINEL
     })
-    // Fire-and-forget server send so a mutual server-side thread still sees it;
-    // demo threads don't have a backend and just keep the optimistic echo.
     const sendChatMessage = route.params.sendChatMessage
     if (sendChatMessage) {
       sendChatMessage(resolvedThreadId, ROOM_INVITE_SENTINEL)
@@ -171,7 +172,6 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
     const body = inputText.trim()
     if (!body || !resolvedThreadId) return
 
-    // Optimistic local echo — appears instantly, replaced by server confirmation
     if (currentUserId) {
       addOptimisticMessage({
         threadId: resolvedThreadId,
@@ -180,8 +180,6 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
       })
     }
 
-    // Send via the sendChatMessage callback injected through navigation params.
-    // This keeps the WS ownership in RootNavigator.
     const sendChatMessage = route.params.sendChatMessage
     if (sendChatMessage) {
       sendChatMessage(resolvedThreadId, body)
@@ -189,6 +187,22 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
     setInputText("")
     hapticLight()
   }, [addOptimisticMessage, currentUserId, inputText, route.params.sendChatMessage, resolvedThreadId])
+
+  const handleSendPressIn = () => {
+    Animated.spring(sendScaleAnim, {
+      toValue: 0.85,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handleSendPressOut = () => {
+    Animated.spring(sendScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
 
   if (!thread && !pendingPartnerId) {
     return (
@@ -214,8 +228,6 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
     )
   }
 
-  // If we have a pendingPartnerId but no thread yet, it means the server is still creating it.
-  // We'll show an empty chat screen until it arrives.
   const isPendingThread = !thread && !!pendingPartnerId
 
   return (
@@ -231,12 +243,12 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
             </ActionButtonCircle>
           }
           rightSlot={
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={styles.headerRightRow}>
               <View style={styles.headerAvatarWrap}>
                 <Avatar
                   name={partnerAvatarSnapshot.displayName}
                   seed={partnerAvatarSnapshot.previewSeed}
-                  size={34}
+                  size={36}
                   ring="soft"
                 />
                 {partnerAvatarSnapshot.source === "preview_fallback" ? (
@@ -246,9 +258,9 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
               <Pressable
                 onPress={() => setReportVisible(true)}
                 hitSlop={8}
-                style={{ width: 28, alignItems: "center" }}
+                style={styles.moreButton}
               >
-                <Text style={{ color: uiTheme.colors.textMuted, fontSize: 18, fontWeight: "800" }}>⋯</Text>
+                <Text style={styles.moreButtonText}>⋯</Text>
               </Pressable>
             </View>
           }
@@ -268,10 +280,11 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
         >
           {messages.length === 0 || isPendingThread ? (
             <View style={styles.emptyChat}>
+              <View style={styles.emptyChatGlow} pointerEvents="none" />
               <Avatar
                 name={partnerAvatarSnapshot.displayName}
                 seed={partnerAvatarSnapshot.previewSeed}
-                size={72}
+                size={80}
                 ring="soft"
               />
               {partnerAvatarSnapshot.source === "preview_fallback" ? (
@@ -310,7 +323,9 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                   <View key={item.messageId}>
                     {dateLabel ? (
                       <View style={bubbleStyles.dateSep}>
-                        <Text style={bubbleStyles.dateSepText}>{dateLabel}</Text>
+                        <View style={bubbleStyles.dateSepPill}>
+                          <Text style={bubbleStyles.dateSepText}>{dateLabel}</Text>
+                        </View>
                       </View>
                     ) : null}
                     <View
@@ -329,31 +344,48 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                     ) : null}
                     {isInvite ? (
                       <View style={inviteStyles.card}>
-                        <View style={inviteStyles.headerRow}>
-                          <View style={inviteStyles.iconCircle}>
-                            <Text style={inviteStyles.iconText}>⌂</Text>
-                          </View>
-                          <View style={inviteStyles.headerText}>
-                            <Text style={inviteStyles.title}>
-                              {isMe ? "MiniRoom invite sent" : `${partnerName} invited you to MiniRoom`}
-                            </Text>
-                            <Text style={inviteStyles.subtitle}>
-                              Shared avatar room after mutual match
-                            </Text>
-                          </View>
-                        </View>
-                        <Pressable
-                          onPress={handleJoinRoom}
-                          style={({ pressed }) => [
-                            inviteStyles.joinButton,
-                            pressed ? inviteStyles.joinButtonPressed : null
-                          ]}
+                        <LinearGradient
+                          colors={[uiTheme.colors.primarySoft, "#FFF5F9"]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={inviteStyles.cardGradient}
                         >
-                          <Text style={inviteStyles.joinButtonText}>Enter MiniRoom →</Text>
-                        </Pressable>
-                        <Text style={inviteStyles.time}>
-                          {formatMessageTime(item.sentAt)}
-                        </Text>
+                          <View style={inviteStyles.headerRow}>
+                            <LinearGradient
+                              colors={uiTheme.gradients.primary as [string, string]}
+                              style={inviteStyles.iconCircle}
+                            >
+                              <Text style={inviteStyles.iconText}>⌂</Text>
+                            </LinearGradient>
+                            <View style={inviteStyles.headerText}>
+                              <Text style={inviteStyles.title}>
+                                {isMe ? "MiniRoom invite sent" : `${partnerName} invited you to MiniRoom`}
+                              </Text>
+                              <Text style={inviteStyles.subtitle}>
+                                Shared avatar room after mutual match
+                              </Text>
+                            </View>
+                          </View>
+                          <Pressable
+                            onPress={handleJoinRoom}
+                            style={({ pressed }) => [
+                              inviteStyles.joinButton,
+                              pressed ? inviteStyles.joinButtonPressed : null
+                            ]}
+                          >
+                            <LinearGradient
+                              colors={uiTheme.gradients.primary as [string, string]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
+                              style={inviteStyles.joinButtonGradient}
+                            >
+                              <Text style={inviteStyles.joinButtonText}>Enter MiniRoom →</Text>
+                            </LinearGradient>
+                          </Pressable>
+                          <Text style={inviteStyles.time}>
+                            {formatMessageTime(item.sentAt)}
+                          </Text>
+                        </LinearGradient>
                       </View>
                     ) : (
                       <View
@@ -362,6 +394,14 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
                           isMe ? bubbleStyles.bubbleMe : bubbleStyles.bubbleThem
                         ]}
                       >
+                        {isMe ? (
+                          <LinearGradient
+                            colors={uiTheme.gradients.primary as [string, string]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={[StyleSheet.absoluteFillObject, { borderRadius: uiTheme.radius.lg }]}
+                          />
+                        ) : null}
                         <Text
                           style={[
                             bubbleStyles.body,
@@ -404,28 +444,45 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
               >
                 <Text style={styles.inviteButtonIcon}>⌂</Text>
               </Pressable>
-              <TextInput
-                style={styles.input}
-                value={inputText}
-                onChangeText={setInputText}
-                placeholder="Message…"
-                placeholderTextColor={uiTheme.colors.textMuted}
-                multiline
-                maxLength={500}
-              />
-              <Pressable
-                onPress={handleSend}
-                disabled={inputText.trim().length === 0 || isPendingThread}
-                style={({ pressed }) => [
-                  styles.sendButton,
-                  (inputText.trim().length === 0 || isPendingThread)
-                    ? styles.sendButtonDisabled
-                    : null,
-                  pressed ? styles.sendButtonPressed : null
-                ]}
-              >
-                <Text style={styles.sendButtonText}>↑</Text>
-              </Pressable>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  placeholder="Message…"
+                  placeholderTextColor={uiTheme.colors.textMuted}
+                  multiline
+                  maxLength={500}
+                />
+              </View>
+              <Animated.View style={{ transform: [{ scale: sendScaleAnim }] }}>
+                <Pressable
+                  onPress={handleSend}
+                  onPressIn={handleSendPressIn}
+                  onPressOut={handleSendPressOut}
+                  disabled={inputText.trim().length === 0 || isPendingThread}
+                  style={({ pressed }) => [
+                    styles.sendButton,
+                    (inputText.trim().length === 0 || isPendingThread)
+                      ? styles.sendButtonDisabled
+                      : null,
+                    pressed ? styles.sendButtonPressed : null
+                  ]}
+                >
+                  <LinearGradient
+                    colors={
+                      inputText.trim().length === 0 || isPendingThread
+                        ? [uiTheme.colors.primaryDisabled, uiTheme.colors.primaryDisabled]
+                        : uiTheme.gradients.primary as [string, string]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.sendButtonGradient}
+                  >
+                    <Text style={styles.sendButtonText}>↑</Text>
+                  </LinearGradient>
+                </Pressable>
+              </Animated.View>
             </View>
           </SafeAreaView>
         </KeyboardAvoidingView>
@@ -437,65 +494,90 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: uiTheme.colors.background
+    backgroundColor: uiTheme.colors.background,
   },
   safe: {
     flex: 1,
     paddingHorizontal: uiTheme.spacing.lg,
-    paddingTop: uiTheme.spacing.sm
+    paddingTop: uiTheme.spacing.sm,
   },
   flex: {
-    flex: 1
+    flex: 1,
+  },
+  headerRightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   headerAvatarWrap: {
     alignItems: "center",
-    gap: 2
+    gap: 2,
   },
   headerAvatarSource: {
+    ...uiTheme.font.micro,
     color: uiTheme.colors.textMuted,
     fontSize: 8,
-    fontWeight: "800"
+  },
+  moreButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: uiTheme.colors.secondary,
+  },
+  moreButtonText: {
+    color: uiTheme.colors.textMuted,
+    fontSize: 18,
+    fontWeight: "800",
   },
   messageListContainer: {
     flex: 1,
-    paddingVertical: uiTheme.spacing.md
+    paddingVertical: uiTheme.spacing.md,
   },
   emptyWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: uiTheme.spacing.xl
+    padding: uiTheme.spacing.xl,
   },
   emptyText: {
+    ...uiTheme.font.body,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.body,
-    textAlign: "center"
+    textAlign: "center",
   },
   emptyChat: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: uiTheme.spacing.sm,
-    paddingBottom: uiTheme.spacing.xxxl
+    paddingBottom: uiTheme.spacing.xxxl,
+    position: "relative",
+  },
+  emptyChatGlow: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: uiTheme.colors.accentGlow,
   },
   emptyChatTitle: {
+    ...uiTheme.font.subheading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "800",
-    marginTop: uiTheme.spacing.sm
+    marginTop: uiTheme.spacing.sm,
   },
   emptyAvatarSource: {
+    ...uiTheme.font.micro,
     color: uiTheme.colors.textMuted,
     fontSize: 10,
-    fontWeight: "800"
   },
   emptyChatBody: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    textAlign: "center"
+    textAlign: "center",
   },
   composerSafe: {
-    backgroundColor: "transparent"
+    backgroundColor: "transparent",
   },
   composer: {
     flexDirection: "row",
@@ -503,124 +585,137 @@ const styles = StyleSheet.create({
     gap: uiTheme.spacing.xs,
     paddingVertical: uiTheme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: uiTheme.colors.border
+    borderTopColor: uiTheme.colors.border,
+  },
+  inputWrap: {
+    flex: 1,
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: uiTheme.colors.glassStrong,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.glassBorder,
+    overflow: "hidden",
   },
   input: {
-    flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     maxHeight: 100,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border,
     paddingHorizontal: uiTheme.spacing.md,
     paddingVertical: uiTheme.spacing.sm,
-    fontSize: uiTheme.typography.body,
-    color: uiTheme.colors.textPrimary
+    ...uiTheme.font.body,
+    color: uiTheme.colors.textPrimary,
   },
   sendButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: uiTheme.colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    ...uiTheme.shadow.glowSubtle,
+  },
+  sendButtonGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: uiTheme.colors.primaryDisabled
+    opacity: 0.6,
   },
   sendButtonPressed: {
-    backgroundColor: uiTheme.colors.primaryPressed
+    opacity: 0.9,
   },
   sendButtonText: {
     color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "800"
+    fontSize: 22,
+    fontWeight: "800",
   },
   inviteButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: uiTheme.colors.border,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   inviteButtonDisabled: {
-    opacity: 0.4
+    opacity: 0.4,
   },
   inviteButtonPressed: {
-    backgroundColor: uiTheme.colors.surfaceMuted
+    backgroundColor: uiTheme.colors.chipBackground,
+    borderColor: uiTheme.colors.primary,
   },
   inviteButtonIcon: {
-    fontSize: 18
-  }
+    fontSize: 20,
+  },
 })
 
 const inviteStyles = StyleSheet.create({
   card: {
     maxWidth: "82%",
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.primarySoft,
+    borderRadius: uiTheme.radius.xl,
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(239, 107, 155, 0.35)",
+    borderColor: "rgba(255, 79, 152, 0.2)",
+    ...uiTheme.shadow.soft,
+  },
+  cardGradient: {
     padding: uiTheme.spacing.md,
     gap: uiTheme.spacing.sm,
-    ...uiTheme.shadow.soft
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: uiTheme.spacing.sm
+    gap: uiTheme.spacing.sm,
   },
   iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   iconText: {
-    fontSize: 18
+    fontSize: 18,
+    color: "#FFFFFF",
   },
   headerText: {
     flex: 1,
-    gap: 2
+    gap: 2,
   },
   title: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
     fontWeight: "800",
-    letterSpacing: -0.1
   },
   subtitle: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "600"
   },
   joinButton: {
     alignSelf: "flex-start",
+    borderRadius: uiTheme.radius.full,
+    overflow: "hidden",
+    ...uiTheme.shadow.glowSubtle,
+  },
+  joinButtonGradient: {
     paddingHorizontal: uiTheme.spacing.lg,
     paddingVertical: uiTheme.spacing.sm,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.primary
   },
   joinButtonPressed: {
-    backgroundColor: uiTheme.colors.primaryPressed
+    opacity: 0.85,
   },
   joinButtonText: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "800",
-    letterSpacing: 0.2
   },
   time: {
-    fontSize: uiTheme.typography.micro,
+    ...uiTheme.font.micro,
     color: uiTheme.colors.textMuted,
-    alignSelf: "flex-end"
-  }
+    alignSelf: "flex-end",
+  },
 })
 
 const bubbleStyles = StyleSheet.create({
@@ -628,64 +723,70 @@ const bubbleStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: uiTheme.spacing.xs,
-    marginBottom: uiTheme.spacing.xxs
+    marginBottom: uiTheme.spacing.xs,
   },
   rowMe: {
-    justifyContent: "flex-end"
+    justifyContent: "flex-end",
   },
   rowThem: {
-    justifyContent: "flex-start"
+    justifyContent: "flex-start",
   },
   bubble: {
     maxWidth: "75%",
     borderRadius: uiTheme.radius.lg,
     paddingHorizontal: uiTheme.spacing.md,
     paddingVertical: uiTheme.spacing.sm,
-    borderWidth: 1
+    borderWidth: 1,
+    overflow: "hidden",
   },
   bubbleMe: {
-    backgroundColor: uiTheme.colors.primary,
-    borderColor: uiTheme.colors.primaryDeep,
-    borderBottomRightRadius: uiTheme.radius.xs
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    borderBottomRightRadius: uiTheme.radius.xs,
+    ...uiTheme.shadow.glowSubtle,
   },
   bubbleThem: {
-    backgroundColor: uiTheme.colors.surface,
-    borderColor: uiTheme.colors.border,
+    backgroundColor: uiTheme.colors.glassStrong,
+    borderColor: uiTheme.colors.glassBorder,
     borderBottomLeftRadius: uiTheme.radius.xs,
-    ...uiTheme.shadow.soft
+    ...uiTheme.shadow.float,
   },
   body: {
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     color: uiTheme.colors.textPrimary,
-    lineHeight: 22
+    zIndex: 1,
   },
   bodyMe: {
-    color: "#FFFFFF"
+    color: "#FFFFFF",
   },
   time: {
-    fontSize: uiTheme.typography.micro,
+    ...uiTheme.font.micro,
     color: uiTheme.colors.textMuted,
     marginTop: 3,
-    alignSelf: "flex-end"
+    alignSelf: "flex-end",
+    fontSize: 10,
+    zIndex: 1,
   },
   timeMe: {
-    color: "rgba(255, 255, 255, 0.7)"
+    color: "rgba(255, 255, 255, 0.7)",
   },
   dateSep: {
     alignItems: "center",
-    paddingVertical: uiTheme.spacing.sm,
-    marginVertical: uiTheme.spacing.xs
+    paddingVertical: uiTheme.spacing.md,
+  },
+  dateSepPill: {
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: 5,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.glass,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.glassBorder,
+    ...uiTheme.shadow.soft,
   },
   dateSepText: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    backgroundColor: uiTheme.colors.surfaceMuted,
-    paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: 3,
-    borderRadius: uiTheme.radius.full,
-    overflow: "hidden"
-  }
+  },
 })

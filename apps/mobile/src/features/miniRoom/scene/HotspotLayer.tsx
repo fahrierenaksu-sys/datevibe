@@ -109,41 +109,7 @@ function HotspotPad(props: HotspotPadProps) {
         }
       ]}
     >
-      <Animated.View
-        style={[
-          styles.padHalo,
-          selected ? styles.padHaloSelected : null,
-          {
-            opacity: ringOpacity,
-            transform: [{ scale: haloScale }]
-          }
-        ]}
-        pointerEvents="none"
-      />
-      <View
-        style={[
-          styles.padRing,
-          hotspot.kind === "seat" ? styles.padRingSeat : null,
-          hotspot.kind === "activity" ? styles.padRingActivity : null,
-          hotspot.kind === "stand" ? styles.padRingStand : null,
-          selected ? styles.padRingSelected : null
-        ]}
-        pointerEvents="none"
-      />
-      {hotspot.label ? (
-        <View
-          style={[
-            styles.labelChip,
-            selected ? styles.labelChipSelected : null
-          ]}
-          pointerEvents="none"
-        >
-          <Text style={styles.labelIcon}>{kindIcon}</Text>
-          <Text style={styles.labelText} numberOfLines={1}>
-            {hotspot.label}
-          </Text>
-        </View>
-      ) : null}
+      {/* Visual ring/halo removed for a cleaner look */}
     </Pressable>
   )
 }

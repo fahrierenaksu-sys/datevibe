@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
+    ...uiTheme.font.subheading,
     fontWeight: "800"
   },
   closeButton: {
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     lineHeight: 21,
     marginBottom: uiTheme.spacing.xs
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   reasonLabel: {
     flex: 1,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "700"
   },
   reasonChevron: {
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   },
   blockOnlyText: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "700"
   },
   reportButton: {
@@ -270,13 +270,13 @@ const styles = StyleSheet.create({
   },
   reportButtonText: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     fontWeight: "800"
   },
   backLink: {
     alignSelf: "center",
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "600",
     paddingVertical: uiTheme.spacing.xs
   },
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   doneText: {
     alignSelf: "center",
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     fontWeight: "700",
     textAlign: "center"
   }

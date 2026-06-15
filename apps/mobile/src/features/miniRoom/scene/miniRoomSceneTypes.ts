@@ -147,6 +147,7 @@ export interface InteractionState {
 
 export interface MiniRoomStore {
   scene: RoomScene
+  hotspots: RoomHotspot[]
   avatars: Record<string, AvatarState>
   bubbles: SpeechBubble[]
   emotes: RoomEmote[]

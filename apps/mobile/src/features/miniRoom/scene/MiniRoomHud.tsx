@@ -95,151 +95,134 @@ export function MiniRoomHud(props: MiniRoomHudProps) {
         </View>
       </View>
 
-      <View style={styles.bottomHud} pointerEvents="box-none">
-        <View style={styles.reactionDock}>
-          {REACTIONS.map((reaction) => (
-            <Pressable
-              key={reaction}
-              disabled={!canSendReaction}
-              onPress={() => onSendReaction(reaction)}
-              style={({ pressed }) => [
-                styles.reactionButton,
-                !canSendReaction ? styles.disabled : null,
-                pressed ? styles.reactionPressed : null
-              ]}
-            >
-              <Text style={styles.reactionText}>{REACTION_EMOJI[reaction]}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   topHud: {
-    position: "absolute",
-    top: uiTheme.spacing.md,
-    left: uiTheme.spacing.md,
-    right: uiTheme.spacing.md,
+    paddingTop: uiTheme.spacing.md,
+    paddingHorizontal: uiTheme.spacing.lg,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
   },
   bottomHud: {
     position: "absolute",
-    left: uiTheme.spacing.md,
-    right: uiTheme.spacing.md,
-    bottom: uiTheme.spacing.md
+    left: uiTheme.spacing.lg,
+    right: uiTheme.spacing.lg,
+    bottom: uiTheme.spacing.lg,
   },
   circleButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(42, 24, 34, 0.56)",
+    backgroundColor: "rgba(30, 15, 24, 0.55)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)"
+    borderColor: "rgba(255, 255, 255, 0.15)",
   },
   circleButtonText: {
     color: "#FFFFFF",
     fontSize: 20,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   topRightDock: {
     minWidth: 42,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: uiTheme.spacing.xs
+    gap: uiTheme.spacing.xs,
   },
   retryButton: {
     minHeight: 38,
     paddingHorizontal: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.full,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.92)"
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
   },
   retryText: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "900"
   },
   reactionDock: {
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    gap: uiTheme.spacing.xs,
-    padding: uiTheme.spacing.xs,
+    gap: uiTheme.spacing.sm,
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.xs,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
     borderWidth: 1,
-    borderColor: "rgba(255, 218, 233, 0.9)"
+    borderColor: "rgba(255, 200, 220, 0.5)",
+    shadowColor: "#2A0A1A",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   reactionButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)"
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
   },
   reactionPressed: {
-    transform: [{ scale: 0.92 }],
-    backgroundColor: uiTheme.colors.primarySoft
+    transform: [{ scale: 0.9 }],
+    backgroundColor: uiTheme.colors.primarySoft,
   },
   reactionText: {
-    fontSize: 20
+    fontSize: 22,
   },
   mediaDock: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     padding: 4,
-    borderRadius: uiTheme.radius.full,
-    backgroundColor: "rgba(42, 24, 34, 0.52)",
+    borderRadius: 16,
+    backgroundColor: "rgba(30, 15, 24, 0.52)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.22)"
+    borderColor: "rgba(255, 255, 255, 0.12)",
   },
   mediaButton: {
-    minWidth: 46,
-    minHeight: 34,
-    borderRadius: uiTheme.radius.full,
+    minWidth: 48,
+    minHeight: 36,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: uiTheme.spacing.sm,
-    backgroundColor: "rgba(255, 255, 255, 0.12)"
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   mediaButtonActive: {
-    backgroundColor: uiTheme.colors.primary
+    backgroundColor: uiTheme.colors.primary,
   },
   safetyButton: {
     minHeight: 38,
     paddingHorizontal: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.full,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
     borderWidth: 1,
-    borderColor: "rgba(255, 218, 233, 0.9)"
+    borderColor: "rgba(255, 200, 220, 0.5)",
   },
   safetyText: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.dangerInk,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "900"
   },
   mediaText: {
+    ...uiTheme.font.captionBold,
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "900"
   },
   disabled: {
-    opacity: 0.42
+    opacity: 0.4,
   },
   pressed: {
-    opacity: 0.78
-  }
+    opacity: 0.75,
+  },
 })
