@@ -30,7 +30,6 @@ export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
   const { isSubmitting, errorMessage, onBootstrap } = props
   const [displayName, setDisplayName] = useState("")
   const [ageText, setAgeText] = useState("")
-  const [gender, setGender] = useState<"male" | "female" | "other" | undefined>(undefined)
   const [selectedPreset, setSelectedPreset] = useState<string>(VIBE_PRESETS[0].id)
   const ctaScaleAnim = useRef(new Animated.Value(1)).current
   const heroAnim = useRef(new Animated.Value(0)).current
@@ -48,8 +47,8 @@ export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
   const ageValid = parsedAge === undefined || (Number.isFinite(parsedAge) && parsedAge >= 18 && parsedAge <= 99)
 
   const canSubmit = useMemo(
-    () => displayName.trim().length >= 2 && ageValid && gender !== undefined && !isSubmitting,
-    [displayName, ageValid, gender, isSubmitting]
+    () => displayName.trim().length >= 2 && ageValid && !isSubmitting,
+    [displayName, ageValid, isSubmitting]
   )
 
   const submit = async (): Promise<void> => {
@@ -59,8 +58,7 @@ export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
     await onBootstrap({
       displayName: displayName.trim(),
       avatarPresetId: selectedPreset,
-      age: parsedAge,
-      gender: gender
+      age: parsedAge
     })
   }
 
@@ -157,29 +155,6 @@ export function SessionBootstrapScreen(props: SessionBootstrapScreenProps) {
                   <Text style={styles.ageHint}>Must be 18–99</Text>
                 ) : null}
 
-                <View style={styles.genderRow}>
-                  <Text style={styles.genderLabel}>Gender</Text>
-                  <View style={styles.genderButtons}>
-                    <Pressable
-                      style={[styles.genderButton, gender === "male" && styles.genderButtonActive]}
-                      onPress={() => setGender("male")}
-                    >
-                      <Text style={[styles.genderButtonText, gender === "male" && styles.genderButtonTextActive]}>Erkek</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.genderButton, gender === "female" && styles.genderButtonActive]}
-                      onPress={() => setGender("female")}
-                    >
-                      <Text style={[styles.genderButtonText, gender === "female" && styles.genderButtonTextActive]}>Kadın</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.genderButton, gender === "other" && styles.genderButtonActive]}
-                      onPress={() => setGender("other")}
-                    >
-                      <Text style={[styles.genderButtonText, gender === "other" && styles.genderButtonTextActive]}>Diğer</Text>
-                    </Pressable>
-                  </View>
-                </View>
               </View>
 
               <View style={styles.vibeCard}>
@@ -372,37 +347,5 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.danger,
     fontWeight: "600",
     marginTop: -uiTheme.spacing.xs,
-  },
-  genderRow: {
-    marginTop: uiTheme.spacing.sm,
-    gap: uiTheme.spacing.xs,
-  },
-  genderLabel: {
-    ...uiTheme.font.label,
-    color: uiTheme.colors.textPrimary,
-  },
-  genderButtons: {
-    flexDirection: "row",
-    gap: uiTheme.spacing.sm,
-  },
-  genderButton: {
-    flex: 1,
-    paddingVertical: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.md,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    alignItems: "center",
-  },
-  genderButtonActive: {
-    borderColor: uiTheme.colors.primary,
-    backgroundColor: uiTheme.colors.primarySoft,
-  },
-  genderButtonText: {
-    ...uiTheme.font.body,
-    color: uiTheme.colors.textSecondary,
-  },
-  genderButtonTextActive: {
-    color: uiTheme.colors.primary,
-    fontWeight: "600",
   },
 })
