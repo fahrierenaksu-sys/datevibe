@@ -250,153 +250,148 @@ function EmptyDemoDeck(props: { onReset: () => void }) {
 const styles = StyleSheet.create({
   demoContainer: {
     gap: uiTheme.spacing.lg,
-    width: "100%"
+    width: "100%",
   },
   likeHintStrip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: uiTheme.spacing.sm,
-    paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.lg,
+    gap: uiTheme.spacing.md,
+    paddingHorizontal: uiTheme.spacing.lg,
+    paddingVertical: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.xl,
     backgroundColor: uiTheme.colors.primarySoft,
     borderWidth: 1,
     borderColor: "#FAD0E3",
-    ...uiTheme.shadow.soft
+    ...uiTheme.shadow.float,
   },
   likeHintIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: uiTheme.colors.primary
+    backgroundColor: uiTheme.colors.primary,
+    ...uiTheme.shadow.glowSubtle,
   },
   likeHintIconText: {
     color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   likeHintContent: {
     flex: 1,
-    gap: 2
+    gap: 3,
   },
   likeHintTitle: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.primaryDeep,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   likeHintBody: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
     lineHeight: 17,
-    fontWeight: "600"
   },
   actionRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: uiTheme.spacing.lg,
-    marginTop: -uiTheme.spacing.xs
+    gap: uiTheme.spacing.xl,
+    marginTop: -uiTheme.spacing.xs,
   },
   progressRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginTop: -uiTheme.spacing.xs
+    marginTop: -uiTheme.spacing.xs,
   },
   progressDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: uiTheme.colors.success
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: uiTheme.colors.success,
   },
   progressText: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
     fontWeight: "700",
-    letterSpacing: 0.3
+    letterSpacing: 0.3,
   },
   matchedStrip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: uiTheme.spacing.sm,
-    paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.lg,
+    gap: uiTheme.spacing.md,
+    paddingHorizontal: uiTheme.spacing.lg,
+    paddingVertical: uiTheme.spacing.md,
+    borderRadius: uiTheme.radius.xl,
     backgroundColor: uiTheme.colors.successSoft,
     borderWidth: 1,
     borderColor: "rgba(58, 192, 138, 0.28)",
-    ...uiTheme.shadow.soft
+    ...uiTheme.shadow.float,
   },
   matchedIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: uiTheme.colors.success
+    backgroundColor: uiTheme.colors.success,
   },
   matchedIconText: {
     color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "900"
+    fontSize: 16,
+    fontWeight: "900",
   },
   matchedContent: {
     flex: 1,
-    gap: 2
+    gap: 3,
   },
   matchedTitle: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.successInk,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   matchedBody: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
     lineHeight: 17,
-    fontWeight: "600"
   },
   emptyCard: {
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.surface,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
+    borderColor: uiTheme.colors.glassBorder,
     padding: uiTheme.spacing.xl,
-    gap: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.md,
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
-    ...uiTheme.shadow.card
+    ...uiTheme.shadow.deep,
   },
   emptyGlow: {
     position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: uiTheme.colors.primarySoft,
-    top: -90,
-    right: -70,
-    opacity: 0.55
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: uiTheme.colors.accentGlow,
+    top: -100,
+    right: -80,
   },
   emptyTitle: {
+    ...uiTheme.font.heading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.heading,
-    fontWeight: "800",
-    textAlign: "center"
+    textAlign: "center",
   },
   emptyBody: {
+    ...uiTheme.font.body,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.body,
     textAlign: "center",
-    lineHeight: 22,
-    paddingHorizontal: uiTheme.spacing.md
+    paddingHorizontal: uiTheme.spacing.md,
   },
   resetHint: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.primaryDeep,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    marginTop: -uiTheme.spacing.xxs
-  }
+    marginTop: -uiTheme.spacing.xxs,
+  },
 })

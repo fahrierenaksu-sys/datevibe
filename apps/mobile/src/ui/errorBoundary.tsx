@@ -96,19 +96,19 @@ const styles = StyleSheet.create({
   },
   title: {
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
+    ...uiTheme.font.subheading,
     fontWeight: "800",
     textAlign: "center"
   },
   body: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     textAlign: "center",
     lineHeight: 20
   },
   errorDetail: {
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontFamily: "monospace",
     backgroundColor: uiTheme.colors.surfaceMuted,
     borderRadius: uiTheme.radius.md,
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   },
   recoverText: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     fontWeight: "800"
   }
 })

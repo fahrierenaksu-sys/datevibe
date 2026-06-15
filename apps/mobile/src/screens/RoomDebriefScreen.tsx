@@ -1,7 +1,8 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import type { ConnectionDecisionStatus, ServerEvent } from "@datevibe/contracts"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Pressable, StyleSheet, Text, View } from "react-native"
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native"
+import { LinearGradient } from "../ui/linearGradient"
 import { SafeAreaView } from "react-native-safe-area-context"
 import {
   passConnection,
@@ -68,6 +69,19 @@ export function RoomDebriefScreen(props: RoomDebriefScreenProps) {
   const pendingServerDecisionRef = useRef<PendingServerDecision | null>(null)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const coinsAwardedRef = useRef(false)
+
+  const heroAnim = useRef(new Animated.Value(0)).current
+  const saveScaleAnim = useRef(new Animated.Value(1)).current
+  const passScaleAnim = useRef(new Animated.Value(1)).current
+
+  // Entrance animation
+  useEffect(() => {
+    Animated.spring(heroAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springGentle,
+    }).start()
+  }, [heroAnim])
 
   // Award coins for completing a room session
   useEffect(() => {
@@ -190,6 +204,38 @@ export function RoomDebriefScreen(props: RoomDebriefScreenProps) {
 
   const buttonsLocked = decision !== "idle"
 
+  const handleSavePressIn = () => {
+    Animated.spring(saveScaleAnim, {
+      toValue: uiTheme.animation.scalePress,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handleSavePressOut = () => {
+    Animated.spring(saveScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
+
+  const handlePassPressIn = () => {
+    Animated.spring(passScaleAnim, {
+      toValue: uiTheme.animation.scalePress,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handlePassPressOut = () => {
+    Animated.spring(passScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
+
   return (
     <View style={styles.root}>
       <SoftBlobBackground variant="lobby" />
@@ -198,17 +244,41 @@ export function RoomDebriefScreen(props: RoomDebriefScreenProps) {
           <Text style={styles.eyebrow}>Mini room ended</Text>
         </View>
 
-        <View style={styles.hero}>
-          <Avatar
-            name={partner.displayName}
-            seed={partner.userId}
-            size={168}
-            ring="strong"
-          />
+        <Animated.View
+          style={[
+            styles.hero,
+            {
+              opacity: heroAnim,
+              transform: [
+                {
+                  translateY: heroAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  })
+                },
+                {
+                  scale: heroAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  })
+                }
+              ],
+            }
+          ]}
+        >
+          <View style={styles.avatarGlow}>
+            <Avatar
+              name={partner.displayName}
+              seed={partner.userId}
+              size={180}
+              ring="strong"
+            />
+          </View>
           <View style={styles.metaPill}>
+            <View style={[styles.metaDot, connected ? null : styles.metaDotSoft]} />
             <Text style={styles.metaPillText}>{meta}</Text>
           </View>
-        </View>
+        </Animated.View>
 
         <View style={styles.copyBlock}>
           <Text style={styles.title}>{title}</Text>
@@ -219,12 +289,15 @@ export function RoomDebriefScreen(props: RoomDebriefScreenProps) {
         </View>
 
         <View style={styles.momentCard}>
-          <View
-            style={[
-              styles.momentDot,
-              connected ? null : styles.momentDotSoft
-            ]}
+          <LinearGradient
+            colors={["#FFFFFF", "#FFF8FB", "#FFF2F8"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
           />
+          <View style={styles.momentIconCircle}>
+            <Text style={styles.momentIconText}>✦</Text>
+          </View>
           <View style={styles.momentCopy}>
             <Text style={styles.momentLabel}>Private memory</Text>
             <Text style={styles.momentText}>{momentLine}</Text>
@@ -232,41 +305,52 @@ export function RoomDebriefScreen(props: RoomDebriefScreenProps) {
         </View>
 
         <View style={styles.choices}>
-          <Pressable
-            disabled={buttonsLocked}
-            onPress={() => {
-              void onPass()
-            }}
-            style={({ pressed }) => [
-              styles.choiceButton,
-              styles.passButton,
-              pressed && !buttonsLocked ? styles.passButtonPressed : null,
-              buttonsLocked ? styles.choiceButtonLocked : null
-            ]}
-          >
-            <Text style={styles.passEmoji}>👋</Text>
-            <Text style={styles.passLabel}>Pass</Text>
-            <Text style={styles.choiceHint}>Not this one</Text>
-          </Pressable>
+          <Animated.View style={[styles.choiceFlex, { transform: [{ scale: passScaleAnim }] }]}>
+            <Pressable
+              disabled={buttonsLocked}
+              onPress={() => {
+                void onPass()
+              }}
+              onPressIn={handlePassPressIn}
+              onPressOut={handlePassPressOut}
+              style={[
+                styles.choiceButton,
+                styles.passButton,
+                buttonsLocked ? styles.choiceButtonLocked : null
+              ]}
+            >
+              <Text style={styles.passEmoji}>👋</Text>
+              <Text style={styles.passLabel}>Pass</Text>
+              <Text style={styles.choiceHint}>Not this one</Text>
+            </Pressable>
+          </Animated.View>
 
-          <Pressable
-            disabled={buttonsLocked}
-            onPress={() => {
-              void onSave()
-            }}
-            style={({ pressed }) => [
-              styles.choiceButton,
-              styles.saveButton,
-              pressed && !buttonsLocked ? styles.saveButtonPressed : null,
-              buttonsLocked ? styles.choiceButtonLocked : null
-            ]}
-          >
-            <Text style={styles.saveEmoji}>💖</Text>
-            <Text style={styles.saveLabel}>Save moment</Text>
-            <Text style={[styles.choiceHint, styles.saveHint]}>
-              Keep it close
-            </Text>
-          </Pressable>
+          <Animated.View style={[styles.choiceFlex, { transform: [{ scale: saveScaleAnim }] }]}>
+            <Pressable
+              disabled={buttonsLocked}
+              onPress={() => {
+                void onSave()
+              }}
+              onPressIn={handleSavePressIn}
+              onPressOut={handleSavePressOut}
+              style={[
+                styles.choiceButton,
+                buttonsLocked ? styles.choiceButtonLocked : null
+              ]}
+            >
+              <LinearGradient
+                colors={uiTheme.gradients.primary as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[StyleSheet.absoluteFillObject, { borderRadius: uiTheme.radius.xl }]}
+              />
+              <Text style={styles.saveEmoji}>💖</Text>
+              <Text style={styles.saveLabel}>Save moment</Text>
+              <Text style={[styles.choiceHint, styles.saveHint]}>
+                Keep it close
+              </Text>
+            </Pressable>
+          </Animated.View>
         </View>
 
         <Pressable
@@ -285,108 +369,122 @@ export function RoomDebriefScreen(props: RoomDebriefScreenProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: uiTheme.colors.background
+    backgroundColor: uiTheme.colors.background,
   },
   safe: {
     flex: 1,
     paddingHorizontal: uiTheme.spacing.lg,
     paddingTop: uiTheme.spacing.md,
-    paddingBottom: uiTheme.spacing.lg
+    paddingBottom: uiTheme.spacing.lg,
   },
   eyebrowRow: {
     alignItems: "center",
-    paddingVertical: uiTheme.spacing.sm
+    paddingVertical: uiTheme.spacing.sm,
   },
   eyebrow: {
+    ...uiTheme.font.overline,
     color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase"
   },
   hero: {
     alignItems: "center",
     gap: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.lg
+    paddingVertical: uiTheme.spacing.lg,
+  },
+  avatarGlow: {
+    ...uiTheme.shadow.glow,
+    borderRadius: 90,
   },
   metaPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: uiTheme.spacing.md,
     paddingVertical: uiTheme.spacing.xs,
-    backgroundColor: uiTheme.colors.surfaceSoft,
+    backgroundColor: uiTheme.colors.glass,
     borderRadius: uiTheme.radius.full,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border
+    borderColor: uiTheme.colors.glassBorder,
+  },
+  metaDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: uiTheme.colors.success,
+  },
+  metaDotSoft: {
+    backgroundColor: uiTheme.colors.warning,
   },
   metaPillText: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "700",
-    letterSpacing: 0.4
+    letterSpacing: 0.4,
   },
   copyBlock: {
     gap: uiTheme.spacing.xs,
     paddingHorizontal: uiTheme.spacing.xs,
     paddingTop: uiTheme.spacing.sm,
-    alignItems: "center"
+    alignItems: "center",
   },
   title: {
+    ...uiTheme.font.heading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.heading,
-    fontWeight: "800",
     textAlign: "center",
-    letterSpacing: -0.3
   },
   subhead: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
     lineHeight: 21,
     textAlign: "center",
-    paddingHorizontal: uiTheme.spacing.md
+    paddingHorizontal: uiTheme.spacing.md,
   },
   momentCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.md,
     marginTop: uiTheme.spacing.lg,
-    padding: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surfaceRaised,
+    padding: uiTheme.spacing.lg,
+    borderRadius: uiTheme.radius.xl,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    ...uiTheme.shadow.soft
+    borderColor: uiTheme.colors.glassBorder,
+    overflow: "hidden",
+    position: "relative",
+    ...uiTheme.shadow.float,
   },
-  momentDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: uiTheme.colors.success
+  momentIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: uiTheme.colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  momentDotSoft: {
-    backgroundColor: uiTheme.colors.warning
+  momentIconText: {
+    fontSize: 18,
+    color: uiTheme.colors.primary,
   },
   momentCopy: {
     flex: 1,
-    gap: 2
+    gap: 3,
   },
   momentLabel: {
+    ...uiTheme.font.overline,
     color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-    textTransform: "uppercase"
   },
   momentText: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
     lineHeight: 20,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   choices: {
     flex: 1,
     flexDirection: "row",
     gap: uiTheme.spacing.md,
     marginTop: uiTheme.spacing.xl,
-    marginBottom: uiTheme.spacing.md
+    marginBottom: uiTheme.spacing.md,
+  },
+  choiceFlex: {
+    flex: 1,
   },
   choiceButton: {
     flex: 1,
@@ -396,61 +494,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: uiTheme.spacing.xs,
-    borderWidth: 1
+    borderWidth: 1,
+    overflow: "hidden",
   },
   choiceButtonLocked: {
-    opacity: 0.6
+    opacity: 0.6,
   },
   passButton: {
-    backgroundColor: uiTheme.colors.surface,
-    borderColor: uiTheme.colors.borderStrong
-  },
-  passButtonPressed: {
-    backgroundColor: uiTheme.colors.surfaceMuted
+    backgroundColor: uiTheme.colors.glass,
+    borderColor: uiTheme.colors.glassBorder,
+    ...uiTheme.shadow.soft,
   },
   passEmoji: {
-    fontSize: 36
+    fontSize: 40,
   },
   passLabel: {
+    ...uiTheme.font.subheading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "800"
-  },
-  saveButton: {
-    backgroundColor: uiTheme.colors.primary,
-    borderColor: uiTheme.colors.primaryDeep,
-    ...uiTheme.shadow.lift
-  },
-  saveButtonPressed: {
-    backgroundColor: uiTheme.colors.primaryPressed
   },
   saveEmoji: {
-    fontSize: 36
+    fontSize: 40,
   },
   saveLabel: {
+    ...uiTheme.font.subheading,
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "800",
-    textAlign: "center"
+    textAlign: "center",
   },
   choiceHint: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "600",
-    letterSpacing: 0.3
+    letterSpacing: 0.3,
   },
   saveHint: {
-    color: "rgba(255, 255, 255, 0.85)"
+    color: "rgba(255, 255, 255, 0.85)",
   },
   laterButton: {
     alignSelf: "center",
     paddingVertical: uiTheme.spacing.sm,
-    paddingHorizontal: uiTheme.spacing.md
+    paddingHorizontal: uiTheme.spacing.md,
   },
   laterText: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.bodySmall,
     fontWeight: "700",
-    textDecorationLine: "underline"
-  }
+    textDecorationLine: "underline",
+  },
 })

@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native"
+import { useRef } from "react"
+import { Animated, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native"
+import { LinearGradient } from "./linearGradient"
 import { uiTheme } from "./theme"
 
 export interface VibeOption {
@@ -24,46 +26,94 @@ interface VibeTilePickerProps {
   style?: StyleProp<ViewStyle>
 }
 
-export function VibeTilePicker(props: VibeTilePickerProps) {
-  const { selectedId, onSelect, style } = props
+function VibeTile(props: {
+  option: VibeOption
+  selected: boolean
+  onPress: () => void
+}) {
+  const { option, selected, onPress } = props
+  const scaleAnim = useRef(new Animated.Value(1)).current
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.92,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
 
   return (
-    <View style={[styles.grid, style]}>
-      {VIBE_PRESETS.map((option) => {
-        const selected = option.id === selectedId
-        return (
-          <Pressable
-            key={option.id}
-            onPress={() => onSelect(option.id)}
-            style={({ pressed }) => [
-              styles.tile,
-              selected ? styles.tileSelected : null,
-              pressed && !selected ? styles.tilePressed : null
-            ]}
-          >
+    <Animated.View style={[styles.tileOuter, { transform: [{ scale: scaleAnim }] }]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
+          styles.tile,
+          selected ? styles.tileSelected : null,
+        ]}
+      >
+        <View style={styles.swatchContainer}>
+          {selected ? (
+            <View style={[styles.swatchRingOuter, { borderColor: option.accent }]}>
+              <LinearGradient
+                colors={[option.swatch, option.ring]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.swatchGradient]}
+              />
+            </View>
+          ) : (
             <View
               style={[
                 styles.swatch,
                 {
                   backgroundColor: option.swatch,
-                  borderColor: selected ? option.accent : "rgba(0,0,0,0.05)"
+                  borderColor: "rgba(0,0,0,0.06)",
                 }
               ]}
             />
-            {selected ? (
-              <View style={[styles.swatchRing, { borderColor: option.accent }]} pointerEvents="none" />
-            ) : null}
-            <Text
-              style={[
-                styles.label,
-                selected ? { color: option.accent, fontWeight: "800" } : null
-              ]}
-            >
-              {option.label}
-            </Text>
-          </Pressable>
-        )
-      })}
+          )}
+          {selected ? (
+            <View style={[styles.checkBadge, { backgroundColor: option.accent }]}>
+              <Text style={styles.checkText}>✓</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text
+          style={[
+            styles.label,
+            selected ? { color: option.accent, fontWeight: "800" } : null
+          ]}
+        >
+          {option.label}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  )
+}
+
+export function VibeTilePicker(props: VibeTilePickerProps) {
+  const { selectedId, onSelect, style } = props
+
+  return (
+    <View style={[styles.grid, style]}>
+      {VIBE_PRESETS.map((option) => (
+        <VibeTile
+          key={option.id}
+          option={option}
+          selected={option.id === selectedId}
+          onPress={() => onSelect(option.id)}
+        />
+      ))}
     </View>
   )
 }
@@ -75,40 +125,69 @@ const styles = StyleSheet.create({
     gap: uiTheme.spacing.sm,
     justifyContent: "space-between"
   },
-  tile: {
+  tileOuter: {
     width: "31%",
+  },
+  tile: {
     alignItems: "center",
-    paddingVertical: uiTheme.spacing.sm,
+    paddingVertical: uiTheme.spacing.md,
     paddingHorizontal: uiTheme.spacing.xs,
     borderRadius: uiTheme.radius.lg,
-    position: "relative"
-  },
-  tilePressed: {
-    backgroundColor: "rgba(255, 255, 255, 0.55)"
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   tileSelected: {
     backgroundColor: "#FFFFFF",
-    ...uiTheme.shadow.soft
+    borderColor: uiTheme.colors.border,
+    ...uiTheme.shadow.soft,
+  },
+  swatchContainer: {
+    position: "relative",
+    width: 56,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
   },
   swatch: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    borderWidth: 2
+    borderWidth: 2,
   },
-  swatchRing: {
+  swatchRingOuter: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2.5,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  swatchGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  checkBadge: {
     position: "absolute",
-    top: 4,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 1.5,
-    borderStyle: "solid"
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  checkText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "900",
   },
   label: {
     marginTop: 8,
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontWeight: "700"
   }
 })

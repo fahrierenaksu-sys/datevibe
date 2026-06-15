@@ -1,5 +1,8 @@
+import { useRef } from "react"
 import type { ReactNode } from "react"
 import {
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +13,54 @@ import {
   type ViewStyle
 } from "react-native"
 import { uiTheme } from "./theme"
+import { LinearGradient } from "./linearGradient"
+
+/* ── Animated Pressable ─────────────────────────────────────── */
+
+interface AnimatedPressableProps {
+  children: ReactNode
+  onPress?: (event: GestureResponderEvent) => void
+  disabled?: boolean
+  style?: StyleProp<ViewStyle>
+  scaleValue?: number
+}
+
+export function AnimatedPressable(props: AnimatedPressableProps) {
+  const { children, onPress, disabled, style, scaleValue = uiTheme.animation.scalePress } = props
+  const scaleAnim = useRef(new Animated.Value(1)).current
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: scaleValue,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  return (
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        style={{ width: "100%" }}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  )
+}
+
+/* ── Screen Surface ─────────────────────────────────────────── */
 
 interface ScreenSurfaceProps {
   children: ReactNode
@@ -35,76 +86,228 @@ export function ScreenSurface(props: ScreenSurfaceProps) {
   return <View style={[styles.screen, styles.screenContent, style]}>{children}</View>
 }
 
+/* ── Card Wrapper ───────────────────────────────────────────── */
+
 interface CardWrapperProps {
   children: ReactNode
   style?: StyleProp<ViewStyle>
+  variant?: "default" | "elevated" | "glass" | "accent"
 }
 
 export function CardWrapper(props: CardWrapperProps) {
-  const { children, style } = props
-  return <View style={[styles.card, style]}>{children}</View>
+  const { children, style, variant = "default" } = props
+  const variantStyle =
+    variant === "elevated" ? styles.cardElevated :
+    variant === "glass" ? styles.cardGlass :
+    variant === "accent" ? styles.cardAccent :
+    null
+
+  return <View style={[styles.card, variantStyle, style]}>{children}</View>
 }
+
+/* ── Gradient Card ──────────────────────────────────────────── */
+
+interface GradientCardProps {
+  children: ReactNode
+  colors?: string[]
+  style?: StyleProp<ViewStyle>
+}
+
+export function GradientCard(props: GradientCardProps) {
+  const { children, colors = uiTheme.gradients.heroBackground, style } = props
+  return (
+    <View style={[styles.gradientCardOuter, style]}>
+      <LinearGradient
+        colors={colors as [string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientCardInner}
+      >
+        {children}
+      </LinearGradient>
+    </View>
+  )
+}
+
+/* ── Section Card ───────────────────────────────────────────── */
+
+interface SectionCardProps {
+  children: ReactNode
+  icon?: string
+  title?: string
+  action?: ReactNode
+  onPress?: () => void
+  style?: StyleProp<ViewStyle>
+}
+
+export function SectionCard(props: SectionCardProps) {
+  const { children, icon, title, action, onPress, style } = props
+
+  const content = (
+    <View style={[styles.sectionCard, style]}>
+      {(title || action) ? (
+        <View style={styles.sectionCardHeader}>
+          <View style={styles.sectionCardTitleRow}>
+            {icon ? (
+              <View style={styles.sectionCardIcon}>
+                <Text style={styles.sectionCardIconText}>{icon}</Text>
+              </View>
+            ) : null}
+            {title ? (
+              <Text style={styles.sectionCardTitle}>{title}</Text>
+            ) : null}
+          </View>
+          {action}
+        </View>
+      ) : null}
+      {children}
+    </View>
+  )
+
+  if (onPress) {
+    return (
+      <AnimatedPressable onPress={onPress}>
+        {content}
+      </AnimatedPressable>
+    )
+  }
+
+  return content
+}
+
+/* ── Primary Button ─────────────────────────────────────────── */
 
 interface SharedButtonProps {
   label: string
   onPress: (event: GestureResponderEvent) => void
   disabled?: boolean
   style?: StyleProp<ViewStyle>
+  icon?: string
 }
 
 export function PrimaryButton(props: SharedButtonProps) {
-  const { label, onPress, disabled = false, style } = props
+  const { label, onPress, disabled = false, style, icon } = props
+  const scaleAnim = useRef(new Animated.Value(1)).current
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: uiTheme.animation.scalePress,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
 
   return (
-    <Pressable
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.buttonBase,
-        styles.primaryButton,
-        pressed && !disabled ? styles.primaryButtonPressed : null,
-        disabled ? styles.primaryButtonDisabled : null,
-        style
-      ]}
-    >
-      <Text style={styles.primaryButtonText}>{label}</Text>
-    </Pressable>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        disabled={disabled}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={({ pressed }) => [
+          styles.buttonBase,
+          styles.primaryButton,
+          !disabled ? uiTheme.shadow.glowSubtle : null,
+          pressed && !disabled ? styles.primaryButtonPressed : null,
+          disabled ? styles.primaryButtonDisabled : null,
+          style
+        ]}
+      >
+        <LinearGradient
+          colors={disabled ? [uiTheme.colors.primaryDisabled, uiTheme.colors.primaryDisabled] : uiTheme.gradients.primary as [string, string]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.buttonGradient}
+        >
+          {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}
+          <Text style={styles.primaryButtonText}>{label}</Text>
+        </LinearGradient>
+      </Pressable>
+    </Animated.View>
   )
 }
+
+/* ── Secondary Button ───────────────────────────────────────── */
 
 export function SecondaryButton(props: SharedButtonProps) {
-  const { label, onPress, disabled = false, style } = props
+  const { label, onPress, disabled = false, style, icon } = props
+  const scaleAnim = useRef(new Animated.Value(1)).current
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: uiTheme.animation.scalePress,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
 
   return (
-    <Pressable
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.buttonBase,
-        styles.secondaryButton,
-        pressed && !disabled ? styles.secondaryButtonPressed : null,
-        disabled ? styles.secondaryButtonDisabled : null,
-        style
-      ]}
-    >
-      <Text style={styles.secondaryButtonText}>{label}</Text>
-    </Pressable>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        disabled={disabled}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={({ pressed }) => [
+          styles.buttonBase,
+          styles.secondaryButton,
+          pressed && !disabled ? styles.secondaryButtonPressed : null,
+          disabled ? styles.secondaryButtonDisabled : null,
+          style
+        ]}
+      >
+        {icon ? <Text style={styles.secondaryButtonIcon}>{icon}</Text> : null}
+        <Text style={styles.secondaryButtonText}>{label}</Text>
+      </Pressable>
+    </Animated.View>
   )
 }
+
+/* ── Tag Chip ───────────────────────────────────────────────── */
 
 interface TagChipProps {
   label: string
+  variant?: "default" | "accent" | "success" | "muted"
   style?: StyleProp<ViewStyle>
 }
 
 export function TagChip(props: TagChipProps) {
-  const { label, style } = props
+  const { label, variant = "default", style } = props
+  const variantStyle =
+    variant === "accent" ? styles.tagChipAccent :
+    variant === "success" ? styles.tagChipSuccess :
+    variant === "muted" ? styles.tagChipMuted :
+    null
+  const textVariantStyle =
+    variant === "accent" ? styles.tagChipTextAccent :
+    variant === "success" ? styles.tagChipTextSuccess :
+    variant === "muted" ? styles.tagChipTextMuted :
+    null
+
   return (
-    <View style={[styles.tagChip, style]}>
-      <Text style={styles.tagChipText}>{label}</Text>
+    <View style={[styles.tagChip, variantStyle, style]}>
+      <Text style={[styles.tagChipText, textVariantStyle]}>{label}</Text>
     </View>
   )
 }
+
+/* ── Avatar Placeholder Block ───────────────────────────────── */
 
 interface AvatarPlaceholderBlockProps {
   title?: string
@@ -118,6 +321,10 @@ export function AvatarPlaceholderBlock(props: AvatarPlaceholderBlockProps) {
 
   return (
     <View style={[styles.avatarBlock, { height }, style]}>
+      <LinearGradient
+        colors={uiTheme.gradients.heroBackground as [string, ...string[]]}
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={styles.avatarGlow} />
       <View style={styles.avatarGlowSecondary} />
       <Text style={styles.avatarTitle}>{title}</Text>
@@ -125,6 +332,8 @@ export function AvatarPlaceholderBlock(props: AvatarPlaceholderBlockProps) {
     </View>
   )
 }
+
+/* ── Top Bar ────────────────────────────────────────────────── */
 
 interface TopBarProps {
   title: string
@@ -150,11 +359,13 @@ export function TopBar(props: TopBarProps) {
   )
 }
 
+/* ── Action Button Circle ───────────────────────────────────── */
+
 interface ActionButtonCircleProps {
   children: ReactNode
   onPress: (event: GestureResponderEvent) => void
   disabled?: boolean
-  variant?: "primary" | "soft"
+  variant?: "primary" | "soft" | "danger"
   size?: number
   style?: StyleProp<ViewStyle>
 }
@@ -169,37 +380,83 @@ export function ActionButtonCircle(props: ActionButtonCircleProps) {
     style
   } = props
 
+  const scaleAnim = useRef(new Animated.Value(1)).current
   const isPrimary = variant === "primary"
+  const isDanger = variant === "danger"
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.9,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
 
   return (
-    <Pressable
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.circleButton,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: isPrimary ? uiTheme.colors.primary : uiTheme.colors.secondary
-        },
-        pressed && !disabled
-          ? { backgroundColor: isPrimary ? uiTheme.colors.primaryPressed : uiTheme.colors.secondaryPressed }
-          : null,
-        disabled ? { opacity: 0.45 } : null,
-        style
-      ]}
-    >
-      {typeof children === "string" ? (
-        <Text style={[styles.circleButtonText, isPrimary ? styles.circleButtonTextPrimary : null]}>
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
-    </Pressable>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        disabled={disabled}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={({ pressed }) => [
+          styles.circleButton,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: isPrimary
+              ? uiTheme.colors.primary
+              : isDanger
+                ? uiTheme.colors.dangerSoft
+                : uiTheme.colors.surface,
+            borderColor: isPrimary
+              ? "transparent"
+              : isDanger
+                ? uiTheme.colors.danger
+                : uiTheme.colors.border,
+          },
+          isPrimary ? uiTheme.shadow.glowSubtle : uiTheme.shadow.float,
+          pressed && !disabled
+            ? {
+                backgroundColor: isPrimary
+                  ? uiTheme.colors.primaryPressed
+                  : isDanger
+                    ? uiTheme.colors.danger
+                    : uiTheme.colors.surfaceMuted,
+              }
+            : null,
+          disabled ? { opacity: 0.45 } : null,
+          style
+        ]}
+      >
+        {typeof children === "string" ? (
+          <Text
+            style={[
+              styles.circleButtonText,
+              isPrimary ? styles.circleButtonTextPrimary : null,
+              isDanger ? styles.circleButtonTextDanger : null,
+            ]}
+          >
+            {children}
+          </Text>
+        ) : (
+          children
+        )}
+      </Pressable>
+    </Animated.View>
   )
 }
+
+/* ── Styles ─────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   screen: {
@@ -220,41 +477,121 @@ const styles = StyleSheet.create({
     gap: uiTheme.spacing.sm,
     ...uiTheme.shadow.card
   },
+  cardElevated: {
+    ...uiTheme.shadow.deep,
+    borderColor: "transparent",
+  },
+  cardGlass: {
+    backgroundColor: uiTheme.colors.glass,
+    borderColor: uiTheme.colors.glassBorder,
+  },
+  cardAccent: {
+    borderColor: uiTheme.colors.primarySoft,
+    backgroundColor: uiTheme.colors.surfaceSoft,
+  },
+  /* ── Gradient Card ───────────────────────────────── */
+  gradientCardOuter: {
+    borderRadius: uiTheme.radius.xl,
+    overflow: "hidden",
+    ...uiTheme.shadow.card,
+  },
+  gradientCardInner: {
+    padding: uiTheme.spacing.lg,
+    gap: uiTheme.spacing.sm,
+  },
+  /* ── Section Card ────────────────────────────────── */
+  sectionCard: {
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: uiTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.border,
+    padding: uiTheme.spacing.lg,
+    gap: uiTheme.spacing.md,
+    ...uiTheme.shadow.soft,
+  },
+  sectionCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionCardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: uiTheme.spacing.sm,
+  },
+  sectionCardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: uiTheme.colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionCardIconText: {
+    fontSize: 16,
+  },
+  sectionCardTitle: {
+    ...uiTheme.font.subheading,
+    color: uiTheme.colors.textPrimary,
+  },
+  /* ── Buttons ─────────────────────────────────────── */
   buttonBase: {
-    minHeight: 52,
+    minHeight: 54,
     borderRadius: uiTheme.radius.full,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: uiTheme.spacing.lg
+    paddingHorizontal: uiTheme.spacing.xl,
+    overflow: "hidden",
+  },
+  buttonGradient: {
+    flex: 1,
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: uiTheme.spacing.xs,
+    borderRadius: uiTheme.radius.full,
+    paddingHorizontal: uiTheme.spacing.xl,
+  },
+  buttonIcon: {
+    fontSize: 16,
+    color: "#FFFFFF",
   },
   primaryButton: {
-    backgroundColor: uiTheme.colors.primary
+    padding: 0,
   },
   primaryButtonPressed: {
-    backgroundColor: uiTheme.colors.primaryPressed
+    opacity: 0.92,
   },
   primaryButtonDisabled: {
-    backgroundColor: uiTheme.colors.primaryDisabled
+    opacity: 0.65,
   },
   primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
-    fontWeight: "700"
+    ...uiTheme.font.bodyBold,
+    letterSpacing: 0.3,
   },
   secondaryButton: {
-    backgroundColor: uiTheme.colors.secondary
+    backgroundColor: uiTheme.colors.secondary,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.border,
   },
   secondaryButtonPressed: {
-    backgroundColor: uiTheme.colors.secondaryPressed
+    backgroundColor: uiTheme.colors.secondaryPressed,
   },
   secondaryButtonDisabled: {
     opacity: 0.55
   },
   secondaryButtonText: {
     color: uiTheme.colors.secondaryText,
-    fontSize: uiTheme.typography.body,
-    fontWeight: "600"
+    ...uiTheme.font.bodyMedium,
   },
+  secondaryButtonIcon: {
+    fontSize: 16,
+    color: uiTheme.colors.secondaryText,
+    marginRight: 4,
+  },
+  /* ── Tag Chips ───────────────────────────────────── */
   tagChip: {
     alignSelf: "flex-start",
     borderRadius: uiTheme.radius.full,
@@ -264,11 +601,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: uiTheme.spacing.sm,
     paddingVertical: 7
   },
+  tagChipAccent: {
+    backgroundColor: uiTheme.colors.primarySoft,
+    borderColor: uiTheme.colors.primary,
+  },
+  tagChipSuccess: {
+    backgroundColor: uiTheme.colors.successSoft,
+    borderColor: uiTheme.colors.success,
+  },
+  tagChipMuted: {
+    backgroundColor: uiTheme.colors.surfaceMuted,
+    borderColor: uiTheme.colors.border,
+  },
   tagChipText: {
     color: uiTheme.colors.chipText,
     fontSize: 11,
     fontWeight: "700"
   },
+  tagChipTextAccent: {
+    color: uiTheme.colors.primaryDeep,
+  },
+  tagChipTextSuccess: {
+    color: uiTheme.colors.successInk,
+  },
+  tagChipTextMuted: {
+    color: uiTheme.colors.textMuted,
+  },
+  /* ── Avatar Block ────────────────────────────────── */
   avatarBlock: {
     borderRadius: uiTheme.radius.xl,
     backgroundColor: uiTheme.colors.avatarBackground,
@@ -310,6 +669,7 @@ const styles = StyleSheet.create({
     color: "#766985",
     zIndex: 1
   },
+  /* ── Top Bar ─────────────────────────────────────── */
   topBar: {
     minHeight: 60,
     flexDirection: "row",
@@ -334,21 +694,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: uiTheme.spacing.sm
   },
   topBarTitle: {
-    fontSize: uiTheme.typography.heading,
+    ...uiTheme.font.heading,
     color: uiTheme.colors.textPrimary,
-    fontWeight: "800"
   },
   topBarSubtitle: {
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textMuted,
-    fontWeight: "600"
   },
+  /* ── Circle Button ───────────────────────────────── */
   circleButton: {
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#EDE3F4",
-    ...uiTheme.shadow.card
+    borderWidth: 1.5,
   },
   circleButtonText: {
     fontSize: 19,
@@ -357,5 +714,8 @@ const styles = StyleSheet.create({
   },
   circleButtonTextPrimary: {
     color: "#FFFFFF"
-  }
+  },
+  circleButtonTextDanger: {
+    color: uiTheme.colors.danger,
+  },
 })

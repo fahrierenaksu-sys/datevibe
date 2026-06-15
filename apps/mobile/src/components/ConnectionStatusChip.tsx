@@ -1,16 +1,17 @@
 import { StyleSheet, Text, View } from "react-native"
 import type { RealtimeConnectionStatus } from "../features/realtime/realtimeClient"
+import { uiTheme } from "../ui/theme"
 
 interface ConnectionStatusChipProps {
   status: RealtimeConnectionStatus
 }
 
 const STATUS_COLORS: Record<RealtimeConnectionStatus, string> = {
-  idle: "#8b8b8b",
-  connecting: "#f59e0b",
-  connected: "#16a34a",
-  disconnected: "#6b7280",
-  error: "#dc2626"
+  idle: uiTheme.colors.textMuted,
+  connecting: uiTheme.colors.warning,
+  connected: uiTheme.colors.success,
+  disconnected: uiTheme.colors.textMuted,
+  error: uiTheme.colors.danger,
 }
 
 export function ConnectionStatusChip(props: ConnectionStatusChipProps) {
@@ -28,20 +29,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: 6
+    borderWidth: 1.5,
+    borderRadius: uiTheme.radius.full,
+    paddingHorizontal: uiTheme.spacing.sm,
+    paddingVertical: uiTheme.spacing.xs,
+    gap: 6,
+    backgroundColor: uiTheme.colors.glass,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   text: {
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "capitalize"
-  }
+    ...uiTheme.font.caption,
+    color: uiTheme.colors.textSecondary,
+    textTransform: "capitalize",
+  },
 })

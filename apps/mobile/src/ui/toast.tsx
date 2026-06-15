@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native"
 import { uiTheme } from "./theme"
+import { LinearGradient } from "./linearGradient"
 
 type ToastType = "info" | "success" | "warning"
 
@@ -50,24 +51,37 @@ export function dismissToast(): void {
 
 // ── UI Component ────────────────────────────────────────────
 
-const TYPE_CONFIG: Record<ToastType, { bg: string; border: string; icon: string; textColor: string }> = {
+const TYPE_CONFIG: Record<ToastType, {
+  bg: string
+  bgGradient: [string, string]
+  border: string
+  icon: string
+  iconBg: string
+  textColor: string
+}> = {
   success: {
     bg: uiTheme.colors.successSoft,
-    border: "rgba(58, 192, 138, 0.3)",
+    bgGradient: ["#E8FAF0", "#DDF5EA"],
+    border: "rgba(58, 192, 138, 0.25)",
     icon: "✓",
+    iconBg: "rgba(58, 192, 138, 0.18)",
     textColor: uiTheme.colors.successInk
   },
   info: {
     bg: uiTheme.colors.primarySoft,
-    border: "#F4A9CA",
+    bgGradient: ["#FFF0F6", "#FFE2EE"],
+    border: "rgba(255, 79, 152, 0.2)",
     icon: "◆",
+    iconBg: "rgba(255, 79, 152, 0.15)",
     textColor: uiTheme.colors.primaryDeep
   },
   warning: {
-    bg: uiTheme.colors.warning,
-    border: "#F5D090",
+    bg: uiTheme.colors.warningSoft,
+    bgGradient: ["#FFF8ED", "#FFF2D9"],
+    border: "rgba(224, 165, 58, 0.25)",
     icon: "!",
-    textColor: "#78350F"
+    iconBg: "rgba(224, 165, 58, 0.18)",
+    textColor: uiTheme.colors.warningInk
   }
 }
 
@@ -75,6 +89,7 @@ export function ToastContainer() {
   const [toast, setToast] = useState<ToastData | null>(currentToast)
   const slideAnim = useRef(new Animated.Value(-100)).current
   const opacityAnim = useRef(new Animated.Value(0)).current
+  const progressAnim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     const listener: ToastListener = (t) => setToast(t)
@@ -84,68 +99,98 @@ export function ToastContainer() {
 
   useEffect(() => {
     if (toast) {
+      progressAnim.setValue(1)
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
           useNativeDriver: true,
-          damping: 20,
-          stiffness: 250
+          damping: 22,
+          stiffness: 280,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 150,
+          duration: 180,
           useNativeDriver: true
         })
       ]).start()
+
+      // Progress bar countdown
+      Animated.timing(progressAnim, {
+        toValue: 0,
+        duration: toast.durationMs ?? 3000,
+        useNativeDriver: false,
+      }).start()
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: -100,
-          duration: 200,
+          duration: 220,
           useNativeDriver: true
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 150,
+          duration: 180,
           useNativeDriver: true
         })
       ]).start()
     }
-  }, [toast, slideAnim, opacityAnim])
+  }, [toast, slideAnim, opacityAnim, progressAnim])
 
   if (!toast) return null
 
   const config = TYPE_CONFIG[toast.type]
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  })
 
   return (
     <Animated.View
       style={[
         styles.container,
         {
-          backgroundColor: config.bg,
           borderColor: config.border,
           transform: [{ translateY: slideAnim }],
           opacity: opacityAnim
         }
       ]}
     >
-      <Pressable style={styles.content} onPress={dismissToast}>
-        <View style={[styles.iconCircle, { borderColor: config.border }]}>
-          <Text style={[styles.icon, { color: config.textColor }]}>
-            {config.icon}
-          </Text>
-        </View>
-        <View style={styles.textWrap}>
-          <Text style={[styles.title, { color: config.textColor }]} numberOfLines={1}>
-            {toast.title}
-          </Text>
-          {toast.body ? (
-            <Text style={[styles.body, { color: config.textColor }]} numberOfLines={2}>
-              {toast.body}
+      <LinearGradient
+        colors={config.bgGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradient}
+      >
+        <Pressable style={styles.content} onPress={dismissToast}>
+          <View style={[styles.iconCircle, { backgroundColor: config.iconBg }]}>
+            <Text style={[styles.icon, { color: config.textColor }]}>
+              {config.icon}
             </Text>
-          ) : null}
+          </View>
+          <View style={styles.textWrap}>
+            <Text style={[styles.title, { color: config.textColor }]} numberOfLines={1}>
+              {toast.title}
+            </Text>
+            {toast.body ? (
+              <Text style={[styles.body, { color: config.textColor }]} numberOfLines={2}>
+                {toast.body}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
+        {/* Progress bar */}
+        <View style={styles.progressTrack}>
+          <Animated.View
+            style={[
+              styles.progressBar,
+              {
+                width: progressWidth,
+                backgroundColor: config.textColor,
+              }
+            ]}
+          />
         </View>
-      </Pressable>
+      </LinearGradient>
     </Animated.View>
   )
 }
@@ -153,45 +198,55 @@ export function ToastContainer() {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    top: 50,
+    top: 54,
     left: uiTheme.spacing.md,
     right: uiTheme.spacing.md,
     borderRadius: uiTheme.radius.xl,
     borderWidth: 1,
+    overflow: "hidden",
     zIndex: 200,
-    ...uiTheme.shadow.card
+    ...uiTheme.shadow.deep,
+  },
+  gradient: {
+    borderRadius: uiTheme.radius.xl - 1,
+    overflow: "hidden",
   },
   content: {
     flexDirection: "row",
     alignItems: "center",
     gap: uiTheme.spacing.sm,
-    paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.sm
+    paddingHorizontal: uiTheme.spacing.lg,
+    paddingVertical: uiTheme.spacing.md,
   },
   iconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.5)"
   },
   icon: {
-    fontSize: 14,
-    fontWeight: "800"
+    fontSize: 16,
+    fontWeight: "900"
   },
   textWrap: {
     flex: 1,
     gap: 2
   },
   title: {
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "800"
+    ...uiTheme.font.bodyBold,
   },
   body: {
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "600",
-    opacity: 0.85
-  }
+    ...uiTheme.font.bodySmall,
+    opacity: 0.8,
+  },
+  progressTrack: {
+    height: 3,
+    backgroundColor: "rgba(0,0,0,0.06)",
+  },
+  progressBar: {
+    height: 3,
+    opacity: 0.35,
+    borderRadius: 2,
+  },
 })

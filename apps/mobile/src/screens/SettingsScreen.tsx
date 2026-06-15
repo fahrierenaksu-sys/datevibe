@@ -1,11 +1,20 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { useCallback } from "react"
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { useCallback, useRef } from "react"
+import {
+  Alert,
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useBlockStore } from "../features/safety/blockStore"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { Avatar } from "../ui/avatar"
 import { SoftBlobBackground } from "../ui/backgrounds"
+import { LinearGradient } from "../ui/linearGradient"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 import { showToast } from "../ui/toast"
@@ -14,6 +23,69 @@ type SettingsScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "Settings"
 >
+
+/* ── Animated Row ──────────────────────────────────────────── */
+
+function SettingsRow(props: {
+  icon: string
+  iconColors: [string, string]
+  label: string
+  value?: string
+  chevron?: boolean
+  onPress?: () => void
+  isLast?: boolean
+  children?: React.ReactNode
+}) {
+  const { icon, iconColors, label, value, chevron, onPress, isLast, children } = props
+  const scaleAnim = useRef(new Animated.Value(1)).current
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring
+    }).start()
+  }
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={!onPress}
+        style={[styles.row, !isLast && styles.rowDivider]}
+      >
+        <View style={styles.iconCircle}>
+          <LinearGradient
+            colors={iconColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconGradient}
+          >
+            <Text style={styles.iconEmoji}>{icon}</Text>
+          </LinearGradient>
+        </View>
+        <View style={styles.rowBody}>
+          <Text style={styles.rowLabel}>{label}</Text>
+        </View>
+        {children}
+        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+        {chevron ? <Text style={styles.rowChevron}>›</Text> : null}
+      </Pressable>
+    </Animated.View>
+  )
+}
+
+/* ── Main Screen ───────────────────────────────────────────── */
 
 export function SettingsScreen(props: SettingsScreenProps) {
   const { navigation } = props
@@ -61,88 +133,124 @@ export function SettingsScreen(props: SettingsScreenProps) {
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* Blocked Users */}
-          <View style={styles.section}>
-            <Text style={styles.sectionEyebrow}>Safety</Text>
-            <Text style={styles.sectionTitle}>Blocked Users</Text>
-            {blockedUserIds.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>
-                  No blocked users. If you block someone, they'll appear here.
-                </Text>
-              </View>
-            ) : (
-              blockedUserIds.map((userId) => (
-                <View key={userId} style={styles.blockedCard}>
-                  <Avatar name="?" seed={userId} size={40} ring="soft" />
-                  <View style={styles.blockedBody}>
-                    <Text style={styles.blockedId} numberOfLines={1}>
-                      {userId.slice(0, 12)}…
-                    </Text>
-                    <Text style={styles.blockedLabel}>Blocked</Text>
+          {/* ── Safety / Blocked Users ────────────────────── */}
+          <View style={styles.sectionWrap}>
+            <Text style={styles.sectionOverline}>SAFETY</Text>
+            <View style={styles.sectionCard}>
+              {blockedUserIds.length === 0 ? (
+                <View style={styles.emptyRow}>
+                  <View style={styles.iconCircle}>
+                    <LinearGradient
+                      colors={["#E2586C", "#FF8A9B"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.iconGradient}
+                    >
+                      <Text style={styles.iconEmoji}>🛡️</Text>
+                    </LinearGradient>
                   </View>
-                  <Pressable
-                    onPress={() => handleUnblock(userId)}
-                    style={({ pressed }) => [
-                      styles.unblockButton,
-                      pressed ? { opacity: 0.85 } : null
+                  <Text style={styles.emptyText}>
+                    No blocked users. If you block someone, they'll appear here.
+                  </Text>
+                </View>
+              ) : (
+                blockedUserIds.map((userId, index) => (
+                  <View
+                    key={userId}
+                    style={[
+                      styles.blockedCard,
+                      index < blockedUserIds.length - 1 && styles.rowDivider
                     ]}
                   >
-                    <Text style={styles.unblockText}>Unblock</Text>
-                  </Pressable>
-                </View>
-              ))
-            )}
-          </View>
-
-          {/* About */}
-          <View style={styles.section}>
-            <Text style={styles.sectionEyebrow}>About</Text>
-            <Text style={styles.sectionTitle}>DateVibe</Text>
-            <View style={styles.aboutCard}>
-              <View style={styles.aboutRow}>
-                <Text style={styles.aboutLabel}>Version</Text>
-                <Text style={styles.aboutValue}>1.0.0-beta</Text>
-              </View>
-              <View style={styles.aboutRow}>
-                <Text style={styles.aboutLabel}>Build</Text>
-                <Text style={styles.aboutValue}>Wave 11</Text>
-              </View>
-              <View style={styles.aboutRow}>
-                <Text style={styles.aboutLabel}>Philosophy</Text>
-                <Text style={styles.aboutValue}>Avatars, not photos</Text>
-              </View>
+                    <Avatar name="?" seed={userId} size={40} ring="soft" />
+                    <View style={styles.blockedBody}>
+                      <Text style={styles.blockedId} numberOfLines={1}>
+                        {userId.slice(0, 12)}…
+                      </Text>
+                      <Text style={styles.blockedLabel}>Blocked</Text>
+                    </View>
+                    <Pressable
+                      onPress={() => handleUnblock(userId)}
+                      style={({ pressed }) => [
+                        styles.unblockButton,
+                        pressed ? { opacity: 0.85 } : null
+                      ]}
+                    >
+                      <Text style={styles.unblockText}>Unblock</Text>
+                    </Pressable>
+                  </View>
+                ))
+              )}
             </View>
           </View>
 
-          {/* Legal */}
-          <View style={styles.section}>
-            <Text style={styles.sectionEyebrow}>Legal</Text>
-            <View style={styles.legalLinks}>
-              <Pressable style={styles.legalLink}>
-                <Text style={styles.legalLinkText}>Privacy Policy</Text>
-                <Text style={styles.legalChevron}>›</Text>
-              </Pressable>
-              <Pressable style={styles.legalLink}>
-                <Text style={styles.legalLinkText}>Terms of Service</Text>
-                <Text style={styles.legalChevron}>›</Text>
-              </Pressable>
-              <Pressable style={styles.legalLink}>
-                <Text style={styles.legalLinkText}>Community Guidelines</Text>
-                <Text style={styles.legalChevron}>›</Text>
-              </Pressable>
+          {/* ── About ─────────────────────────────────────── */}
+          <View style={styles.sectionWrap}>
+            <Text style={styles.sectionOverline}>ABOUT</Text>
+            <View style={styles.sectionCard}>
+              <SettingsRow
+                icon="📱"
+                iconColors={uiTheme.gradients.primary}
+                label="Version"
+                value="1.0.0-beta"
+              />
+              <SettingsRow
+                icon="🌊"
+                iconColors={uiTheme.gradients.cool}
+                label="Build"
+                value="Wave 11"
+              />
+              <SettingsRow
+                icon="✨"
+                iconColors={uiTheme.gradients.warm}
+                label="Philosophy"
+                value="Avatars, not photos"
+                isLast
+              />
             </View>
           </View>
 
-          <Text style={styles.footer}>
-            Made with intention. No algorithms. No photos.{"\n"}
-            Just real moments between real people.
-          </Text>
+          {/* ── Legal ─────────────────────────────────────── */}
+          <View style={styles.sectionWrap}>
+            <Text style={styles.sectionOverline}>LEGAL</Text>
+            <View style={styles.sectionCard}>
+              <SettingsRow
+                icon="🔒"
+                iconColors={["#9B59B6", "#C39BD3"]}
+                label="Privacy Policy"
+                chevron
+              />
+              <SettingsRow
+                icon="📄"
+                iconColors={["#3498DB", "#85C1E9"]}
+                label="Terms of Service"
+                chevron
+              />
+              <SettingsRow
+                icon="💬"
+                iconColors={["#3AC08A", "#82E0AA"]}
+                label="Community Guidelines"
+                chevron
+                isLast
+              />
+            </View>
+          </View>
+
+          {/* ── Footer ────────────────────────────────────── */}
+          <View style={styles.footerWrap}>
+            <Text style={styles.footerTagline}>
+              Made with intention. No algorithms. No photos.{"\n"}
+              Just real moments between real people.
+            </Text>
+            <Text style={styles.footerVersion}>DateVibe v1.0.0-beta</Text>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
   )
 }
+
+/* ── Styles ─────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   root: {
@@ -155,132 +263,138 @@ const styles = StyleSheet.create({
     paddingTop: uiTheme.spacing.sm
   },
   scroll: {
-    gap: uiTheme.spacing.lg,
+    gap: uiTheme.spacing.md,
     paddingBottom: uiTheme.spacing.xxl
   },
-  section: {
+
+  /* ── Section ────────────────────────────────────── */
+  sectionWrap: {
     gap: uiTheme.spacing.xs
   },
-  sectionEyebrow: {
+  sectionOverline: {
+    ...uiTheme.font.overline,
     color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase"
+    paddingLeft: uiTheme.spacing.xxs,
+    marginBottom: 2
   },
-  sectionTitle: {
-    color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "800",
-    marginBottom: uiTheme.spacing.xs
-  },
-  emptyCard: {
-    padding: uiTheme.spacing.lg,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
+  sectionCard: {
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border
+    borderColor: uiTheme.colors.glassBorder,
+    overflow: "hidden",
+    ...uiTheme.shadow.soft
+  },
+
+  /* ── Row ─────────────────────────────────────────── */
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.sm
+  },
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: uiTheme.colors.divider
+  },
+  rowBody: {
+    flex: 1
+  },
+  rowLabel: {
+    ...uiTheme.font.bodyMedium,
+    color: uiTheme.colors.textPrimary
+  },
+  rowValue: {
+    ...uiTheme.font.caption,
+    color: uiTheme.colors.textSecondary
+  },
+  rowChevron: {
+    ...uiTheme.font.subheading,
+    color: uiTheme.colors.textMuted,
+    marginLeft: uiTheme.spacing.xxs
+  },
+
+  /* ── Icon Circle ─────────────────────────────────── */
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    overflow: "hidden"
+  },
+  iconGradient: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  iconEmoji: {
+    fontSize: 16
+  },
+
+  /* ── Empty state ─────────────────────────────────── */
+  emptyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: uiTheme.spacing.sm,
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.md
   },
   emptyText: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.bodySmall,
-    textAlign: "center",
+    flex: 1,
     lineHeight: 20
   },
+
+  /* ── Blocked card ────────────────────────────────── */
   blockedCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: uiTheme.spacing.sm,
-    padding: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    marginBottom: uiTheme.spacing.xs
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.sm
   },
   blockedBody: {
     flex: 1,
     gap: 2
   },
   blockedId: {
-    color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "700"
+    ...uiTheme.font.label,
+    color: uiTheme.colors.textPrimary
   },
   blockedLabel: {
-    color: uiTheme.colors.danger,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800"
+    ...uiTheme.font.micro,
+    color: uiTheme.colors.danger
   },
   unblockButton: {
     paddingHorizontal: uiTheme.spacing.md,
     paddingVertical: 6,
     borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.dangerSoft,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border
+    borderColor: uiTheme.colors.danger
   },
   unblockText: {
-    color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "700"
+    ...uiTheme.font.caption,
+    color: uiTheme.colors.dangerInk
   },
-  aboutCard: {
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    overflow: "hidden"
-  },
-  aboutRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+
+  /* ── Footer ──────────────────────────────────────── */
+  footerWrap: {
     alignItems: "center",
-    paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: uiTheme.colors.border
+    gap: uiTheme.spacing.xs,
+    paddingVertical: uiTheme.spacing.lg,
+    paddingTop: uiTheme.spacing.md
   },
-  aboutLabel: {
-    color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "600"
-  },
-  aboutValue: {
-    color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "700"
-  },
-  legalLinks: {
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    overflow: "hidden"
-  },
-  legalLink: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: uiTheme.spacing.md,
-    paddingVertical: uiTheme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: uiTheme.colors.border
-  },
-  legalLinkText: {
-    color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "600"
-  },
-  legalChevron: {
+  footerTagline: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textMuted,
-    fontSize: 18,
-    fontWeight: "700"
-  },
-  footer: {
-    color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
     textAlign: "center",
-    lineHeight: 20,
-    paddingVertical: uiTheme.spacing.lg
+    lineHeight: 20
+  },
+  footerVersion: {
+    ...uiTheme.font.micro,
+    color: uiTheme.colors.textMuted,
+    opacity: 0.6
   }
 })

@@ -278,173 +278,173 @@ export function DiscoverFiltersBottomSheet(props: DiscoverFiltersBottomSheetProp
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "flex-end"
+    justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(28, 16, 34, 0.42)"
+    backgroundColor: "rgba(28, 16, 34, 0.52)",
   },
   sheet: {
     maxHeight: "86%",
-    borderTopLeftRadius: uiTheme.radius.xl,
-    borderTopRightRadius: uiTheme.radius.xl,
+    borderTopLeftRadius: uiTheme.radius.xxl,
+    borderTopRightRadius: uiTheme.radius.xxl,
     backgroundColor: uiTheme.colors.surface,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: uiTheme.colors.border,
-    paddingTop: uiTheme.spacing.md
+    paddingTop: uiTheme.spacing.lg,
+    ...uiTheme.shadow.deep,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: uiTheme.spacing.lg,
-    paddingBottom: uiTheme.spacing.sm
+    paddingBottom: uiTheme.spacing.md,
   },
   headerTitle: {
+    ...uiTheme.font.heading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.heading,
-    fontWeight: "800"
   },
   closeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: uiTheme.colors.secondary
+    backgroundColor: uiTheme.colors.glass,
+    borderWidth: 1,
+    borderColor: uiTheme.colors.glassBorder,
   },
   closeButtonText: {
     color: uiTheme.colors.secondaryText,
     fontSize: 15,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   content: {
-    maxHeight: 520
+    maxHeight: 520,
   },
   contentContainer: {
     paddingHorizontal: uiTheme.spacing.lg,
     paddingBottom: uiTheme.spacing.md,
-    gap: uiTheme.spacing.md
+    gap: uiTheme.spacing.lg,
   },
   section: {
-    gap: uiTheme.spacing.sm
+    gap: uiTheme.spacing.sm,
   },
   sectionTitle: {
-    color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    fontWeight: "700"
+    ...uiTheme.font.overline,
+    color: uiTheme.colors.primary,
   },
   segmentRow: {
     flexDirection: "row",
-    gap: uiTheme.spacing.xs
+    gap: uiTheme.spacing.xs,
   },
   segment: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: uiTheme.radius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: uiTheme.colors.border,
-    backgroundColor: "#FAF8FC",
+    backgroundColor: uiTheme.colors.surface,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   segmentActive: {
-    borderColor: "#F4A9CA",
-    backgroundColor: uiTheme.colors.chipBackground
+    borderColor: uiTheme.colors.primary,
+    backgroundColor: uiTheme.colors.chipBackground,
+    ...uiTheme.shadow.soft,
   },
   segmentText: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   segmentTextActive: {
     color: uiTheme.colors.chipText,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   ageCard: {
-    borderRadius: uiTheme.radius.lg,
+    borderRadius: uiTheme.radius.xl,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    backgroundColor: "#FCFAFE",
-    padding: uiTheme.spacing.md,
-    gap: uiTheme.spacing.sm
+    borderColor: uiTheme.colors.glassBorder,
+    backgroundColor: uiTheme.colors.glass,
+    padding: uiTheme.spacing.lg,
+    gap: uiTheme.spacing.md,
+    ...uiTheme.shadow.soft,
   },
   ageValue: {
+    ...uiTheme.font.title,
     color: uiTheme.colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "800"
+    fontSize: 22,
   },
   ageControls: {
     flexDirection: "row",
-    gap: uiTheme.spacing.md
+    gap: uiTheme.spacing.lg,
   },
   ageControlGroup: {
     flex: 1,
-    gap: uiTheme.spacing.xs
+    gap: uiTheme.spacing.xs,
   },
   ageLabel: {
+    ...uiTheme.font.captionBold,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "700"
   },
   ageStepper: {
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: uiTheme.radius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: uiTheme.colors.border,
     backgroundColor: uiTheme.colors.surface,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: uiTheme.spacing.xs
+    paddingHorizontal: uiTheme.spacing.xs,
   },
   stepperButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: uiTheme.colors.secondary
+    backgroundColor: uiTheme.colors.chipBackground,
   },
   stepperText: {
-    color: uiTheme.colors.secondaryText,
+    color: uiTheme.colors.primary,
     fontSize: 18,
-    fontWeight: "700"
+    fontWeight: "800",
   },
   stepperValue: {
+    ...uiTheme.font.bodyBold,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.body,
-    fontWeight: "700"
   },
   tagsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: uiTheme.spacing.xs
+    gap: uiTheme.spacing.xs,
   },
   vibeChip: {
     borderRadius: uiTheme.radius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: uiTheme.colors.border,
-    backgroundColor: "#FAF8FC",
-    paddingHorizontal: uiTheme.spacing.sm,
-    paddingVertical: uiTheme.spacing.xs
+    backgroundColor: uiTheme.colors.surface,
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.sm,
   },
   vibeChipSelected: {
-    borderColor: "#F4A9CA",
-    backgroundColor: uiTheme.colors.chipBackground
+    borderColor: uiTheme.colors.primary,
+    backgroundColor: uiTheme.colors.chipBackground,
+    ...uiTheme.shadow.soft,
   },
   vibeChipText: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   vibeChipTextSelected: {
     color: uiTheme.colors.chipText,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   footer: {
     borderTopWidth: 1,
@@ -452,9 +452,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: uiTheme.spacing.lg,
     paddingVertical: uiTheme.spacing.md,
     flexDirection: "row",
-    gap: uiTheme.spacing.sm
+    gap: uiTheme.spacing.sm,
   },
   footerButton: {
-    flex: 1
-  }
+    flex: 1,
+  },
 })

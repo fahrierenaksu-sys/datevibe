@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { useCallback, useMemo } from "react"
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { useCallback, useMemo, useRef } from "react"
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { LinearGradient } from "../ui/linearGradient"
 import { SafeAreaView } from "react-native-safe-area-context"
 import {
   removeSavedConnection,
@@ -148,6 +149,7 @@ function SavedCard(props: SavedCardProps) {
   const status = entry.status ?? "local-only"
   const statusCopy = getStatusCopy(status)
   const isMutual = status === "mutual"
+  const msgScaleAnim = useRef(new Animated.Value(1)).current
 
   const onRemove = (): void => {
     void removeSavedConnection({ userId: entry.userId })
@@ -157,14 +159,32 @@ function SavedCard(props: SavedCardProps) {
     if (onOpenChat) onOpenChat(entry.userId, entry.displayName)
   }
 
+  const handleMsgPressIn = () => {
+    Animated.spring(msgScaleAnim, {
+      toValue: uiTheme.animation.scalePress,
+      useNativeDriver: true,
+      ...uiTheme.animation.spring,
+    }).start()
+  }
+
+  const handleMsgPressOut = () => {
+    Animated.spring(msgScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      ...uiTheme.animation.springBouncy,
+    }).start()
+  }
+
   return (
     <View style={cardStyles.card}>
-      <Avatar
-        name={entry.displayName}
-        seed={entry.userId}
-        size={64}
-        ring="soft"
-      />
+      <View style={cardStyles.avatarGlow}>
+        <Avatar
+          name={entry.displayName}
+          seed={entry.userId}
+          size={64}
+          ring="soft"
+        />
+      </View>
       <View style={cardStyles.body}>
         <Text style={cardStyles.name} numberOfLines={1}>
           {entry.displayName}
@@ -196,16 +216,24 @@ function SavedCard(props: SavedCardProps) {
       </View>
       <View style={cardStyles.actions}>
         {isMutual ? (
-          <Pressable
-            onPress={handleMessage}
-            hitSlop={10}
-            style={({ pressed }) => [
-              cardStyles.messageButton,
-              pressed ? cardStyles.messageButtonPressed : null
-            ]}
-          >
-            <Text style={cardStyles.messageText}>Message</Text>
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: msgScaleAnim }] }}>
+            <Pressable
+              onPress={handleMessage}
+              onPressIn={handleMsgPressIn}
+              onPressOut={handleMsgPressOut}
+              hitSlop={10}
+              style={cardStyles.messageButton}
+            >
+              <LinearGradient
+                colors={uiTheme.gradients.primary as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={cardStyles.messageGradient}
+              >
+                <Text style={cardStyles.messageText}>Message</Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
         ) : null}
         <Pressable
           onPress={onRemove}
@@ -236,7 +264,16 @@ function EmptyShelf(props: EmptyShelfProps) {
   }
   return (
     <View style={emptyStyles.card}>
+      <LinearGradient
+        colors={["#FFFFFF", "#FFF8FB", "#FFF0F6"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={emptyStyles.glow} pointerEvents="none" />
+      <View style={emptyStyles.iconCircle}>
+        <Text style={emptyStyles.iconText}>✦</Text>
+      </View>
       <Text style={emptyStyles.title}>Nobody saved yet</Text>
       <Text style={emptyStyles.body}>
         When a mini-room ends, you choose who stays. The people you save will
@@ -249,45 +286,39 @@ function EmptyShelf(props: EmptyShelfProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: uiTheme.colors.background
+    backgroundColor: uiTheme.colors.background,
   },
   safe: {
     flex: 1,
     paddingHorizontal: uiTheme.spacing.lg,
-    paddingTop: uiTheme.spacing.sm
+    paddingTop: uiTheme.spacing.sm,
   },
   topRightSpacer: {
-    width: 40
+    width: 40,
   },
   header: {
     gap: uiTheme.spacing.xxs,
     paddingHorizontal: 2,
     paddingTop: uiTheme.spacing.sm,
-    paddingBottom: uiTheme.spacing.md
+    paddingBottom: uiTheme.spacing.md,
   },
   eyebrow: {
+    ...uiTheme.font.overline,
     color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase"
   },
   headerTitle: {
+    ...uiTheme.font.title,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.title,
-    fontWeight: "800",
-    letterSpacing: -0.4
   },
   headerSubhead: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
-    lineHeight: 21,
-    marginTop: 2
+    marginTop: 2,
   },
   scroll: {
     gap: uiTheme.spacing.sm,
-    paddingBottom: uiTheme.spacing.xxl
-  }
+    paddingBottom: uiTheme.spacing.xxl,
+  },
 })
 
 const cardStyles = StyleSheet.create({
@@ -295,33 +326,34 @@ const cardStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: uiTheme.spacing.md,
-    padding: uiTheme.spacing.md,
+    padding: uiTheme.spacing.lg,
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.surface,
+    backgroundColor: uiTheme.colors.glass,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    ...uiTheme.shadow.soft
+    borderColor: uiTheme.colors.glassBorder,
+    ...uiTheme.shadow.float,
+  },
+  avatarGlow: {
+    ...uiTheme.shadow.glowSubtle,
+    borderRadius: 32,
   },
   body: {
     flex: 1,
-    gap: 4
+    gap: 4,
   },
   name: {
+    ...uiTheme.font.subheading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "800",
-    letterSpacing: -0.2
   },
   met: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "600"
   },
   moment: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.bodySmall,
     fontWeight: "700",
-    lineHeight: 19
+    lineHeight: 19,
   },
   privacyPill: {
     marginTop: 4,
@@ -334,66 +366,63 @@ const cardStyles = StyleSheet.create({
     borderRadius: uiTheme.radius.full,
     backgroundColor: uiTheme.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border
+    borderColor: uiTheme.colors.border,
   },
   privacyPillMutual: {
     backgroundColor: uiTheme.colors.successSoft,
-    borderColor: "rgba(58, 192, 138, 0.28)"
+    borderColor: "rgba(58, 192, 138, 0.28)",
   },
   privacyDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: uiTheme.colors.primary
+    backgroundColor: uiTheme.colors.primary,
   },
   privacyDotMutual: {
-    backgroundColor: uiTheme.colors.success
+    backgroundColor: uiTheme.colors.success,
   },
   privacyDotUnmatched: {
-    backgroundColor: uiTheme.colors.textMuted
+    backgroundColor: uiTheme.colors.textMuted,
   },
   privacyText: {
+    ...uiTheme.font.micro,
     color: uiTheme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.3
   },
   privacyTextMutual: {
-    color: uiTheme.colors.successInk
+    color: uiTheme.colors.successInk,
   },
   removeButton: {
     paddingHorizontal: uiTheme.spacing.sm,
     paddingVertical: uiTheme.spacing.xs,
-    borderRadius: uiTheme.radius.full
+    borderRadius: uiTheme.radius.full,
   },
   removeButtonPressed: {
-    backgroundColor: uiTheme.colors.surfaceMuted
+    backgroundColor: uiTheme.colors.surfaceMuted,
   },
   removeText: {
+    ...uiTheme.font.caption,
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "700",
-    letterSpacing: 0.3
+    letterSpacing: 0.3,
   },
   actions: {
     gap: uiTheme.spacing.xs,
-    alignItems: "flex-end"
+    alignItems: "flex-end",
   },
   messageButton: {
+    borderRadius: uiTheme.radius.full,
+    overflow: "hidden",
+    ...uiTheme.shadow.glowSubtle,
+  },
+  messageGradient: {
     paddingHorizontal: uiTheme.spacing.md,
     paddingVertical: uiTheme.spacing.xs,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.primary
-  },
-  messageButtonPressed: {
-    backgroundColor: uiTheme.colors.primaryPressed
   },
   messageText: {
+    ...uiTheme.font.captionBold,
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.3
-  }
+    letterSpacing: 0.3,
+  },
 })
 
 const emptyStyles = StyleSheet.create({
@@ -401,36 +430,46 @@ const emptyStyles = StyleSheet.create({
     marginTop: uiTheme.spacing.md,
     padding: uiTheme.spacing.xl,
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.surface,
     borderWidth: 1,
-    borderColor: uiTheme.colors.border,
-    gap: uiTheme.spacing.sm,
+    borderColor: uiTheme.colors.glassBorder,
+    gap: uiTheme.spacing.md,
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
-    ...uiTheme.shadow.soft
+    ...uiTheme.shadow.float,
   },
   glow: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: uiTheme.colors.primarySoft,
-    top: -80,
-    right: -60,
-    opacity: 0.55
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: uiTheme.colors.accentGlow,
+    top: -100,
+    right: -70,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: uiTheme.colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+    ...uiTheme.shadow.soft,
+  },
+  iconText: {
+    fontSize: 24,
+    color: uiTheme.colors.primary,
   },
   title: {
+    ...uiTheme.font.subheading,
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.subheading,
-    fontWeight: "800",
-    textAlign: "center"
+    textAlign: "center",
   },
   body: {
+    ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.bodySmall,
     textAlign: "center",
     lineHeight: 21,
-    paddingHorizontal: uiTheme.spacing.sm
-  }
+    paddingHorizontal: uiTheme.spacing.sm,
+  },
 })

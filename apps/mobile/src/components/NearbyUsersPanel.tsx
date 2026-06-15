@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native"
+import { uiTheme } from "../ui/theme"
 
 export interface NearbyUsersPanelUser {
   userId: string
@@ -56,7 +57,9 @@ export function NearbyUsersPanel(props: NearbyUsersPanelProps) {
                   onSendInvite(user.userId)
                 }}
               >
-                <Text style={styles.inviteButtonText}>Invite</Text>
+                <Text style={[styles.inviteButtonText, !canSendInvite && styles.inviteButtonTextDisabled]}>
+                  Invite
+                </Text>
               </Pressable>
             </View>
             {index < users.length - 1 ? <View style={styles.separator} /> : null}
@@ -69,50 +72,53 @@ export function NearbyUsersPanel(props: NearbyUsersPanelProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 4
+    paddingVertical: uiTheme.spacing.xs,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 8
+    gap: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.sm,
   },
   metaContainer: {
     flex: 1,
-    gap: 2
+    gap: 2,
   },
   name: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827"
+    ...uiTheme.font.bodySmall,
+    color: uiTheme.colors.textPrimary,
+    fontWeight: "700",
   },
   meta: {
-    fontSize: 12,
-    color: "#6b7280"
+    ...uiTheme.font.caption,
+    color: uiTheme.colors.textMuted,
   },
   inviteButton: {
-    borderWidth: 1,
-    borderColor: "#111827",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8
+    borderWidth: 1.5,
+    borderColor: uiTheme.colors.primary,
+    borderRadius: uiTheme.radius.full,
+    paddingHorizontal: uiTheme.spacing.md,
+    paddingVertical: uiTheme.spacing.xs,
+    backgroundColor: uiTheme.colors.chipBackground,
   },
   inviteButtonDisabled: {
-    borderColor: "#d1d5db",
-    backgroundColor: "#f3f4f6"
+    borderColor: uiTheme.colors.border,
+    backgroundColor: uiTheme.colors.surfaceMuted,
   },
   inviteButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#111827"
+    ...uiTheme.font.captionBold,
+    color: uiTheme.colors.primary,
+  },
+  inviteButtonTextDisabled: {
+    color: uiTheme.colors.textMuted,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "#d1d5db"
+    backgroundColor: uiTheme.colors.divider,
   },
   empty: {
-    fontSize: 13,
-    color: "#6b7280"
-  }
+    ...uiTheme.font.bodySmall,
+    color: uiTheme.colors.textMuted,
+  },
 })

@@ -733,13 +733,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.heading,
+    ...uiTheme.font.heading,
     fontWeight: "900"
   },
   subtitle: {
     marginTop: 2,
     color: "rgba(255,255,255,0.54)",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "700"
   },
   devPill: {
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   },
   devPillText: {
     color: uiTheme.colors.primary,
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "900"
   },
   stageWrap: {
@@ -865,13 +865,13 @@ const styles = StyleSheet.create({
   },
   devPanelTitle: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     fontWeight: "900"
   },
   devPanelSubtitle: {
     marginTop: 2,
     color: "rgba(255,255,255,0.54)",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "700"
   },
   resetButton: {
@@ -886,7 +886,7 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "900"
   },
   itemList: {
@@ -910,7 +910,7 @@ const styles = StyleSheet.create({
   },
   itemChipName: {
     color: "rgba(255,255,255,0.72)",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "900"
   },
   itemChipNameSelected: {
@@ -939,7 +939,7 @@ const styles = StyleSheet.create({
   },
   trayTitle: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "900"
   },
   trayCount: {
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   trayItemName: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "900"
   },
   trayItemMeta: {
@@ -1003,13 +1003,13 @@ const styles = StyleSheet.create({
   },
   selectedName: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     fontWeight: "900"
   },
   selectedMeta: {
     marginTop: 2,
     color: "rgba(255,255,255,0.56)",
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "700"
   },
   nudgePad: {

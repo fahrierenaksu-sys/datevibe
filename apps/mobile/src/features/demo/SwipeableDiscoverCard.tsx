@@ -22,7 +22,10 @@ import {
   Text,
   View
 } from "react-native"
-import { Avatar } from "../../ui/avatar"
+import {
+  CandidateAvatarPreview,
+  createCandidateAvatarSnapshot
+} from "../../components/DiscoverCard"
 import { TagChip } from "../../ui/primitives"
 import { uiTheme } from "../../ui/theme"
 import type { DummyProfile } from "./dummyProfiles"
@@ -124,6 +127,10 @@ export function SwipeableDiscoverCard(props: SwipeableDiscoverCardProps) {
       : profile.distance < 500
         ? `${profile.distance}m`
         : "Nearby"
+  const avatarSnapshot = createCandidateAvatarSnapshot({
+    userId: profile.userId,
+    displayName: profile.displayName
+  })
 
   return (
     <Animated.View
@@ -164,7 +171,14 @@ export function SwipeableDiscoverCard(props: SwipeableDiscoverCardProps) {
       <View style={styles.heroBlock}>
         <View style={styles.heroGlow} pointerEvents="none" />
         <View style={styles.heroGlowSecondary} pointerEvents="none" />
-        <Avatar name={profile.displayName} seed={profile.userId} size={172} ring="strong" />
+        <CandidateAvatarPreview
+          snapshot={avatarSnapshot}
+          size={208}
+          stage="discover"
+        />
+        <View style={styles.avatarSourcePill}>
+          <Text style={styles.avatarSourceText}>{avatarSnapshot.label}</Text>
+        </View>
 
         {/* Age badge */}
         <View style={styles.ageBadge}>
@@ -273,9 +287,9 @@ const styles = StyleSheet.create({
     letterSpacing: 3
   },
   heroBlock: {
-    height: 278,
+    height: 292,
     borderRadius: uiTheme.radius.lg,
-    backgroundColor: "#ECE9EE",
+    backgroundColor: "#FFF1F7",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -367,6 +381,24 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.3
   },
+  avatarSourcePill: {
+    position: "absolute",
+    bottom: 54,
+    alignSelf: "center",
+    zIndex: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(32, 22, 42, 0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.48)"
+  },
+  avatarSourceText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.2
+  },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -394,13 +426,13 @@ const styles = StyleSheet.create({
   },
   fullNameText: {
     color: uiTheme.colors.primaryDeep,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     lineHeight: 18,
     fontWeight: "800"
   },
   bioText: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     lineHeight: 22,
     fontWeight: "600"
   },
@@ -416,14 +448,14 @@ const styles = StyleSheet.create({
   },
   swipeHintLeft: {
     color: uiTheme.colors.danger,
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "800",
     letterSpacing: 0.5,
     opacity: 0.45
   },
   swipeHintRight: {
     color: uiTheme.colors.success,
-    fontSize: uiTheme.typography.caption,
+    ...uiTheme.font.caption,
     fontWeight: "800",
     letterSpacing: 0.5,
     opacity: 0.45

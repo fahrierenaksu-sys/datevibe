@@ -46,7 +46,31 @@ export const uiTheme = {
     nightBorder: "rgba(255, 255, 255, 0.12)",
     nightTextPrimary: "#FFFFFF",
     nightTextSecondary: "rgba(255, 255, 255, 0.78)",
-    nightTextMuted: "rgba(255, 255, 255, 0.5)"
+    nightTextMuted: "rgba(255, 255, 255, 0.5)",
+    /* ── Premium additions ────────────────────── */
+    glass: "rgba(255, 255, 255, 0.72)",
+    glassStrong: "rgba(255, 255, 255, 0.85)",
+    glassBorder: "rgba(255, 255, 255, 0.45)",
+    accentGlow: "rgba(255, 79, 152, 0.18)",
+    accentGlowStrong: "rgba(255, 79, 152, 0.32)",
+    shimmer: "rgba(255, 255, 255, 0.55)",
+    gold: "#FFD700",
+    goldSoft: "#FFF7D8",
+    goldInk: "#8B6914",
+    platinum: "#E5E5EA",
+    platinumSoft: "#F5F5F7",
+  },
+  gradients: {
+    primary: ["#FF4F98", "#FF7EB3"] as [string, string],
+    primaryDeep: ["#D92A79", "#FF4F98"] as [string, string],
+    warm: ["#FF4F98", "#FFB99A"] as [string, string],
+    cool: ["#9B59B6", "#667EEA"] as [string, string],
+    match: ["#FF4F98", "#FF7EB3", "#FFB99A"] as [string, string, string],
+    sunset: ["#FF6B6B", "#FF4F98", "#9B59B6"] as [string, string, string],
+    glass: ["rgba(255,255,255,0.12)", "rgba(255,255,255,0.03)"] as [string, string],
+    cardOverlay: ["transparent", "rgba(28, 16, 34, 0.65)"] as [string, string],
+    heroBackground: ["#FBF8FD", "#FEF4F9", "#FFF2F8"] as [string, string, string],
+    nightGlow: ["#2D1B4E", "#1B0F26"] as [string, string],
   },
   radius: {
     xs: 8,
@@ -77,6 +101,21 @@ export const uiTheme = {
     caption: 12,
     micro: 11
   },
+  font: {
+    display: { fontSize: 40, fontWeight: "900" as const, letterSpacing: -1.2, lineHeight: 48 },
+    title: { fontSize: 30, fontWeight: "800" as const, letterSpacing: -0.6, lineHeight: 36 },
+    heading: { fontSize: 24, fontWeight: "800" as const, letterSpacing: -0.4, lineHeight: 30 },
+    subheading: { fontSize: 18, fontWeight: "700" as const, letterSpacing: -0.2, lineHeight: 24 },
+    body: { fontSize: 16, fontWeight: "400" as const, letterSpacing: -0.1, lineHeight: 24 },
+    bodyMedium: { fontSize: 16, fontWeight: "600" as const, letterSpacing: -0.1, lineHeight: 24 },
+    bodyBold: { fontSize: 16, fontWeight: "700" as const, letterSpacing: -0.1, lineHeight: 24 },
+    bodySmall: { fontSize: 14, fontWeight: "400" as const, letterSpacing: 0, lineHeight: 20 },
+    caption: { fontSize: 12, fontWeight: "600" as const, letterSpacing: 0.2, lineHeight: 16 },
+    captionBold: { fontSize: 12, fontWeight: "800" as const, letterSpacing: 0.4, lineHeight: 16 },
+    micro: { fontSize: 11, fontWeight: "700" as const, letterSpacing: 0.3, lineHeight: 14 },
+    overline: { fontSize: 11, fontWeight: "800" as const, letterSpacing: 1.2, lineHeight: 14, textTransform: "uppercase" as const },
+    label: { fontSize: 13, fontWeight: "700" as const, letterSpacing: 0.1, lineHeight: 18 },
+  },
   shadow: {
     card: {
       shadowColor: "#2A123C",
@@ -98,7 +137,47 @@ export const uiTheme = {
       shadowRadius: 24,
       shadowOffset: { width: 0, height: 12 },
       elevation: 8
-    }
+    },
+    /* ── Premium additions ────────────────────── */
+    glow: {
+      shadowColor: "#FF4F98",
+      shadowOpacity: 0.35,
+      shadowRadius: 32,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 12
+    },
+    glowSubtle: {
+      shadowColor: "#FF4F98",
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6
+    },
+    deep: {
+      shadowColor: "#1A0A24",
+      shadowOpacity: 0.12,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 14 },
+      elevation: 10
+    },
+    float: {
+      shadowColor: "#2A123C",
+      shadowOpacity: 0.10,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6
+    },
+  },
+  animation: {
+    spring: { damping: 20, stiffness: 300, mass: 1 },
+    springBouncy: { damping: 12, stiffness: 200, mass: 0.8 },
+    springGentle: { damping: 26, stiffness: 180, mass: 1 },
+    durationFast: 150,
+    durationNormal: 250,
+    durationSlow: 400,
+    durationEntrance: 350,
+    scalePress: 0.965,
+    scalePop: 1.05,
   },
   palette: {
     avatar: [
@@ -110,7 +189,13 @@ export const uiTheme = {
       { bg: "#FFE8F0", fg: "#B93872" },
       { bg: "#E8E0F5", fg: "#4A2F87" },
       { bg: "#FEEBC8", fg: "#7A4B09" }
-    ]
+    ],
+    rarity: {
+      common: { border: "#E0E0E0", glow: "transparent", label: "#888888" },
+      rare: { border: "#5B9BD5", glow: "rgba(91,155,213,0.2)", label: "#3A7CC0" },
+      epic: { border: "#9B59B6", glow: "rgba(155,89,182,0.25)", label: "#8E44AD" },
+      legendary: { border: "#FFD700", glow: "rgba(255,215,0,0.3)", label: "#B8860B" },
+    },
   }
 } as const
 
