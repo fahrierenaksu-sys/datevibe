@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   Animated,
   Easing,
@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context"
 import { SoftBlobBackground } from "../ui/backgrounds"
 import { BrandMark } from "../ui/brandMark"
+import { LinearGradient } from "../ui/linearGradient"
 import { uiTheme } from "../ui/theme"
 
 interface WelcomeScreenProps {
@@ -41,12 +42,110 @@ const STEPS = [
   }
 ]
 
+/* ─── Animated dot component ─────────────────────────────────── */
+
+function AnimatedDot({ active }: { active: boolean }) {
+  const widthAnim = useRef(new Animated.Value(active ? 28 : 8)).current
+  const opacityAnim = useRef(new Animated.Value(active ? 1 : 0.45)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(widthAnim, {
+        toValue: active ? 28 : 8,
+        damping: uiTheme.animation.spring.damping,
+        stiffness: uiTheme.animation.spring.stiffness,
+        mass: uiTheme.animation.spring.mass,
+        useNativeDriver: false
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: active ? 1 : 0.45,
+        duration: uiTheme.animation.durationNormal,
+        useNativeDriver: false
+      })
+    ]).start()
+  }, [active, widthAnim, opacityAnim])
+
+  return (
+    <Animated.View
+      style={[
+        styles.dot,
+        {
+          width: widthAnim,
+          opacity: opacityAnim
+        }
+      ]}
+    >
+      {active ? (
+        <LinearGradient
+          colors={uiTheme.gradients.primary}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.dotGradient}
+        />
+      ) : (
+        <View style={styles.dotInactive} />
+      )}
+    </Animated.View>
+  )
+}
+
+/* ─── Main screen ─────────────────────────────────────────────── */
+
 export function WelcomeScreen(props: WelcomeScreenProps) {
   const { onComplete } = props
   const { width } = useWindowDimensions()
   const [currentStep, setCurrentStep] = useState(0)
   const scrollRef = useRef<ScrollView>(null)
   const fadeAnim = useRef(new Animated.Value(1)).current
+
+  // Step card entrance: scale + opacity spring
+  const cardScale = useRef(new Animated.Value(1)).current
+  const cardOpacity = useRef(new Animated.Value(1)).current
+
+  // Brand row entrance animation
+  const brandTranslateY = useRef(new Animated.Value(-18)).current
+  const brandOpacity = useRef(new Animated.Value(0)).current
+
+  // Button press scale
+  const buttonScale = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(brandTranslateY, {
+        toValue: 0,
+        damping: uiTheme.animation.springGentle.damping,
+        stiffness: uiTheme.animation.springGentle.stiffness,
+        mass: uiTheme.animation.springGentle.mass,
+        useNativeDriver: true
+      }),
+      Animated.timing(brandOpacity, {
+        toValue: 1,
+        duration: uiTheme.animation.durationEntrance,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true
+      })
+    ]).start()
+  }, [brandTranslateY, brandOpacity])
+
+  const animateCardEntrance = useCallback(() => {
+    cardScale.setValue(0.92)
+    cardOpacity.setValue(0)
+    Animated.parallel([
+      Animated.spring(cardScale, {
+        toValue: 1,
+        damping: uiTheme.animation.springBouncy.damping,
+        stiffness: uiTheme.animation.springBouncy.stiffness,
+        mass: uiTheme.animation.springBouncy.mass,
+        useNativeDriver: true
+      }),
+      Animated.timing(cardOpacity, {
+        toValue: 1,
+        duration: uiTheme.animation.durationNormal,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true
+      })
+    ]).start()
+  }, [cardScale, cardOpacity])
 
   const goToStep = useCallback(
     (step: number) => {
@@ -63,9 +162,10 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
           easing: Easing.out(Easing.ease),
           useNativeDriver: true
         }).start()
+        animateCardEntrance()
       })
     },
-    [fadeAnim, width]
+    [fadeAnim, width, animateCardEntrance]
   )
 
   const handleNext = useCallback(() => {
@@ -76,53 +176,107 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
     }
   }, [currentStep, goToStep, onComplete])
 
+  const handleButtonPressIn = useCallback(() => {
+    Animated.spring(buttonScale, {
+      toValue: uiTheme.animation.scalePress,
+      damping: uiTheme.animation.spring.damping,
+      stiffness: uiTheme.animation.spring.stiffness,
+      useNativeDriver: true
+    }).start()
+  }, [buttonScale])
+
+  const handleButtonPressOut = useCallback(() => {
+    Animated.spring(buttonScale, {
+      toValue: 1,
+      damping: uiTheme.animation.spring.damping,
+      stiffness: uiTheme.animation.spring.stiffness,
+      useNativeDriver: true
+    }).start()
+  }, [buttonScale])
+
   const isLast = currentStep === STEPS.length - 1
 
   return (
     <View style={styles.root}>
       <SoftBlobBackground variant="lobby" />
       <SafeAreaView style={styles.safe} edges={["top", "left", "right", "bottom"]}>
-        <View style={styles.brandRow}>
+        {/* Brand row with entrance animation */}
+        <Animated.View
+          style={[
+            styles.brandRow,
+            {
+              opacity: brandOpacity,
+              transform: [{ translateY: brandTranslateY }]
+            }
+          ]}
+        >
           <BrandMark size={36} />
           <Text style={styles.brandText}>DateVibe</Text>
-        </View>
+        </Animated.View>
 
-        <Animated.View style={[styles.contentWrap, { opacity: fadeAnim }]}>
-          <View style={styles.stepCard}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.iconText}>{STEPS[currentStep].icon}</Text>
+        {/* Step card with scale + opacity spring entrance */}
+        <Animated.View
+          style={[
+            styles.contentWrap,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: cardScale }]
+            }
+          ]}
+        >
+          <Animated.View style={[styles.stepCard, { opacity: cardOpacity }]}>
+            {/* Gradient icon circle with glow */}
+            <View style={styles.iconCircleOuter}>
+              <LinearGradient
+                colors={uiTheme.gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.iconCircle}
+              >
+                <Text style={styles.iconText}>{STEPS[currentStep].icon}</Text>
+              </LinearGradient>
             </View>
             <Text style={styles.stepTitle}>{STEPS[currentStep].title}</Text>
             <Text style={styles.stepBody}>{STEPS[currentStep].body}</Text>
-          </View>
+          </Animated.View>
         </Animated.View>
 
-        {/* Dots */}
+        {/* Animated dots */}
         <View style={styles.dotsRow}>
           {STEPS.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                i === currentStep ? styles.dotActive : null
-              ]}
-            />
+            <AnimatedDot key={i} active={i === currentStep} />
           ))}
         </View>
 
         {/* Actions */}
         <View style={styles.actions}>
-          <Pressable
-            onPress={handleNext}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed ? styles.primaryButtonPressed : null
+          <Animated.View
+            style={[
+              styles.primaryButtonWrap,
+              { transform: [{ scale: buttonScale }] }
             ]}
           >
-            <Text style={styles.primaryButtonText}>
-              {isLast ? "Build my vibe" : "Next"}
-            </Text>
-          </Pressable>
+            <Pressable
+              onPress={handleNext}
+              onPressIn={handleButtonPressIn}
+              onPressOut={handleButtonPressOut}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed ? styles.primaryButtonPressed : null
+              ]}
+            >
+              <LinearGradient
+                colors={uiTheme.gradients.primary}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.primaryButtonGradient}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isLast ? "Build my vibe" : "Next"}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
 
           {!isLast ? (
             <Pressable onPress={onComplete} hitSlop={8}>
@@ -153,7 +307,7 @@ const styles = StyleSheet.create({
   },
   brandText: {
     color: uiTheme.colors.textPrimary,
-    fontSize: uiTheme.typography.heading,
+    ...uiTheme.font.heading,
     fontWeight: "800",
     letterSpacing: -0.5
   },
@@ -169,77 +323,90 @@ const styles = StyleSheet.create({
     padding: uiTheme.spacing.xl,
     alignItems: "center",
     gap: uiTheme.spacing.md,
-    ...uiTheme.shadow.card
+    ...uiTheme.shadow.deep
+  },
+  iconCircleOuter: {
+    borderRadius: 44,
+    ...uiTheme.shadow.glow
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: uiTheme.colors.chipBackground,
-    borderWidth: 1,
-    borderColor: "#F4A9CA",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     alignItems: "center",
     justifyContent: "center"
   },
   iconText: {
-    fontSize: 32,
-    color: uiTheme.colors.primary,
+    fontSize: 34,
+    color: uiTheme.colors.textInverted,
     fontWeight: "800"
   },
   stepTitle: {
     color: uiTheme.colors.textPrimary,
-    fontSize: 28,
-    fontWeight: "800",
-    textAlign: "center",
-    letterSpacing: -0.3
+    ...uiTheme.font.title,
+    textAlign: "center"
   },
   stepBody: {
     color: uiTheme.colors.textSecondary,
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.body,
     textAlign: "center",
-    lineHeight: 24,
     paddingHorizontal: uiTheme.spacing.sm
   },
   dotsRow: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
     gap: 8,
     paddingVertical: uiTheme.spacing.lg
   },
   dot: {
-    width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: uiTheme.colors.border
+    overflow: "hidden"
   },
-  dotActive: {
-    width: 24,
-    backgroundColor: uiTheme.colors.primary,
-    borderRadius: 4
+  dotGradient: {
+    flex: 1,
+    borderRadius: 4,
+    ...uiTheme.shadow.glowSubtle
+  },
+  dotInactive: {
+    flex: 1,
+    borderRadius: 4,
+    backgroundColor: uiTheme.colors.border
   },
   actions: {
     gap: uiTheme.spacing.md,
     alignItems: "center",
     paddingBottom: uiTheme.spacing.lg
   },
+  primaryButtonWrap: {
+    width: "100%",
+    ...uiTheme.shadow.glow
+  },
   primaryButton: {
     width: "100%",
-    paddingVertical: uiTheme.spacing.md,
     borderRadius: uiTheme.radius.full,
-    backgroundColor: uiTheme.colors.primary,
-    alignItems: "center"
+    overflow: "hidden"
   },
   primaryButtonPressed: {
     opacity: 0.88
   },
+  primaryButtonGradient: {
+    width: "100%",
+    minHeight: 56,
+    borderRadius: uiTheme.radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: uiTheme.spacing.md
+  },
   primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: uiTheme.typography.body,
+    ...uiTheme.font.bodyBold,
     fontWeight: "800"
   },
   skipText: {
     color: uiTheme.colors.textMuted,
-    fontSize: uiTheme.typography.bodySmall,
+    ...uiTheme.font.bodySmall,
     fontWeight: "600"
   }
 })
