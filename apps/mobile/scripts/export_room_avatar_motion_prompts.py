@@ -62,17 +62,12 @@ def build_prompt(plan: dict[str, object], index: int) -> str:
             "- Keep every generated frame aligned to the driver's baseline, centerline, frame count, and body silhouette."
         )
     )
-    action_lines = (
-        "- define the body motion mask for this body preset\n"
-        f"{frame_continuity_line}\n"
-        f"{driver_action_tail}"
-        if is_motion_driver
-        else (
-            f"- create {plan['label']} for this single fitted layer only\n"
-            f"- use `{plan['motionDriverLayerName']}` as the motion/pose reference when available\n"
-            f"{frame_continuity_line}\n"
-            f"{fitted_action_tail}"
-        )
+    action_lines = build_action_lines(
+        plan=plan,
+        frame_continuity_line=frame_continuity_line,
+        driver_action_tail=driver_action_tail,
+        fitted_action_tail=fitted_action_tail,
+        is_motion_driver=is_motion_driver,
     )
 
     return f"""## {index}. {plan["bodyPreset"]} {plan["label"]} - {plan["layerName"]}
@@ -128,6 +123,44 @@ Import gate:
 - animated motions must visibly change after frame 01
 ```
 """
+
+
+def build_action_lines(
+    plan: dict[str, object],
+    frame_continuity_line: str,
+    driver_action_tail: str,
+    fitted_action_tail: str,
+    is_motion_driver: bool,
+) -> str:
+    if is_motion_driver and plan["state"] == "walking":
+        return "\n".join([
+            "- define the female base body motion mask for a subtle premium front-facing walk",
+            "- keep the avatar grounded with consistent feet contact near baseline y=360",
+            "- keep the body centered around centerline x=128 without side-to-side sliding",
+            "- make frames 2-4 visibly different from frame 01 but not exaggerated or cartoony",
+            frame_continuity_line,
+            driver_action_tail,
+        ])
+    if is_motion_driver and plan["state"] == "sitting":
+        return "\n".join([
+            "- define a natural premium seated front pose for the female base body",
+            "- keep the seated pose usable for RoomV2 seat hotspots without cropping the body",
+            "- keep the body centered around centerline x=128 and visually grounded",
+            frame_continuity_line,
+            driver_action_tail,
+        ])
+    if is_motion_driver:
+        return "\n".join([
+            "- define the body motion mask for this body preset",
+            frame_continuity_line,
+            driver_action_tail,
+        ])
+    return "\n".join([
+        f"- create {plan['label']} for this single fitted layer only",
+        f"- use `{plan['motionDriverLayerName']}` as the motion/pose reference when available",
+        frame_continuity_line,
+        fitted_action_tail,
+    ])
 
 
 def main() -> None:

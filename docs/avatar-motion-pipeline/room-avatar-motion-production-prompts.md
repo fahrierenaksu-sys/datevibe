@@ -48,7 +48,10 @@ Canvas contract:
 - no extra characters, labels, scenery, props, UI, poster layout, or background
 
 Action:
-- define the body motion mask for this body preset
+- define the female base body motion mask for a subtle premium front-facing walk
+- keep the avatar grounded with consistent feet contact near baseline y=360
+- keep the body centered around centerline x=128 without side-to-side sliding
+- make frames 2-4 visibly different from frame 01 but not exaggerated or cartoony
 - frame 01 must match the shipped seed frame exactly
 - remaining frames must preserve the same body rig, baseline, centerline, proportions, and feet contact
 - keep the result production mobile avatar art, not concept art
@@ -470,7 +473,9 @@ Canvas contract:
 - no extra characters, labels, scenery, props, UI, poster layout, or background
 
 Action:
-- define the body motion mask for this body preset
+- define a natural premium seated front pose for the female base body
+- keep the seated pose usable for RoomV2 seat hotspots without cropping the body
+- keep the body centered around centerline x=128 and visually grounded
 - frame 01 must match the shipped seed frame exactly
 - preserve the same body rig, baseline, centerline, proportions, and feet contact
 - keep the result production mobile avatar art, not concept art

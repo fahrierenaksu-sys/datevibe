@@ -26,6 +26,53 @@ Do not import any generated frames into app assets or `ROOM_AVATAR_CATALOG`
 until all required female default Walk/Sit layers pass extractor guards and
 overlay QA.
 
+## Phase 2 Base Driver Generation Order
+
+Generate and approve only the female base/body driver before any fitted layer:
+
+1. `room_avatar_base_female_v2_walking_front`
+2. `room_avatar_base_female_v2_sitting_front`
+
+Do not generate hair, face, top, bottom, or shoes until both base strips are
+visually approved.
+
+### Base Walk Front
+
+- Edit canvas / generated strip path: `docs/avatar-motion-pipeline/room_avatar_base_female_v2_walking_front_strip.png`
+- Strip size: `1024x384`
+- Frames: 4 equal `256x384` slots
+- Timing: `120ms`, looping
+- Extracted staging folder: `docs/avatar-motion-pipeline/extracted-frames/room_avatar_base_female_v2_walking_front/`
+- Expected frames:
+  - `room_avatar_base_female_v2_walking_front_f01.png`
+  - `room_avatar_base_female_v2_walking_front_f02.png`
+  - `room_avatar_base_female_v2_walking_front_f03.png`
+  - `room_avatar_base_female_v2_walking_front_f04.png`
+
+Extract after the generated strip replaces the edit canvas:
+
+```bash
+python3 apps/mobile/scripts/extract_room_avatar_motion_frames.py \
+  --asset-prefix room_avatar_base_female_v2_walking_front
+```
+
+### Base Sit Front
+
+- Edit canvas / generated strip path: `docs/avatar-motion-pipeline/room_avatar_base_female_v2_sitting_front_strip.png`
+- Strip size: `256x384`
+- Frames: 1 `256x384` slot
+- Timing metadata: `120ms`, static/non-looping
+- Extracted staging folder: `docs/avatar-motion-pipeline/extracted-frames/room_avatar_base_female_v2_sitting_front/`
+- Expected frame:
+  - `room_avatar_base_female_v2_sitting_front_f01.png`
+
+Extract after the generated strip replaces the edit canvas:
+
+```bash
+python3 apps/mobile/scripts/extract_room_avatar_motion_frames.py \
+  --asset-prefix room_avatar_base_female_v2_sitting_front
+```
+
 ## First Missing Strip
 
 - Requirement: `female Walk front`
@@ -124,6 +171,16 @@ python3 apps/mobile/scripts/render_room_avatar_motion_contact_sheet.py
 This creates `room-avatar-motion-contact-sheet.html` so the default rig motion
 queue can be reviewed without opening every canvas separately.
 
+Render the base-driver overlay QA sheet after extraction:
+
+```bash
+python3 apps/mobile/scripts/render_room_avatar_motion_overlay_qa.py
+```
+
+This creates `room-avatar-motion-base-overlay-qa.html` from extracted base
+frames only. It shows frame 01 seed locks and the first walk motion frame over a
+checkerboard with centerline `x=128` and feet baseline `y=360`.
+
 ## Overlay QA Gate
 
 Before catalog import, create an overlay QA sheet that shows:
@@ -136,6 +193,11 @@ Before catalog import, create an overlay QA sheet that shows:
 Stop before catalog import if any output shows cropped pixels, layer drift,
 clothing/body separation, hair/face/shoe drift, background contamination, or a
 robotic/sliding/non-premium 4-frame walk.
+
+For the base-driver approval step, stop before fitted layers if the base looks
+ugly, placeholder-like, non-premium, cropped, sliding, distorted, or unable to
+read as a grounded DateVibe avatar. If the 4-frame walk cannot look premium,
+pause and propose a 6-frame upgrade before generating fitted layers.
 
 Extract frames from a generated strip only after it passes the import-prep
 guards:
