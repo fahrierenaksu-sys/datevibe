@@ -34,12 +34,18 @@ def build_prompt(plan: dict[str, object], index: int) -> str:
     frame_duration_ms = int(plan["frameDurationMs"])
     loop_label = "looping" if bool(plan["loop"]) else "static/non-looping"
     is_motion_driver = plan.get("fitRole") == "motionDriver"
+    is_single_frame_pose = frame_count == 1 and plan.get("state") == "sitting"
     expected_files = "\n".join(
         f"  - `{file_name}`" for file_name in plan["expectedFileNames"]
     )
+    seed_lock_heading = (
+        "Use the approved seed layer as the strict visual identity lock for the single seated output frame:"
+        if is_single_frame_pose
+        else "Preserve the approved seed layer in slot 01 exactly:"
+    )
     frame_continuity_line = (
-        "- frame 01 must match the shipped seed frame exactly"
-        if frame_count == 1
+        "- the single output frame must stay seed-locked to the shipped layer identity, rig, proportions, palette family, baseline, and centerline"
+        if is_single_frame_pose
         else "- frame 01 must match the shipped seed frame exactly"
     )
     driver_action_tail = (
@@ -61,6 +67,25 @@ def build_prompt(plan: dict[str, object], index: int) -> str:
             f"- Motion driver reference strip: `{plan['motionDriverStripPath']}`.\n"
             "- Keep every generated frame aligned to the driver's baseline, centerline, frame count, and body silhouette."
         )
+    )
+    visual_quality_contract = build_visual_quality_contract(
+        plan=plan,
+        is_motion_driver=is_motion_driver,
+    )
+    visual_quality_block = (
+        f"\nVisual quality contract:\n{visual_quality_contract}"
+        if visual_quality_contract
+        else ""
+    )
+    frame_import_guard = (
+        "- do not drift from the approved seed identity, rig, silhouette family, palette family, baseline, or centerline"
+        if is_single_frame_pose
+        else "- do not change frame 01"
+    )
+    motion_change_guard = (
+        "- static pose must read clearly as a seated front pose without animation smear"
+        if is_single_frame_pose
+        else "- animated motions must visibly change after frame 01"
     )
     action_lines = build_action_lines(
         plan=plan,
@@ -89,7 +114,7 @@ Prompt:
 ```text
 Edit the provided transparent DateVibe room-avatar reference canvas into one horizontal {frame_count}-frame spritesheet.
 
-Preserve the approved seed layer in slot 01 exactly:
+{seed_lock_heading}
 - same 2.5D layered rig: {plan["rigId"]}
 - same body preset: {plan["bodyPreset"]}
 - same layer type: {plan["layerType"]}
@@ -101,6 +126,7 @@ Preserve the approved seed layer in slot 01 exactly:
 
 Motion fit contract:
 {fit_reference_lines}
+{visual_quality_block}
 
 Canvas contract:
 - exactly one row
@@ -117,10 +143,10 @@ Action:
 Import gate:
 - do not crop or resize frames
 - do not flatten onto a background
-- do not change frame 01
+{frame_import_guard}
 - do not merge this layer with another avatar layer
 - do not change the shared feet baseline or centerline
-- animated motions must visibly change after frame 01
+{motion_change_guard}
 ```
 """
 
@@ -134,7 +160,9 @@ def build_action_lines(
 ) -> str:
     if is_motion_driver and plan["state"] == "walking":
         return "\n".join([
-            "- define the female base body motion mask for a subtle premium front-facing walk",
+            "- define the female base body motion mask for a subtle cute chibi premium front-facing walk",
+            "- make the base read as a desirable DateVibe character body driver, not a generic mannequin or placeholder",
+            "- produce only the base/body layer: no hair, face, clothing, shoes, accessories, props, chair, or bed",
             "- keep the avatar grounded with consistent feet contact near baseline y=360",
             "- keep the body centered around centerline x=128 without side-to-side sliding",
             "- make frames 2-4 visibly different from frame 01 but not exaggerated or cartoony",
@@ -143,7 +171,9 @@ def build_action_lines(
         ])
     if is_motion_driver and plan["state"] == "sitting":
         return "\n".join([
-            "- define a natural premium seated front pose for the female base body",
+            "- define a natural cute chibi premium seated front pose for the female base body",
+            "- make the base read as a desirable DateVibe character body driver, not a generic mannequin or placeholder",
+            "- produce only the base/body layer: no hair, face, clothing, shoes, accessories, props, chair, or bed",
             "- keep the seated pose usable for RoomV2 seat hotspots without cropping the body",
             "- keep the body centered around centerline x=128 and visually grounded",
             frame_continuity_line,
@@ -160,6 +190,24 @@ def build_action_lines(
         f"- use `{plan['motionDriverLayerName']}` as the motion/pose reference when available",
         frame_continuity_line,
         fitted_action_tail,
+    ])
+
+
+def build_visual_quality_contract(
+    plan: dict[str, object],
+    is_motion_driver: bool,
+) -> str:
+    if not is_motion_driver:
+        return ""
+
+    return "\n".join([
+        "- style must read as a high-quality cute chibi / 2.5D premium mobile game avatar for a modern social/dating room app",
+        "- soft, cozy, charming, premium, and readable at mobile scale",
+        "- slightly oversized head proportions, compact body, rounded silhouette, polished edges, and warm pastel-friendly palette",
+        "- this is the premium base body motion driver, not a mannequin, flat placeholder, cheap sticker, or clipart body",
+        "- transparent RGBA PNG only; no background pixels, matte, shadow, floor plane, scenery, or contamination",
+        "- base layer only: no hair, face, clothing, shoes, accessories, props, chair, bed, labels, or poster layout",
+        "- avoid childish baby doll styling, anime fan art, pixel art, realistic human anatomy, distorted anatomy, cropped pixels, and blurry edges",
     ])
 
 
