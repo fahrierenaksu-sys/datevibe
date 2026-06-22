@@ -24,6 +24,7 @@ import {
   projectAvatarV2ToRoomAvatarAppearance
 } from "../features/avatarV2/room/avatarRoomProjection"
 import { getRoomAvatarMotionReadinessSummary } from "../features/avatarV2/room/avatarRoomSelectors"
+import { getAvatarAutomationSlug } from "../features/avatarV2/qa/avatarQaInventory"
 import type {
   AvatarAnimationState,
   AvatarCatalogItem,
@@ -276,6 +277,10 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
               return (
                 <Pressable
                   key={category.type}
+                  testID={`wardrobe-category-${category.type}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${category.label} wardrobe category`}
+                  accessibilityState={{ selected: active }}
                   onPress={() => {
                     hapticLight()
                     setActiveType(category.type)
@@ -334,6 +339,15 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
               return (
                 <Pressable
                   key={item.id}
+                  testID={`wardrobe-item-${getAvatarAutomationSlug(item.id)}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}, ${
+                    equipped ? "Wearing" : itemStateLabel
+                  }`}
+                  accessibilityState={{
+                    disabled: locked,
+                    selected: equipped
+                  }}
                   disabled={locked}
                   onPress={() => handleEquip(item)}
                   style={({ pressed }) => [

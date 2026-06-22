@@ -18,6 +18,10 @@ import {
   equipAvatarV2Item,
   resolveAvatarV2
 } from "../avatarV2Selectors"
+import {
+  createAvatarQaInventory,
+  isAvatarQaUnlockEnabled
+} from "../qa/avatarQaInventory"
 import type {
   AvatarCatalogItem,
   AvatarInventory,
@@ -35,6 +39,11 @@ interface AvatarV2ContextValue {
 }
 
 const AvatarV2Context = createContext<AvatarV2ContextValue | null>(null)
+
+const AVATAR_QA_UNLOCK_ENABLED = isAvatarQaUnlockEnabled(
+  __DEV__,
+  process.env.EXPO_PUBLIC_DATEVIBE_QA_UNLOCK_AVATAR_ITEMS
+)
 
 interface AvatarV2ProviderProps {
   children: ReactNode
@@ -74,6 +83,10 @@ export function AvatarV2Provider({ children }: AvatarV2ProviderProps) {
 
   useEffect(() => {
     if (!hasHydratedPersistedAvatar) return
+    // Disposable regression QA must never overwrite the user's saved avatar.
+    // The env flag is also guarded by __DEV__ above, so production builds
+    // always retain the normal persistence and inventory behavior.
+    if (AVATAR_QA_UNLOCK_ENABLED) return
     void AsyncStorage.setItem(
       AVATAR_V2_STORAGE_KEY,
       JSON.stringify(avatar)
@@ -83,9 +96,10 @@ export function AvatarV2Provider({ children }: AvatarV2ProviderProps) {
   }, [avatar, hasHydratedPersistedAvatar])
 
   const avatarInventory = useMemo<AvatarInventory>(
-    () => ({
-      ownedItemIds: localInventory.inventory.ownedAvatarItemIds
-    }),
+    () => createAvatarQaInventory(
+      localInventory.inventory.ownedAvatarItemIds,
+      AVATAR_QA_UNLOCK_ENABLED
+    ),
     [localInventory.inventory.ownedAvatarItemIds]
   )
 

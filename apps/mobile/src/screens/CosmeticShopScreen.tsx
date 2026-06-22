@@ -37,6 +37,7 @@ import {
   type StatusCardCatalogItem
 } from "../features/shop/shopCatalog"
 import { roomAvatarLayerAssets } from "../features/avatarV2/room/avatarRoomAssets"
+import { getAvatarAutomationSlug } from "../features/avatarV2/qa/avatarQaInventory"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { hapticError, hapticLight, hapticSuccess } from "../ui/haptics"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
@@ -388,7 +389,11 @@ function SelectedProductPreview(props: {
   const disabled = product.actionType === "disabled"
 
   return (
-    <View style={styles.previewCard}>
+    <View
+      testID="shop-selected-product-preview"
+      accessibilityLabel={`${product.title}, ${product.stateLabel}`}
+      style={styles.previewCard}
+    >
       <View style={styles.previewHeader}>
         <View>
           <Text style={styles.previewEyebrow}>{product.eyebrow}</Text>
@@ -432,6 +437,10 @@ function SelectedProductPreview(props: {
 
       <Text style={styles.previewDescription}>{product.description}</Text>
       <Pressable
+        testID="shop-preview-primary-action"
+        accessibilityRole="button"
+        accessibilityLabel={product.actionLabel}
+        accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={onPrimaryAction}
         style={({ pressed }) => [
@@ -454,8 +463,13 @@ function ShopSection(props: {
   onSelect: (product: ShopCatalogItem) => void
   getMetaLabel?: (product: ShopCatalogItem) => string
 }) {
+  const sectionSlug = props.title.toLowerCase().replaceAll(" ", "-")
   return (
-    <View style={styles.section}>
+    <View
+      testID={`shop-${sectionSlug}-section`}
+      accessibilityLabel={`${props.title} section`}
+      style={styles.section}
+    >
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{props.title}</Text>
         <Text style={styles.sectionSubtitle}>{props.subtitle}</Text>
@@ -490,8 +504,15 @@ function ShopProductCard(props: {
     ? getAvatarItemPreviewSource(product.avatarItem)
     : undefined
   const productReference = PRODUCT_REFERENCE_AVATAR_ITEM_IDS.has(product.sourceItemId)
+  const automationSlug = product.avatarItem
+    ? getAvatarAutomationSlug(product.sourceItemId)
+    : product.sourceItemId.replaceAll("_", "-")
   return (
     <Pressable
+      testID={`shop-item-${automationSlug}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${product.title}, ${metaLabel ?? product.stateLabel}`}
+      accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.productCard,
@@ -538,7 +559,10 @@ function ShopProductCard(props: {
       <Text style={styles.productTitle} numberOfLines={2}>
         {product.title}
       </Text>
-      <View style={styles.productMetaPill}>
+      <View
+        testID={`shop-item-${automationSlug}-price`}
+        style={styles.productMetaPill}
+      >
         <Text style={styles.productMeta} numberOfLines={1}>
           {metaLabel ?? product.stateLabel}
         </Text>
