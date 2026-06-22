@@ -1,7 +1,16 @@
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack"
 import { Ionicons } from "@expo/vector-icons"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
+import {
+  Image,
+  type LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View
+} from "react-native"
 import { uiTheme } from "../ui/theme"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useAvatarV2 } from "../features/avatarV2/state/AvatarV2Provider"
@@ -84,6 +93,8 @@ const MY_ROOM_AVATAR_SPAWN = {
   y: 0.76,
   direction: "front" as RoomFurnitureRotation
 } as const
+const MY_ROOM_WIDE_STAGE_BREAKPOINT = 720
+const MY_ROOM_WIDE_STAGE_AVATAR_FEET_Y = 0.82
 const MY_ROOM_TRANSIENT_POSE_DURATION_MS = 1800
 const MY_ROOM_MOVEMENT_FEEDBACK_DURATION_MS = 1700
 const MY_ROOM_MOVEMENT_NO_OP_DISTANCE = 0.012
@@ -112,6 +123,7 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
   const movementFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [movementFeedback, setMovementFeedback] = useState<string | undefined>()
   const [stageMarker, setStageMarker] = useState<RoomRendererStageMarker | undefined>()
+  const [stageWidth, setStageWidth] = useState(0)
 
   const roomScene = useMemo(
     () =>
@@ -139,9 +151,20 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
       Math.round(windowSize.height * shellCamera.stageHeightRatio)
     )
   )
-  const stageRendererWidth = windowSize.width < 390
-    ? shellCamera.compactRendererWidth
-    : shellCamera.regularRendererWidth
+  const usesWideStageCamera = stageWidth >= MY_ROOM_WIDE_STAGE_BREAKPOINT
+  const stageRendererWidth = usesWideStageCamera
+    ? "100%"
+    : windowSize.width < 390
+      ? shellCamera.compactRendererWidth
+      : shellCamera.regularRendererWidth
+  const stageRendererTranslateY = usesWideStageCamera && roomScene.shell
+    ? getWideStageRendererTranslateY({
+        stageWidth,
+        stageHeight,
+        shellCanvasWidth: roomScene.shell.canvasSize.width,
+        shellCanvasHeight: roomScene.shell.canvasSize.height
+      })
+    : shellCamera.rendererTranslateY
 
   const projectedRoomAvatar = useMemo(
     () =>
@@ -431,6 +454,11 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     showMovementFeedback
   ])
 
+  const handleStageLayout = useCallback((event: LayoutChangeEvent): void => {
+    const nextWidth = Math.round(event.nativeEvent.layout.width)
+    setStageWidth((current) => current === nextWidth ? current : nextWidth)
+  }, [])
+
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView
@@ -453,7 +481,10 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
         </View>
 
         <View style={styles.roomStack}>
-          <View style={[styles.stageCard, { height: stageHeight }]}>
+          <View
+            onLayout={handleStageLayout}
+            style={[styles.stageCard, { height: stageHeight }]}
+          >
             <View style={styles.stageBackdrop} pointerEvents="none" />
             <View style={styles.stageTopScrim} pointerEvents="none" />
             <RoomRenderer2D
@@ -467,7 +498,7 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                 styles.stageRenderer,
                 {
                   width: stageRendererWidth,
-                  transform: [{ translateY: shellCamera.rendererTranslateY }]
+                  transform: [{ translateY: stageRendererTranslateY }]
                 }
               ]}
             />
@@ -654,6 +685,19 @@ function getMyRoomPointDistance(
   to: RoomWorldPoint
 ): number {
   return Math.hypot(to.x - from.x, to.y - from.y)
+}
+
+function getWideStageRendererTranslateY(input: {
+  stageWidth: number
+  stageHeight: number
+  shellCanvasWidth: number
+  shellCanvasHeight: number
+}): number {
+  const rendererHeight =
+    input.stageWidth * input.shellCanvasHeight / input.shellCanvasWidth
+  const avatarFeetY = rendererHeight * MY_ROOM_AVATAR_SPAWN.y
+  const targetFeetY = input.stageHeight * MY_ROOM_WIDE_STAGE_AVATAR_FEET_Y
+  return Math.round(targetFeetY - avatarFeetY)
 }
 
 function PoseDockButton(props: {
