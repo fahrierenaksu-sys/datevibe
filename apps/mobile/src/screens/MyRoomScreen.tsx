@@ -80,9 +80,12 @@ const MY_ROOM_STAGE_CAMERA = {
   compactRendererWidth: "165%",
   regularRendererWidth: "154%",
   rendererTranslateY: 0,
-  stageHeightRatio: 0.46,
-  minStageHeight: 360,
-  maxStageHeight: 500
+  compactStageHeightRatio: 0.48,
+  wideStageHeightRatio: 0.64,
+  compactMinStageHeight: 372,
+  wideMinStageHeight: 440,
+  compactMaxStageHeight: 500,
+  wideMaxStageHeight: 560
 } as const
 const MY_ROOM_AVATAR_SPAWN = {
   x: 0.47,
@@ -103,8 +106,8 @@ const MY_ROOM_AVATAR_SIZE = {
     height: 0.5
   },
   wide: {
-    width: 0.152,
-    height: 0.4
+    width: 0.164,
+    height: 0.436
   }
 } as const
 const MY_ROOM_WIDE_STAGE_BREAKPOINT = 720
@@ -162,15 +165,28 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     compactRendererWidth: MY_ROOM_STAGE_CAMERA.compactRendererWidth,
     regularRendererWidth: MY_ROOM_STAGE_CAMERA.regularRendererWidth,
     rendererTranslateY: MY_ROOM_STAGE_CAMERA.rendererTranslateY,
-    stageHeightRatio: MY_ROOM_STAGE_CAMERA.stageHeightRatio,
-    minStageHeight: MY_ROOM_STAGE_CAMERA.minStageHeight,
-    maxStageHeight: MY_ROOM_STAGE_CAMERA.maxStageHeight
+    compactStageHeightRatio: MY_ROOM_STAGE_CAMERA.compactStageHeightRatio,
+    wideStageHeightRatio: MY_ROOM_STAGE_CAMERA.wideStageHeightRatio,
+    compactMinStageHeight: MY_ROOM_STAGE_CAMERA.compactMinStageHeight,
+    wideMinStageHeight: MY_ROOM_STAGE_CAMERA.wideMinStageHeight,
+    compactMaxStageHeight: MY_ROOM_STAGE_CAMERA.compactMaxStageHeight,
+    wideMaxStageHeight: MY_ROOM_STAGE_CAMERA.wideMaxStageHeight
   }
+  const usesWideWindow = windowSize.width >= MY_ROOM_WIDE_STAGE_BREAKPOINT
+  const stageHeightRatio = usesWideWindow
+    ? shellCamera.wideStageHeightRatio
+    : shellCamera.compactStageHeightRatio
+  const minStageHeight = usesWideWindow
+    ? shellCamera.wideMinStageHeight
+    : shellCamera.compactMinStageHeight
+  const maxStageHeight = usesWideWindow
+    ? shellCamera.wideMaxStageHeight
+    : shellCamera.compactMaxStageHeight
   const stageHeight = Math.max(
-    shellCamera.minStageHeight,
+    minStageHeight,
     Math.min(
-      shellCamera.maxStageHeight,
-      Math.round(windowSize.height * shellCamera.stageHeightRatio)
+      maxStageHeight,
+      Math.round(windowSize.height * stageHeightRatio)
     )
   )
   const usesWideStageCamera = stageWidth >= MY_ROOM_WIDE_STAGE_BREAKPOINT
