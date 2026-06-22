@@ -47,10 +47,6 @@ import {
   createRoomWorldHotspotsFromRoomV2Scene
 } from "../features/roomWorld/roomWorldRoomV2Projection"
 import {
-  getRoomWorldMotionReadinessSummary,
-  type RoomWorldMotionReadinessLevel
-} from "../features/roomWorld/roomWorldDiagnostics"
-import {
   createRoomWorldMovementPlan,
   getRoomWorldMovementFrame,
   getRoomWorldMovementFramePose,
@@ -84,9 +80,9 @@ const MY_ROOM_STAGE_CAMERA = {
   compactRendererWidth: "184%",
   regularRendererWidth: "174%",
   rendererTranslateY: -4,
-  stageHeightRatio: 0.45,
-  minStageHeight: 390,
-  maxStageHeight: 430
+  stageHeightRatio: 0.56,
+  minStageHeight: 430,
+  maxStageHeight: 600
 } as const
 const MY_ROOM_AVATAR_SPAWN = {
   x: 0.47,
@@ -143,7 +139,12 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     () => createRoomWorldHotspotsFromRoomV2Scene(roomScene),
     [roomScene]
   )
-  const shellCamera = roomScene.shell?.myRoomCamera ?? MY_ROOM_STAGE_CAMERA
+  const shellCamera = {
+    ...(roomScene.shell?.myRoomCamera ?? MY_ROOM_STAGE_CAMERA),
+    stageHeightRatio: MY_ROOM_STAGE_CAMERA.stageHeightRatio,
+    minStageHeight: MY_ROOM_STAGE_CAMERA.minStageHeight,
+    maxStageHeight: MY_ROOM_STAGE_CAMERA.maxStageHeight
+  }
   const stageHeight = Math.max(
     shellCamera.minStageHeight,
     Math.min(
@@ -184,15 +185,6 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     [projectedRoomAvatar]
   )
   const roomMotionBadge = getMyRoomMotionBadge(roomMotionReadiness.level)
-  const roomWorldReadiness = useMemo(
-    () => getRoomWorldMotionReadinessSummary({
-      geometry: roomWorldGeometry,
-      spawn: MY_ROOM_AVATAR_SPAWN,
-      clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE
-    }),
-    [roomWorldGeometry]
-  )
-  const roomWorldBadge = getMyRoomWorldBadge(roomWorldReadiness.level)
 
   const roomAvatar = useMemo(
     () =>
@@ -469,7 +461,7 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>My Room</Text>
-            <Text style={styles.subtitle}>Cozy avatar room</Text>
+            <Text style={styles.subtitle}>Tap the floor to move</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -504,21 +496,19 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
               ]}
             />
             <View style={styles.stageHud} pointerEvents="none">
-              <View style={styles.stageHudRow}>
-                <View style={styles.stageHudPill}>
-                  <Ionicons name="heart" size={13} color="#FF7AB8" />
-                  <Text style={styles.stageHeaderText} numberOfLines={1}>
-                    Cozy room
-                  </Text>
-                </View>
-                <View style={styles.stageHudPill}>
-                  <Ionicons name="cube" size={13} color="#FAD7E8" />
-                  <Text style={styles.stageHeaderText} numberOfLines={1}>
-                    {userRoomDecor.placedItems.length} decor
-                  </Text>
-                </View>
+              <View style={styles.stageHudPill}>
+                <Ionicons name="heart" size={13} color="#FF7AB8" />
+                <Text style={styles.stageHeaderText} numberOfLines={1}>
+                  Cozy room
+                </Text>
               </View>
-              <View style={styles.stageHudRow}>
+              <View style={styles.stageHudMetaGroup}>
+                <View style={styles.stageMiniPill}>
+                  <Ionicons name="cube" size={12} color="#FAD7E8" />
+                  <Text style={styles.stageMotionText} numberOfLines={1}>
+                    {userRoomDecor.placedItems.length}
+                  </Text>
+                </View>
                 <View style={styles.stageStatusPill}>
                   <Ionicons
                     name={roomMotionBadge.icon}
@@ -527,16 +517,6 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                   />
                   <Text style={styles.stageMotionText} numberOfLines={1}>
                     {roomMotionBadge.label}
-                  </Text>
-                </View>
-                <View style={styles.stageStatusPill}>
-                  <Ionicons
-                    name={roomWorldBadge.icon}
-                    size={13}
-                    color={roomWorldBadge.color}
-                  />
-                  <Text style={styles.stageMotionText} numberOfLines={1}>
-                    {roomWorldBadge.label}
                   </Text>
                 </View>
               </View>
@@ -549,7 +529,12 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                 </Text>
               </View>
             ) : null}
-            <View style={styles.poseDock}>
+            <View
+              style={[
+                styles.poseDock,
+                usesWideStageCamera ? styles.poseDockWide : null
+              ]}
+            >
               <PoseDockButton
                 icon="hand-left"
                 label="Wave"
@@ -569,57 +554,56 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                 onPress={() => handlePoseAction("idle")}
               />
             </View>
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open wardrobe"
-              style={({ pressed }) => [
-                styles.actionButtonGlass,
-                pressed ? styles.actionButtonPressed : null
+            <View
+              style={[
+                styles.stageActionDock,
+                usesWideStageCamera ? styles.stageActionDockWide : null
               ]}
-              onPress={() => navigation.navigate("WardrobeV2")}
             >
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="shirt" size={20} color="#FF7AB8" />
-              </View>
-              <Text style={styles.actionTextGlass} numberOfLines={1}>
-                Wardrobe
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Edit room"
-              style={({ pressed }) => [
-                styles.actionButtonGlass,
-                pressed ? styles.actionButtonPressed : null
-              ]}
-              onPress={() => navigation.navigate("MyRoomV2Preview")}
-            >
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="brush" size={20} color="#FF7AB8" />
-              </View>
-              <Text style={styles.actionTextGlass} numberOfLines={1}>
-                Edit Room
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open room shop"
-              style={({ pressed }) => [
-                styles.actionButtonGlass,
-                pressed ? styles.actionButtonPressed : null
-              ]}
-              onPress={() => navigation.navigate("RoomShop")}
-            >
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="sparkles" size={20} color="#FF7AB8" />
-              </View>
-              <Text style={styles.actionTextGlass} numberOfLines={1}>
-                Room Shop
-              </Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open wardrobe"
+                style={({ pressed }) => [
+                  styles.stageActionButton,
+                  styles.stageActionButtonPrimary,
+                  pressed ? styles.stageActionButtonPressed : null
+                ]}
+                onPress={() => navigation.navigate("WardrobeV2")}
+              >
+                <Ionicons name="shirt" size={18} color="#FFFFFF" />
+                <Text style={styles.stageActionText} numberOfLines={1}>
+                  Wardrobe
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit room"
+                style={({ pressed }) => [
+                  styles.stageActionButton,
+                  pressed ? styles.stageActionButtonPressed : null
+                ]}
+                onPress={() => navigation.navigate("MyRoomV2Preview")}
+              >
+                <Ionicons name="brush" size={18} color="#FFD9E8" />
+                <Text style={styles.stageActionText} numberOfLines={1}>
+                  Edit
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open room shop"
+                style={({ pressed }) => [
+                  styles.stageActionButton,
+                  pressed ? styles.stageActionButtonPressed : null
+                ]}
+                onPress={() => navigation.navigate("RoomShop")}
+              >
+                <Ionicons name="sparkles" size={18} color="#FFD9E8" />
+                <Text style={styles.stageActionText} numberOfLines={1}>
+                  Shop
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -636,47 +620,20 @@ function getMyRoomMotionBadge(level: RoomAvatarMotionReadinessLevel): {
     case "motionReady":
       return {
         icon: "checkmark-circle",
-        label: "Motion assets",
+        label: "Ready",
         color: "#8FFFD1"
       }
     case "idleReady":
       return {
         icon: "sparkles",
-        label: "Runtime motion",
+        label: "Preview",
         color: "#FFD1E3"
       }
     case "notReady":
       return {
         icon: "alert-circle",
-        label: "Room art pending",
+        label: "Art pending",
         color: "#FFE1A8"
-      }
-  }
-}
-
-function getMyRoomWorldBadge(level: RoomWorldMotionReadinessLevel): {
-  icon: keyof typeof Ionicons.glyphMap
-  label: string
-  color: string
-} {
-  switch (level) {
-    case "ready":
-      return {
-        icon: "walk",
-        label: "Room pathing",
-        color: "#8FFFD1"
-      }
-    case "constrained":
-      return {
-        icon: "resize",
-        label: "Tight layout",
-        color: "#FFE1A8"
-      }
-    case "blocked":
-      return {
-        icon: "alert-circle",
-        label: "Path blocked",
-        color: "#FFB4C8"
       }
   }
 }
@@ -872,9 +829,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#070B1D",
   },
   content: {
-    gap: 10,
+    gap: uiTheme.spacing.sm,
     paddingHorizontal: uiTheme.spacing.sm,
-    paddingBottom: uiTheme.spacing.md,
+    paddingBottom: uiTheme.spacing.lg,
   },
   header: {
     flexDirection: "row",
@@ -904,49 +861,54 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.1)",
   },
   roomStack: {
-    gap: 8,
+    gap: uiTheme.spacing.sm,
   },
-  actions: {
+  stageActionDock: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 12,
     flexDirection: "row",
-    gap: 8,
-    padding: 0,
-    marginTop: 0,
+    gap: 7,
+    padding: 6,
+    borderRadius: uiTheme.radius.xl,
+    backgroundColor: "rgba(13, 10, 27, 0.74)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
   },
-  actionButtonGlass: {
+  stageActionDockWide: {
+    left: "18%",
+    right: "18%",
+  },
+  stageActionButton: {
     flex: 1,
+    minHeight: 38,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
-    minHeight: 72,
-    paddingVertical: 9,
-    paddingHorizontal: 6,
+    gap: 5,
+    paddingHorizontal: 8,
     borderRadius: 16,
-    backgroundColor: "rgba(24, 14, 31, 0.58)",
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderWidth: 1,
-    borderColor: "rgba(255, 122, 184, 0.28)",
-    shadowColor: "#FF4F98",
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  actionButtonPressed: {
+  stageActionButtonPrimary: {
+    backgroundColor: "rgba(255, 79, 152, 0.82)",
+    borderColor: "rgba(255,255,255,0.24)",
+    shadowColor: "#FF4F98",
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  stageActionButtonPressed: {
     opacity: 0.82,
     transform: [{ scale: 0.98 }],
   },
-  actionIconWrap: {
-    width: 36,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 13,
-    backgroundColor: "rgba(255, 234, 244, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
-  },
-  actionTextGlass: {
+  stageActionText: {
     ...uiTheme.font.captionBold,
     fontSize: 11.5,
-    color: "#FFD9E8",
+    color: "#FFFFFF",
     textAlign: "center",
   },
   shopContent: {
@@ -1051,10 +1013,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-start",
     overflow: "hidden",
-    borderRadius: uiTheme.radius.xxl,
+    borderRadius: 34,
     backgroundColor: "#080715",
     borderWidth: 1,
-    borderColor: "rgba(255, 183, 217, 0.24)",
+    borderColor: "rgba(255, 183, 217, 0.18)",
     ...uiTheme.shadow.deep,
   },
   stageBackdrop: {
@@ -1070,27 +1032,24 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: 68,
-    backgroundColor: "rgba(255, 111, 174, 0.08)",
+    height: 92,
+    backgroundColor: "rgba(255, 111, 174, 0.1)",
   },
   stageRenderer: {
     backgroundColor: "#0B0815",
   },
   stageHud: {
     position: "absolute",
-    left: 12,
-    top: 12,
-    right: 12,
-    gap: 7,
-  },
-  stageHudRow: {
+    left: 14,
+    top: 14,
+    right: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
   stageHudPill: {
-    maxWidth: "48%",
+    maxWidth: "45%",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -1101,8 +1060,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.16)",
   },
+  stageHudMetaGroup: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 7,
+  },
+  stageMiniPill: {
+    minWidth: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(9,13,34,0.54)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
   stageStatusPill: {
-    maxWidth: "48%",
+    maxWidth: 138,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -1144,9 +1123,9 @@ const styles = StyleSheet.create({
   },
   poseDock: {
     position: "absolute",
-    left: 10,
-    right: 10,
-    bottom: 10,
+    left: 12,
+    right: 12,
+    bottom: 66,
     flexDirection: "row",
     gap: 5,
     padding: 5,
@@ -1154,6 +1133,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(9,13,34,0.68)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
+  },
+  poseDockWide: {
+    left: "18%",
+    right: "18%",
   },
   poseButton: {
     flex: 1,

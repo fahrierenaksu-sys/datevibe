@@ -47,6 +47,19 @@ type CosmeticShopScreenProps = NativeStackScreenProps<
   "CosmeticShop"
 >
 
+const PRODUCT_REFERENCE_AVATAR_ITEM_IDS = new Set([
+  "avatar_v2_top_lilac_offshoulder_bow_blouse",
+  "avatar_v2_bottom_floral_embroidered_skort_shorts",
+  "avatar_v2_top_silver_sequin_halter_top",
+  "avatar_v2_bottom_pink_embellished_wide_pants",
+  "avatar_v2_bottom_patchwork_bow_mini_skirt",
+  "avatar_v2_top_silver_lace_ruffle_dress_top",
+  "avatar_v2_bottom_silver_lace_ruffle_dress_bottom",
+  "avatar_v2_top_red_floral_bikini_top",
+  "avatar_v2_bottom_white_embellished_wide_pants",
+  "avatar_v2_shoes_white_sneakers"
+])
+
 export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
   const { navigation } = props
   const avatarV2 = useAvatarV2()
@@ -65,7 +78,9 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
   )
 
   const avatarProducts = useMemo(
-    () => shopItems.filter((item) => item.sectionId === "avatar"),
+    () => sortAvatarShopProducts(
+      shopItems.filter((item) => item.sectionId === "avatar")
+    ),
     [shopItems]
   )
   const roomProducts = useMemo(
@@ -252,7 +267,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
       <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
         <TopBar
           title="Shop"
-          subtitle="Preview, unlock, equip, place"
+          subtitle="Curated drops for your avatar"
           titleAlign="start"
           leftSlot={
             <ActionButtonCircle onPress={() => navigation.goBack()} size={40}>
@@ -282,7 +297,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="My Items"
-            subtitle="Owned pieces, equipped avatar items, and placed room decor."
+            subtitle="Owned looks and room pieces."
             products={myItems}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -291,7 +306,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="Avatar Wearables"
-            subtitle="Owned pieces equip now. Locked pieces preview first."
+            subtitle="Preview the drop, then unlock."
             products={avatarProducts}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -299,7 +314,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="Room Pieces"
-            subtitle="Owned decor can be placed into My Room."
+            subtitle="Cozy pieces for your space."
             products={roomProducts}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -307,7 +322,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="Status Styles"
-            subtitle="Prepared for future card and chat identity items."
+            subtitle="Profile polish for later."
             products={statusProducts}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -316,6 +331,21 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
       </SafeAreaView>
     </View>
   )
+}
+
+function sortAvatarShopProducts(products: ShopCatalogItem[]): ShopCatalogItem[] {
+  return [...products].sort((left, right) => {
+    const priorityDelta =
+      getAvatarShopProductPriority(left) - getAvatarShopProductPriority(right)
+    if (priorityDelta !== 0) return priorityDelta
+    return left.title.localeCompare(right.title)
+  })
+}
+
+function getAvatarShopProductPriority(product: ShopCatalogItem): number {
+  if (PRODUCT_REFERENCE_AVATAR_ITEM_IDS.has(product.sourceItemId)) return 0
+  if (product.priceCoins !== null) return 1
+  return 2
 }
 
 function SelectedProductPreview(props: {
@@ -334,7 +364,9 @@ function SelectedProductPreview(props: {
       <View style={styles.previewHeader}>
         <View>
           <Text style={styles.previewEyebrow}>{product.eyebrow}</Text>
-          <Text style={styles.previewTitle}>{product.title}</Text>
+          <Text style={styles.previewTitle} numberOfLines={2}>
+            {product.title}
+          </Text>
         </View>
         <View style={styles.statePill}>
           <Text style={styles.stateText}>{product.stateLabel}</Text>
@@ -346,8 +378,8 @@ function SelectedProductPreview(props: {
           <AvatarPreview2D
             avatar={previewAvatar}
             catalog={AVATAR_V2_CATALOG}
-            size={164}
-            stageHeight={230}
+            size={202}
+            stageHeight={282}
             label="Preview on avatar"
           />
         ) : product.previewType === "room" ? (
@@ -429,11 +461,18 @@ function ShopProductCard(props: {
     >
       <View style={styles.productThumb}>
         {product.previewType === "avatar" && product.avatarItem ? (
-          <Ionicons
-            name={getAvatarIcon(product.avatarItem.type)}
-            size={24}
-            color={selected ? "#FFFFFF" : uiTheme.colors.primary}
-          />
+          <View
+            style={[
+              styles.productIconOrb,
+              selected ? styles.productIconOrbSelected : null
+            ]}
+          >
+            <Ionicons
+              name={getAvatarIcon(product.avatarItem.type)}
+              size={24}
+              color={selected ? "#FFFFFF" : uiTheme.colors.primary}
+            />
+          </View>
         ) : product.previewType === "room" && product.roomItem ? (
           <Image
             source={product.roomItem.asset.source}
@@ -441,19 +480,28 @@ function ShopProductCard(props: {
             style={styles.productImage}
           />
         ) : (
-          <Ionicons
-            name={getStatusIcon(product.statusCardItem?.category)}
-            size={24}
-            color={selected ? "#FFFFFF" : product.statusCardItem?.accentColor ?? uiTheme.colors.primary}
-          />
+          <View
+            style={[
+              styles.productIconOrb,
+              selected ? styles.productIconOrbSelected : null
+            ]}
+          >
+            <Ionicons
+              name={getStatusIcon(product.statusCardItem?.category)}
+              size={24}
+              color={selected ? "#FFFFFF" : product.statusCardItem?.accentColor ?? uiTheme.colors.primary}
+            />
+          </View>
         )}
       </View>
-      <Text style={styles.productTitle} numberOfLines={1}>
+      <Text style={styles.productTitle} numberOfLines={2}>
         {product.title}
       </Text>
-      <Text style={styles.productMeta} numberOfLines={1}>
-        {metaLabel ?? product.stateLabel}
-      </Text>
+      <View style={styles.productMetaPill}>
+        <Text style={styles.productMeta} numberOfLines={1}>
+          {metaLabel ?? product.stateLabel}
+        </Text>
+      </View>
     </Pressable>
   )
 }
@@ -617,7 +665,7 @@ const styles = StyleSheet.create({
     paddingTop: uiTheme.spacing.sm,
   },
   scroll: {
-    gap: uiTheme.spacing.lg,
+    gap: uiTheme.spacing.xl,
     paddingBottom: 136,
   },
   coinPill: {
@@ -639,10 +687,10 @@ const styles = StyleSheet.create({
   previewCard: {
     gap: uiTheme.spacing.md,
     padding: uiTheme.spacing.lg,
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.glass,
+    borderRadius: uiTheme.radius.xxl,
+    backgroundColor: "#FFF8FC",
     borderWidth: 1,
-    borderColor: uiTheme.colors.glassBorder,
+    borderColor: "#F5DDEC",
     overflow: "hidden",
     ...uiTheme.shadow.deep,
   },
@@ -674,11 +722,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   previewStage: {
-    minHeight: 238,
+    minHeight: 292,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: "#160D1E",
+    borderRadius: uiTheme.radius.xxl,
+    backgroundColor: "#180D21",
     overflow: "hidden",
   },
   roomPreviewRenderer: {
@@ -783,7 +831,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   section: {
-    gap: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.md,
   },
   sectionHeader: {
     gap: 3,
@@ -797,35 +845,49 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.textSecondary,
   },
   productRow: {
-    gap: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.md,
     paddingRight: uiTheme.spacing.lg,
   },
   productCard: {
-    width: 148,
-    minHeight: 158,
-    gap: uiTheme.spacing.xs,
-    padding: uiTheme.spacing.sm,
+    width: 168,
+    minHeight: 186,
+    gap: uiTheme.spacing.sm,
+    padding: uiTheme.spacing.md,
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.glass,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: uiTheme.colors.glassBorder,
+    borderColor: "#F1E4F2",
     ...uiTheme.shadow.float,
   },
   productCardSelected: {
     borderColor: uiTheme.colors.primary,
-    backgroundColor: "#FFF7FB",
+    backgroundColor: "#FFF5FA",
   },
   productCardPressed: {
     opacity: 0.82,
     transform: [{ scale: 0.97 }],
   },
   productThumb: {
-    height: 80,
+    height: 92,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surfaceSoft,
+    backgroundColor: "#FFF0F7",
     overflow: "hidden",
+  },
+  productIconOrb: {
+    width: 54,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F2D9E9",
+  },
+  productIconOrbSelected: {
+    backgroundColor: uiTheme.colors.primary,
+    borderColor: "rgba(255,255,255,0.5)",
   },
   productImage: {
     width: "86%",
@@ -836,8 +898,19 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.textPrimary,
     fontWeight: "900",
   },
+  productMetaPill: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    minHeight: 28,
+    justifyContent: "center",
+    paddingHorizontal: 9,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: "#F4DDEB",
+  },
   productMeta: {
-    ...uiTheme.font.micro,
-    color: uiTheme.colors.textMuted,
+    ...uiTheme.font.captionBold,
+    color: uiTheme.colors.chipText,
   },
 })

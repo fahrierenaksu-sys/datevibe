@@ -58,7 +58,7 @@ const PREVIEW_MOTION_MODES: Array<{
 
 export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
   const { navigation } = props
-  const [activeType, setActiveType] = useState<AvatarItemType>("hair")
+  const [activeType, setActiveType] = useState<AvatarItemType>("top")
   const [previewMotionState, setPreviewMotionState] =
     useState<AvatarAnimationState>("idle_front")
   const { avatar, catalog, inventory, canEquipItem, equipItem } = useAvatarV2()
@@ -91,6 +91,16 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
     )
     return equipped ? `${equipped.name} equipped` : `${activeType} ready`
   }, [activeItems, activeType, avatar])
+  const visibleActiveItems = useMemo(
+    () =>
+      [...activeItems].sort((left, right) => {
+        const leftEquipped = isAvatarV2ItemEquipped(avatar, left)
+        const rightEquipped = isAvatarV2ItemEquipped(avatar, right)
+        if (leftEquipped === rightEquipped) return 0
+        return leftEquipped ? -1 : 1
+      }),
+    [activeItems, avatar]
+  )
 
   const handleEquip = (item: AvatarCatalogItem): void => {
     hapticLight()
@@ -117,7 +127,7 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
           </Pressable>
           <View style={styles.titleBlock}>
             <Text style={styles.title}>Wardrobe</Text>
-            <Text style={styles.subtitle}>Customize your look</Text>
+            <Text style={styles.subtitle}>Try on your favorite look</Text>
           </View>
           {SHOW_DEBUG_UI ? (
             <View style={styles.statusPill}>
@@ -137,8 +147,8 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
             animationState={previewMotionState}
             selectedType={activeType}
             label={equippedLabel}
-            size={164}
-            stageHeight={246}
+            size={214}
+            stageHeight={318}
           />
 
           <View style={styles.motionPreviewRow}>
@@ -193,9 +203,6 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
               />
             </View>
             <View style={styles.roomReadinessCopy}>
-              <Text style={styles.roomReadinessSlice} numberOfLines={1}>
-                Room motion status
-              </Text>
               <View style={styles.roomReadinessTitleRow}>
                 <Text style={styles.roomReadinessTitle}>
                   {readinessCopy.title}
@@ -213,67 +220,9 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.roomReadinessBody}>
+              <Text style={styles.roomReadinessBody} numberOfLines={1}>
                 {readinessCopy.body}
               </Text>
-              <View style={styles.motionCoverageRail}>
-                {roomMotionReadiness.requirementSummaries.map((requirement) => (
-                  <View
-                    key={requirement.label}
-                    style={[
-                      styles.motionCoverageChip,
-                      requirement.isReady ? styles.motionCoverageChipReady : null
-                    ]}
-                  >
-                    <Ionicons
-                      name={requirement.isReady ? "checkmark-circle" : "ellipse-outline"}
-                      size={13}
-                      color={requirement.isReady ? "#8FFFD1" : "#FFB4D4"}
-                    />
-                    <Text
-                      style={[
-                        styles.motionCoverageChipText,
-                        requirement.isReady ? styles.motionCoverageChipTextReady : null
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {formatWardrobeMotionRequirementLabel(requirement.label)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.motionGestureRow}>
-                <Text style={styles.motionGestureLabel} numberOfLines={1}>
-                  Gestures {roomMotionReadiness.gestureReadyRequirementCount}/
-                  {roomMotionReadiness.gestureTotalRequirementCount}
-                </Text>
-                <View style={styles.motionGestureRail}>
-                  {roomMotionReadiness.gestureRequirementSummaries.map((requirement) => (
-                    <View
-                      key={requirement.label}
-                      style={[
-                        styles.motionGestureChip,
-                        requirement.isReady ? styles.motionGestureChipReady : null
-                      ]}
-                    >
-                      <Ionicons
-                        name={requirement.isReady ? "checkmark-circle" : "ellipse-outline"}
-                        size={12}
-                        color={requirement.isReady ? "#C9FFEA" : "#FFB4D4"}
-                      />
-                      <Text
-                        style={[
-                          styles.motionGestureChipText,
-                          requirement.isReady ? styles.motionGestureChipTextReady : null
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {formatWardrobeMotionRequirementLabel(requirement.label)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
               {roomMotionReadiness.missingRequirementLabels.length > 0 ? (
                 <Text style={styles.roomReadinessNext} numberOfLines={1}>
                   Needs art: {formatWardrobeMotionRequirementLabel(
@@ -332,8 +281,15 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
             })}
           </ScrollView>
 
+          <View style={styles.selectedLookBar}>
+            <Ionicons name={CATEGORY_ICONS[activeType]} size={16} color="#FFFFFF" />
+            <Text style={styles.selectedLookText} numberOfLines={1}>
+              {equippedLabel}
+            </Text>
+          </View>
+
           <View style={styles.grid}>
-            {activeItems.map((item) => {
+            {visibleActiveItems.map((item) => {
               const catalogItem = buildAvatarShopCatalogItem({
                 item,
                 avatar,
@@ -354,30 +310,39 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                     pressed ? styles.itemCardPressed : null
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.itemIconShell,
-                      equipped ? styles.itemIconShellEquipped : null
-                    ]}
-                  >
-                    <Ionicons
-                      name={locked ? "lock-closed" : CATEGORY_ICONS[item.type]}
-                      size={20}
-                      color={equipped ? "#FFFFFF" : "rgba(255,255,255,0.74)"}
-                    />
+                  <View style={styles.itemTopRow}>
+                    <View
+                      style={[
+                        styles.itemIconShell,
+                        equipped ? styles.itemIconShellEquipped : null
+                      ]}
+                    >
+                      <Ionicons
+                        name={locked ? "lock-closed" : CATEGORY_ICONS[item.type]}
+                        size={20}
+                        color={equipped ? "#FFFFFF" : "rgba(255,255,255,0.76)"}
+                      />
+                    </View>
+                    {equipped ? (
+                      <View style={styles.itemCheckBadge}>
+                        <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+                      </View>
+                    ) : null}
                   </View>
-                  <Text style={styles.itemName} numberOfLines={1}>
+                  <Text style={styles.itemName} numberOfLines={2}>
                     {item.name}
                   </Text>
-                  <Text
+                  <View
                     style={[
-                      styles.itemMeta,
+                      styles.itemMetaPill,
+                      equipped ? styles.itemMetaPillEquipped : null,
                       locked ? styles.itemMetaLocked : null
                     ]}
-                    numberOfLines={1}
                   >
-                    {catalogItem.stateLabel}
-                  </Text>
+                    <Text style={styles.itemMeta} numberOfLines={1}>
+                      {equipped ? "Wearing" : locked ? catalogItem.stateLabel : "Try on"}
+                    </Text>
+                  </View>
                 </Pressable>
               )
             })}
@@ -445,7 +410,7 @@ function formatWardrobeMotionRequirementLabel(label: string): string {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#110A16",
+    backgroundColor: "#140916",
   },
   safe: {
     flex: 1,
@@ -511,7 +476,7 @@ const styles = StyleSheet.create({
     marginTop: uiTheme.spacing.sm,
     padding: 5,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
   },
@@ -540,20 +505,20 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   roomReadinessCard: {
-    marginTop: uiTheme.spacing.md,
+    marginTop: uiTheme.spacing.sm,
     flexDirection: "row",
     alignItems: "center",
     gap: uiTheme.spacing.sm,
-    padding: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: "rgba(255,255,255,0.09)",
+    padding: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.lg,
+    backgroundColor: "rgba(255,255,255,0.075)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(255,255,255,0.12)",
   },
   roomReadinessIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -603,7 +568,7 @@ const styles = StyleSheet.create({
   },
   roomReadinessBody: {
     ...uiTheme.font.caption,
-    marginTop: 5,
+    marginTop: 2,
     color: "rgba(255,255,255,0.68)",
     lineHeight: 18,
   },
@@ -711,7 +676,8 @@ const styles = StyleSheet.create({
   },
   categoryRow: {
     gap: 8,
-    paddingVertical: uiTheme.spacing.lg,
+    paddingTop: uiTheme.spacing.lg,
+    paddingBottom: uiTheme.spacing.sm,
   },
   categoryTab: {
     minWidth: 86,
@@ -722,13 +688,31 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingHorizontal: 14,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.075)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
   },
   categoryTabActive: {
     backgroundColor: uiTheme.colors.primary,
     borderColor: "rgba(255,255,255,0.2)",
+  },
+  selectedLookBar: {
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: uiTheme.spacing.md,
+    marginBottom: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(255,79,152,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,122,184,0.34)",
+  },
+  selectedLookText: {
+    ...uiTheme.font.captionBold,
+    flex: 1,
+    minWidth: 0,
+    color: "#FFFFFF",
   },
   categoryTabText: {
     ...uiTheme.font.captionBold,
@@ -744,19 +728,23 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     width: "48%",
-    minHeight: 130,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: uiTheme.spacing.xs,
+    minHeight: 148,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: uiTheme.spacing.sm,
     padding: uiTheme.spacing.md,
     borderRadius: uiTheme.radius.xl,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.085)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.12)",
   },
   itemCardEquipped: {
-    backgroundColor: "rgba(255,79,152,0.17)",
+    backgroundColor: "rgba(255,79,152,0.2)",
     borderColor: "rgba(255,79,152,0.68)",
+    shadowColor: "#FF4F98",
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
   itemCardLocked: {
     opacity: 0.48,
@@ -764,31 +752,62 @@ const styles = StyleSheet.create({
   itemCardPressed: {
     transform: [{ scale: 0.97 }],
   },
+  itemTopRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   itemIconShell: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
   itemIconShellEquipped: {
     backgroundColor: uiTheme.colors.primary,
+  },
+  itemCheckBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#31B67A",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
   },
   itemName: {
     ...uiTheme.font.bodySmall,
     maxWidth: "100%",
     color: "#FFFFFF",
     fontWeight: "900",
-    textAlign: "center",
+    textAlign: "left",
+  },
+  itemMetaPill: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    minHeight: 28,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  itemMetaPillEquipped: {
+    backgroundColor: "rgba(143,255,209,0.18)",
+    borderColor: "rgba(143,255,209,0.26)",
   },
   itemMeta: {
-    ...uiTheme.font.caption,
+    ...uiTheme.font.captionBold,
     maxWidth: "100%",
-    color: "rgba(255,255,255,0.54)",
+    color: "#FFEAF4",
     textAlign: "center",
   },
   itemMetaLocked: {
-    color: "#FFB4D4",
+    opacity: 0.78,
   },
 })
