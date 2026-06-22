@@ -26,7 +26,7 @@ type ProfileEditScreenProps = NativeStackScreenProps<
   currentDisplayName: string
   currentAge: number | undefined
   currentUserId: string
-  onSave: (displayName: string, age: number | undefined) => void
+  onSave: (displayName: string, age: number | undefined) => Promise<void>
 }
 
 export function ProfileEditScreen(props: ProfileEditScreenProps) {
@@ -37,24 +37,34 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
     currentAge ? String(currentAge) : ""
   )
   const [saved, setSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const saveScaleAnim = useRef(new Animated.Value(1)).current
 
   const parsedAge = Number.parseInt(ageText, 10)
   const ageValid = ageText === "" || (parsedAge >= 18 && parsedAge <= 99)
   const nameValid = displayName.trim().length >= 2
-  const canSave = nameValid && ageValid && !saved
+  const canSave = nameValid && ageValid && !saved && !isSaving
 
   const hasChanges =
     displayName.trim() !== currentDisplayName ||
     (ageText !== "" ? parsedAge !== currentAge : currentAge !== undefined)
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!canSave || !hasChanges) return
     const finalAge = ageText === "" ? undefined : parsedAge
-    onSave(displayName.trim(), finalAge)
-    hapticMedium()
-    setSaved(true)
-    setTimeout(() => navigation.goBack(), 600)
+    setIsSaving(true)
+    setSaveError(null)
+    try {
+      await onSave(displayName.trim(), finalAge)
+      hapticMedium()
+      setSaved(true)
+      setTimeout(() => navigation.goBack(), 600)
+    } catch {
+      setSaveError("Could not save your profile. Please try again.")
+    } finally {
+      setIsSaving(false)
+    }
   }, [ageText, canSave, displayName, hasChanges, navigation, onSave, parsedAge])
 
   const handleSavePressIn = () => {
@@ -160,6 +170,12 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
             </Text>
           </View>
 
+          {saveError ? (
+            <Text accessibilityRole="alert" style={styles.saveError}>
+              {saveError}
+            </Text>
+          ) : null}
+
           {/* Save */}
           <Animated.View style={[styles.saveWrap, { transform: [{ scale: saveScaleAnim }] }]}>
             <Pressable
@@ -183,7 +199,7 @@ export function ProfileEditScreen(props: ProfileEditScreenProps) {
                 style={styles.saveButtonGradient}
               >
                 <Text style={styles.saveButtonText}>
-                  {saved ? "Saved ✓" : "Save Changes"}
+                  {saved ? "Saved ✓" : isSaving ? "Saving..." : "Save Changes"}
                 </Text>
               </LinearGradient>
             </Pressable>
@@ -276,6 +292,12 @@ const styles = StyleSheet.create({
     ...uiTheme.font.caption,
     color: uiTheme.colors.textMuted,
     lineHeight: 18,
+  },
+  saveError: {
+    ...uiTheme.font.caption,
+    color: uiTheme.colors.danger,
+    fontWeight: "700",
+    textAlign: "center",
   },
   saveWrap: {
     alignSelf: "center",
