@@ -102,12 +102,12 @@ const MY_ROOM_WALK_ACTION_TARGETS: RoomWorldPoint[] = [
 ]
 const MY_ROOM_AVATAR_SIZE = {
   compact: {
-    width: 0.17,
-    height: 0.45
+    width: 0.20,
+    height: 0.30
   },
   wide: {
-    width: 0.15,
-    height: 0.4
+    width: 0.18,
+    height: 0.27
   }
 } as const
 const MY_ROOM_WIDE_STAGE_BREAKPOINT = 720
