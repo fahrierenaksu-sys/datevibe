@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { useCallback, useMemo, useState } from "react"
 import {
   Image,
+  type ImageSourcePropType,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,10 +33,10 @@ import type {
 } from "../features/roomV2/roomV2.types"
 import {
   buildShopCatalogItems,
-  INITIAL_SHOP_ITEM_ID,
   type ShopCatalogItem,
   type StatusCardCatalogItem
 } from "../features/shop/shopCatalog"
+import { roomAvatarLayerAssets } from "../features/avatarV2/room/avatarRoomAssets"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { hapticError, hapticLight, hapticSuccess } from "../ui/haptics"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
@@ -59,13 +60,40 @@ const PRODUCT_REFERENCE_AVATAR_ITEM_IDS = new Set([
   "avatar_v2_bottom_white_embellished_wide_pants",
   "avatar_v2_shoes_white_sneakers"
 ])
+const INITIAL_PRODUCT_REFERENCE_SHOP_ITEM_ID =
+  "avatar:avatar_v2_top_lilac_offshoulder_bow_blouse"
+const AVATAR_ITEM_PREVIEW_SOURCES: Partial<Record<string, ImageSourcePropType>> = {
+  avatar_v2_top_default: roomAvatarLayerAssets.topFemaleCreamBasicTeeV2.source,
+  avatar_v2_bottom_default: roomAvatarLayerAssets.bottomFemaleDenimSkortShortsV2.source,
+  avatar_v2_shoes_default: roomAvatarLayerAssets.shoesFemaleDefaultV2.source,
+  avatar_v2_top_lilac_offshoulder_bow_blouse:
+    roomAvatarLayerAssets.topFemaleLilacOffshoulderBowBlouseV2.source,
+  avatar_v2_bottom_floral_embroidered_skort_shorts:
+    roomAvatarLayerAssets.bottomFemaleFloralEmbroideredSkortShortsV2.source,
+  avatar_v2_shoes_white_sneakers:
+    roomAvatarLayerAssets.shoesFemaleWhiteSneakersV2.source,
+  avatar_v2_top_silver_sequin_halter_top:
+    roomAvatarLayerAssets.topFemaleSilverSequinHalterTopV2.source,
+  avatar_v2_bottom_pink_embellished_wide_pants:
+    roomAvatarLayerAssets.bottomFemalePinkEmbellishedWidePantsV2.source,
+  avatar_v2_bottom_patchwork_bow_mini_skirt:
+    roomAvatarLayerAssets.bottomFemalePatchworkBowMiniSkirtV2.source,
+  avatar_v2_top_silver_lace_ruffle_dress_top:
+    roomAvatarLayerAssets.topFemaleSilverLaceRuffleDressTopV2.source,
+  avatar_v2_bottom_silver_lace_ruffle_dress_bottom:
+    roomAvatarLayerAssets.bottomFemaleSilverLaceRuffleDressBottomV2.source,
+  avatar_v2_top_red_floral_bikini_top:
+    roomAvatarLayerAssets.topFemaleRedFloralBikiniTopV2.source,
+  avatar_v2_bottom_white_embellished_wide_pants:
+    roomAvatarLayerAssets.bottomFemaleWhiteEmbellishedWidePantsV2.source
+}
 
 export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
   const { navigation } = props
   const avatarV2 = useAvatarV2()
   const inventoryStore = useInventoryStore()
   const roomV2 = useRoomV2()
-  const [selectedId, setSelectedId] = useState(INITIAL_SHOP_ITEM_ID)
+  const [selectedId, setSelectedId] = useState(INITIAL_PRODUCT_REFERENCE_SHOP_ITEM_ID)
 
   const shopItems = useMemo(
     () =>
@@ -373,14 +401,22 @@ function SelectedProductPreview(props: {
         </View>
       </View>
 
-      <View style={styles.previewStage}>
+      <View
+        style={[
+          styles.previewStage,
+          product.previewType === "avatar"
+            ? styles.previewStageAvatar
+            : null
+        ]}
+      >
         {product.previewType === "avatar" ? (
           <AvatarPreview2D
             avatar={previewAvatar}
             catalog={AVATAR_V2_CATALOG}
-            size={202}
+            size={210}
             stageHeight={282}
             label="Preview on avatar"
+            metaTone="light"
           />
         ) : product.previewType === "room" ? (
           <RoomRenderer2D
@@ -450,6 +486,10 @@ function ShopProductCard(props: {
   onPress: () => void
 }) {
   const { product, selected, metaLabel, onPress } = props
+  const avatarPreviewSource = product.avatarItem
+    ? getAvatarItemPreviewSource(product.avatarItem)
+    : undefined
+  const productReference = PRODUCT_REFERENCE_AVATAR_ITEM_IDS.has(product.sourceItemId)
   return (
     <Pressable
       onPress={onPress}
@@ -460,19 +500,15 @@ function ShopProductCard(props: {
       ]}
     >
       <View style={styles.productThumb}>
+        {product.previewType === "avatar" ? (
+          <View style={styles.productThumbHalo} />
+        ) : null}
         {product.previewType === "avatar" && product.avatarItem ? (
-          <View
-            style={[
-              styles.productIconOrb,
-              selected ? styles.productIconOrbSelected : null
-            ]}
-          >
-            <Ionicons
-              name={getAvatarIcon(product.avatarItem.type)}
-              size={24}
-              color={selected ? "#FFFFFF" : uiTheme.colors.primary}
-            />
-          </View>
+          <AvatarProductThumbnail
+            item={product.avatarItem}
+            source={avatarPreviewSource}
+            selected={selected}
+          />
         ) : product.previewType === "room" && product.roomItem ? (
           <Image
             source={product.roomItem.asset.source}
@@ -493,6 +529,11 @@ function ShopProductCard(props: {
             />
           </View>
         )}
+        {productReference ? (
+          <View style={styles.productDropBadge}>
+            <Text style={styles.productDropBadgeText}>Drop</Text>
+          </View>
+        ) : null}
       </View>
       <Text style={styles.productTitle} numberOfLines={2}>
         {product.title}
@@ -503,6 +544,41 @@ function ShopProductCard(props: {
         </Text>
       </View>
     </Pressable>
+  )
+}
+
+function AvatarProductThumbnail(props: {
+  item: NonNullable<ShopCatalogItem["avatarItem"]>
+  source: ImageSourcePropType | undefined
+  selected: boolean
+}) {
+  const { item, source, selected } = props
+  if (!source) {
+    return (
+      <View
+        style={[
+          styles.productIconOrb,
+          selected ? styles.productIconOrbSelected : null
+        ]}
+      >
+        <Ionicons
+          name={getAvatarIcon(item.type)}
+          size={24}
+          color={selected ? "#FFFFFF" : uiTheme.colors.primary}
+        />
+      </View>
+    )
+  }
+
+  return (
+    <Image
+      source={source}
+      resizeMode="contain"
+      style={[
+        styles.productWearableImage,
+        getAvatarItemPreviewImageStyle(item)
+      ]}
+    />
   )
 }
 
@@ -600,6 +676,34 @@ function getAvatarIcon(
   return "person"
 }
 
+function getAvatarItemPreviewSource(
+  item: NonNullable<ShopCatalogItem["avatarItem"]>
+): ImageSourcePropType | undefined {
+  return AVATAR_ITEM_PREVIEW_SOURCES[item.id]
+}
+
+function getAvatarItemPreviewImageStyle(
+  item: NonNullable<ShopCatalogItem["avatarItem"]>
+): {
+  width: number
+  height: number
+  transform: Array<{ translateY: number }>
+} {
+  if (item.type === "top") {
+    if (item.id === "avatar_v2_top_default" || item.id === "avatar_v2_top_cream_basic_tee") {
+      return { width: 182, height: 273, transform: [{ translateY: -28 }] }
+    }
+    return { width: 190, height: 285, transform: [{ translateY: -64 }] }
+  }
+  if (item.type === "bottom") {
+    return { width: 210, height: 315, transform: [{ translateY: -124 }] }
+  }
+  if (item.type === "shoes") {
+    return { width: 210, height: 315, transform: [{ translateY: -140 }] }
+  }
+  return { width: 150, height: 225, transform: [{ translateY: -34 }] }
+}
+
 function getStatusIcon(
   category: StatusCardCatalogItem["category"] | undefined
 ): keyof typeof Ionicons.glyphMap {
@@ -687,7 +791,7 @@ const styles = StyleSheet.create({
   previewCard: {
     gap: uiTheme.spacing.md,
     padding: uiTheme.spacing.lg,
-    borderRadius: uiTheme.radius.xxl,
+    borderRadius: 30,
     backgroundColor: "#FFF8FC",
     borderWidth: 1,
     borderColor: "#F5DDEC",
@@ -728,6 +832,11 @@ const styles = StyleSheet.create({
     borderRadius: uiTheme.radius.xxl,
     backgroundColor: "#180D21",
     overflow: "hidden",
+  },
+  previewStageAvatar: {
+    backgroundColor: "#FFF0F7",
+    borderWidth: 1,
+    borderColor: "#F4DCEB",
   },
   roomPreviewRenderer: {
     width: "132%",
@@ -849,11 +958,11 @@ const styles = StyleSheet.create({
     paddingRight: uiTheme.spacing.lg,
   },
   productCard: {
-    width: 168,
-    minHeight: 186,
+    width: 174,
+    minHeight: 204,
     gap: uiTheme.spacing.sm,
-    padding: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.xl,
+    padding: 10,
+    borderRadius: 24,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#F1E4F2",
@@ -868,12 +977,22 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   productThumb: {
-    height: 92,
+    position: "relative",
+    height: 112,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: "#FFF0F7",
+    borderRadius: 20,
+    backgroundColor: "#FFF2F8",
     overflow: "hidden",
+  },
+  productThumbHalo: {
+    position: "absolute",
+    bottom: 14,
+    width: 94,
+    height: 54,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "#EAC3D9",
+    opacity: 0.7,
   },
   productIconOrb: {
     width: 54,
@@ -892,6 +1011,26 @@ const styles = StyleSheet.create({
   productImage: {
     width: "86%",
     height: "86%",
+  },
+  productWearableImage: {
+    alignSelf: "center",
+  },
+  productDropBadge: {
+    position: "absolute",
+    left: 8,
+    top: 8,
+    minHeight: 22,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(255,255,255,0.86)",
+    borderWidth: 1,
+    borderColor: "#F2D9E9",
+  },
+  productDropBadgeText: {
+    ...uiTheme.font.micro,
+    color: uiTheme.colors.primary,
+    fontWeight: "900",
   },
   productTitle: {
     ...uiTheme.font.bodySmall,

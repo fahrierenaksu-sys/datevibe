@@ -181,7 +181,7 @@ export function DiscoverCard(props: DiscoverCardProps) {
         <View style={cardStyles.heroGlowSecondary} pointerEvents="none" />
         <CandidateAvatarPreview
           snapshot={resolvedAvatarSnapshot}
-          size={202}
+          size={222}
           stage="discover"
         />
         <View style={cardStyles.avatarSourcePill}>
@@ -245,7 +245,7 @@ export function CandidateAvatarPreview(props: {
     })
   }, [snapshot.previewSeed])
   const platformWidth = size * (stage === "discover" ? 0.96 : 0.82)
-  const avatarWidth = size * 0.54
+  const avatarWidth = size * 0.62
   const avatarHeight = avatarWidth / (256 / 384)
 
   return (
@@ -315,29 +315,39 @@ function createPreviewCandidateAppearance(seed: string): RoomAvatarAppearance {
     return resolveRoomAvatarAppearance(DEFAULT_ROOM_AVATAR_MALE, ROOM_AVATAR_CATALOG)
   }
 
-  const variant = hash % 3
+  const variant = hash % 4
   const appearancePatch: Partial<RoomAvatarAppearance> =
     variant === 0
       ? {
           bodyPreset: "female",
-          hairBackId: "",
-          hairFrontId: "room_avatar_hair_female_plum_crop_front_v2",
-          hairId: "room_avatar_hair_female_plum_crop_front_v2",
-          topId: "room_avatar_top_female_cream_knit_v2",
-          bottomId: "room_avatar_bottom_female_denim_straight_v2",
-          shoesId: "room_avatar_shoes_female_cream_sneakers_v2"
+          hairBackId: "room_avatar_hair_female_blonde_long_back_v2",
+          hairFrontId: "room_avatar_hair_female_blonde_long_front_v2",
+          hairId: "room_avatar_hair_female_blonde_long_front_v2",
+          topId: "room_avatar_top_female_lilac_offshoulder_bow_blouse_v2",
+          bottomId: "room_avatar_bottom_female_floral_embroidered_skort_shorts_v2",
+          shoesId: "room_avatar_shoes_female_white_sneakers_v2"
         }
       : variant === 1
         ? {
             bodyPreset: "female",
-            hairBackId: "room_avatar_hair_female_cocoa_wave_back_v2",
-            hairFrontId: "room_avatar_hair_female_cocoa_wave_front_v2",
-            hairId: "room_avatar_hair_female_cocoa_wave_front_v2",
-            topId: "room_avatar_top_female_cream_knit_v2",
-            bottomId: "room_avatar_bottom_female_denim_straight_v2",
-            shoesId: "room_avatar_shoes_female_cream_sneakers_v2"
+            hairBackId: "room_avatar_hair_female_blonde_long_back_v2",
+            hairFrontId: "room_avatar_hair_female_blonde_long_front_v2",
+            hairId: "room_avatar_hair_female_blonde_long_front_v2",
+            topId: "room_avatar_top_female_silver_sequin_halter_top_v2",
+            bottomId: "room_avatar_bottom_female_pink_embellished_wide_pants_v2",
+            shoesId: "room_avatar_shoes_female_default_v2"
           }
-        : DEFAULT_ROOM_AVATAR_FEMALE
+        : variant === 2
+          ? {
+              bodyPreset: "female",
+              hairBackId: "room_avatar_hair_female_blonde_long_back_v2",
+              hairFrontId: "room_avatar_hair_female_blonde_long_front_v2",
+              hairId: "room_avatar_hair_female_blonde_long_front_v2",
+              topId: "room_avatar_top_female_red_floral_bikini_top_v2",
+              bottomId: "room_avatar_bottom_female_white_embellished_wide_pants_v2",
+              shoesId: "room_avatar_shoes_female_default_v2"
+            }
+          : DEFAULT_ROOM_AVATAR_FEMALE
 
   return resolveRoomAvatarAppearance(appearancePatch, ROOM_AVATAR_CATALOG)
 }

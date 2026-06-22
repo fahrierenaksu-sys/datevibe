@@ -58,8 +58,9 @@ export const DEFAULT_AVATAR_ROOM_PROJECTION_MAP: AvatarRoomProjectionMap = {
     hairId: "room_avatar_hair_female_blonde_long_front_v2"
   },
   avatar_v2_hair_wave: {
-    hairFrontId: "room_avatar_hair_female_cocoa_wave_front_v2",
-    hairBackId: "room_avatar_hair_female_cocoa_wave_back_v2"
+    hairFrontId: "room_avatar_hair_female_blonde_long_front_v2",
+    hairBackId: "room_avatar_hair_female_blonde_long_back_v2",
+    hairId: "room_avatar_hair_female_blonde_long_front_v2"
   },
   avatar_v2_top_default: {
     topId: "room_avatar_top_female_cream_basic_tee_v2"
