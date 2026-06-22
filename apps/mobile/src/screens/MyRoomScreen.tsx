@@ -162,7 +162,8 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
         stageWidth,
         stageHeight,
         shellCanvasWidth: roomScene.shell.canvasSize.width,
-        shellCanvasHeight: roomScene.shell.canvasSize.height
+        shellCanvasHeight: roomScene.shell.canvasSize.height,
+        avatarWorldY: avatarPose.y
       })
     : shellCamera.rendererTranslateY
 
@@ -692,12 +693,16 @@ function getWideStageRendererTranslateY(input: {
   stageHeight: number
   shellCanvasWidth: number
   shellCanvasHeight: number
+  avatarWorldY: number
 }): number {
   const rendererHeight =
     input.stageWidth * input.shellCanvasHeight / input.shellCanvasWidth
-  const avatarFeetY = rendererHeight * MY_ROOM_AVATAR_SPAWN.y
+  const avatarFeetY = rendererHeight * input.avatarWorldY
   const targetFeetY = input.stageHeight * MY_ROOM_WIDE_STAGE_AVATAR_FEET_Y
-  return Math.round(targetFeetY - avatarFeetY)
+  return Math.round(Math.max(
+    input.stageHeight - rendererHeight,
+    Math.min(0, targetFeetY - avatarFeetY)
+  ))
 }
 
 function PoseDockButton(props: {
