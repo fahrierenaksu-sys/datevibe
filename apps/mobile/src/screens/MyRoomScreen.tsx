@@ -77,14 +77,14 @@ type MyRoomScreenProps = MyRoomNavProps & {
 }
 
 const MY_ROOM_STAGE_CAMERA = {
-  compactRendererWidth: "165%",
+  compactRendererWidth: "155%",
   regularRendererWidth: "154%",
   rendererTranslateY: 0,
-  compactStageHeightRatio: 0.48,
+  compactStageHeightRatio: 0.61,
   wideStageHeightRatio: 0.64,
-  compactMinStageHeight: 372,
+  compactMinStageHeight: 468,
   wideMinStageHeight: 440,
-  compactMaxStageHeight: 500,
+  compactMaxStageHeight: 560,
   wideMaxStageHeight: 560
 } as const
 const MY_ROOM_AVATAR_SPAWN = {
@@ -102,12 +102,12 @@ const MY_ROOM_WALK_ACTION_TARGETS: RoomWorldPoint[] = [
 ]
 const MY_ROOM_AVATAR_SIZE = {
   compact: {
-    width: 0.19,
-    height: 0.5
+    width: 0.17,
+    height: 0.45
   },
   wide: {
-    width: 0.164,
-    height: 0.436
+    width: 0.15,
+    height: 0.4
   }
 } as const
 const MY_ROOM_WIDE_STAGE_BREAKPOINT = 720

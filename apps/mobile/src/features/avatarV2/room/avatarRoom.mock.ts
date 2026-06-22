@@ -416,10 +416,18 @@ function withIdleFrontMotionAsset(
       ...item.assetsByMotion,
       idle: {
         ...item.assetsByMotion?.idle,
-        front: item.assetsByMotion?.idle?.front ?? item.asset
+        front: item.assetsByMotion?.idle?.front ?? getIdleFrontAsset(item)
       }
     }
   }
+}
+
+function getIdleFrontAsset(item: RoomAvatarCatalogItem): RoomV2AvatarMotionAsset {
+  const walkingFront = item.assetsByMotion?.walking?.front
+  if (walkingFront && "frames" in walkingFront) {
+    return walkingFront.frames[0]
+  }
+  return walkingFront ?? item.asset
 }
 
 function createExactMotionVariants(

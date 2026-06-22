@@ -19,7 +19,10 @@ import {
 import { AvatarPreview2D } from "../features/avatarV2/components/AvatarPreview2D"
 import { roomAvatarLayerAssets } from "../features/avatarV2/room/avatarRoomAssets"
 import { ROOM_AVATAR_CATALOG } from "../features/avatarV2/room/avatarRoom.mock"
-import { projectAvatarV2ToRoomAvatarAppearance } from "../features/avatarV2/room/avatarRoomProjection"
+import {
+  DEFAULT_AVATAR_ROOM_PROJECTION_MAP,
+  projectAvatarV2ToRoomAvatarAppearance
+} from "../features/avatarV2/room/avatarRoomProjection"
 import { getRoomAvatarMotionReadinessSummary } from "../features/avatarV2/room/avatarRoomSelectors"
 import type {
   AvatarAnimationState,
@@ -118,7 +121,11 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
     const equipped = activeItems.find((item) =>
       isAvatarV2ItemEquipped(avatar, item)
     )
-    return equipped ? `${equipped.name} equipped` : `${activeType} ready`
+    if (!equipped) return `${activeType} ready`
+    if (!isAvatarItemRoomPreviewSupported(equipped)) {
+      return `${equipped.name} room art pending`
+    }
+    return `${equipped.name} equipped`
   }, [activeItems, activeType, avatar])
   const visibleActiveItems = useMemo(
     () =>
@@ -315,9 +322,15 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                 inventory
               })
               const canEquip = canEquipItem(item)
-              const locked = !canEquip
-              const equipped = isAvatarV2ItemEquipped(avatar, item)
+              const roomPreviewSupported = isAvatarItemRoomPreviewSupported(item)
+              const locked = !canEquip || !roomPreviewSupported
+              const equipped = isAvatarV2ItemEquipped(avatar, item) && roomPreviewSupported
               const previewSource = getAvatarItemPreviewSource(item)
+              const itemStateLabel = !roomPreviewSupported
+                ? "Room art pending"
+                : locked
+                  ? catalogItem.stateLabel
+                  : "Try on"
               return (
                 <Pressable
                   key={item.id}
@@ -372,7 +385,7 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                     ]}
                   >
                     <Text style={styles.itemMeta} numberOfLines={1}>
-                      {equipped ? "Wearing" : locked ? catalogItem.stateLabel : "Try on"}
+                      {equipped ? "Wearing" : itemStateLabel}
                     </Text>
                   </View>
                 </Pressable>
@@ -451,6 +464,10 @@ function getAvatarItemPreviewSource(
   item: AvatarCatalogItem
 ): ImageSourcePropType | undefined {
   return AVATAR_ITEM_PREVIEW_SOURCES[item.id]
+}
+
+function isAvatarItemRoomPreviewSupported(item: AvatarCatalogItem): boolean {
+  return item.id in DEFAULT_AVATAR_ROOM_PROJECTION_MAP
 }
 
 function getAvatarItemPreviewImageStyle(item: AvatarCatalogItem): {
