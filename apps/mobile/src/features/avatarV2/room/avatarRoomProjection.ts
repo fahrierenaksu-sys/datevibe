@@ -53,21 +53,52 @@ export const DEFAULT_AVATAR_ROOM_PROJECTION_MAP: AvatarRoomProjectionMap = {
   },
   // Mapping Coverage v1 — default wardrobe items
   avatar_v2_hair_default: {
-    hairFrontId: "room_avatar_hair_female_plum_crop_front_v2",
-    hairBackId: ""
+    hairFrontId: "room_avatar_hair_female_blonde_long_front_v2",
+    hairBackId: "room_avatar_hair_female_blonde_long_back_v2",
+    hairId: "room_avatar_hair_female_blonde_long_front_v2"
   },
   avatar_v2_hair_wave: {
     hairFrontId: "room_avatar_hair_female_cocoa_wave_front_v2",
     hairBackId: "room_avatar_hair_female_cocoa_wave_back_v2"
   },
   avatar_v2_top_default: {
-    topId: "room_avatar_top_female_cream_knit_v2"
+    topId: "room_avatar_top_female_cream_basic_tee_v2"
   },
   avatar_v2_bottom_default: {
-    bottomId: "room_avatar_bottom_female_denim_straight_v2"
+    bottomId: "room_avatar_bottom_female_denim_skort_shorts_v2"
   },
   avatar_v2_shoes_default: {
-    shoesId: "room_avatar_shoes_female_cream_sneakers_v2"
+    shoesId: "room_avatar_shoes_female_default_v2"
+  },
+  avatar_v2_top_lilac_offshoulder_bow_blouse: {
+    topId: "room_avatar_top_female_lilac_offshoulder_bow_blouse_v2"
+  },
+  avatar_v2_bottom_floral_embroidered_skort_shorts: {
+    bottomId: "room_avatar_bottom_female_floral_embroidered_skort_shorts_v2"
+  },
+  avatar_v2_shoes_white_sneakers: {
+    shoesId: "room_avatar_shoes_female_white_sneakers_v2"
+  },
+  avatar_v2_top_silver_sequin_halter_top: {
+    topId: "room_avatar_top_female_silver_sequin_halter_top_v2"
+  },
+  avatar_v2_bottom_pink_embellished_wide_pants: {
+    bottomId: "room_avatar_bottom_female_pink_embellished_wide_pants_v2"
+  },
+  avatar_v2_bottom_patchwork_bow_mini_skirt: {
+    bottomId: "room_avatar_bottom_female_patchwork_bow_mini_skirt_v2"
+  },
+  avatar_v2_top_silver_lace_ruffle_dress_top: {
+    topId: "room_avatar_top_female_silver_lace_ruffle_dress_top_v2"
+  },
+  avatar_v2_bottom_silver_lace_ruffle_dress_bottom: {
+    bottomId: "room_avatar_bottom_female_silver_lace_ruffle_dress_bottom_v2"
+  },
+  avatar_v2_top_red_floral_bikini_top: {
+    topId: "room_avatar_top_female_red_floral_bikini_top_v2"
+  },
+  avatar_v2_bottom_white_embellished_wide_pants: {
+    bottomId: "room_avatar_bottom_female_white_embellished_wide_pants_v2"
   }
 }
 

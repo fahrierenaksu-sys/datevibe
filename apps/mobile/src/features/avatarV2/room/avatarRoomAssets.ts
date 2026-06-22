@@ -5,7 +5,7 @@ import type {
 
 // Room avatar v1 assets use one 256x384 transparent canvas, one centerline,
 // and one shared feet baseline so clothing layers can stack without offsets.
-const roomAvatarAsset = (
+export const roomAvatarAsset = (
   key: string,
   source: RoomV2AssetRef["source"]
 ): RoomV2AssetRef => ({
@@ -180,5 +180,53 @@ export const roomAvatarLayerAssets = {
   shoesFemalesCreamSneakersV2: roomAvatarAsset(
     "avatar_room_shoes_female_cream_sneakers_v2",
     require("../assets/room/avatar_room_shoes_female_cream_sneakers_v2.png")
+  ),
+  topFemaleCreamBasicTeeV2: roomAvatarAsset(
+    "avatar_room_top_female_cream_basic_tee_v2",
+    require("../assets/room/avatar_room_top_female_cream_basic_tee_v2.png")
+  ),
+  bottomFemaleDenimSkortShortsV2: roomAvatarAsset(
+    "avatar_room_bottom_female_denim_skort_shorts_v2",
+    require("../assets/room/avatar_room_bottom_female_denim_skort_shorts_v2.png")
+  ),
+  shoesFemaleWhiteSneakersV2: roomAvatarAsset(
+    "avatar_room_shoes_female_white_sneakers_v2",
+    require("../assets/room/avatar_room_shoes_female_white_sneakers_v2.png")
+  ),
+  topFemaleLilacOffshoulderBowBlouseV2: roomAvatarAsset(
+    "avatar_room_top_female_lilac_offshoulder_bow_blouse_v2",
+    require("../assets/room/avatar_room_top_female_lilac_offshoulder_bow_blouse_v2.png")
+  ),
+  bottomFemaleFloralEmbroideredSkortShortsV2: roomAvatarAsset(
+    "avatar_room_bottom_female_floral_embroidered_skort_shorts_v2",
+    require("../assets/room/avatar_room_bottom_female_floral_embroidered_skort_shorts_v2.png")
+  ),
+  topFemaleSilverSequinHalterTopV2: roomAvatarAsset(
+    "avatar_room_top_female_silver_sequin_halter_top_v2",
+    require("../assets/room/avatar_room_top_female_silver_sequin_halter_top_v2.png")
+  ),
+  bottomFemalePinkEmbellishedWidePantsV2: roomAvatarAsset(
+    "avatar_room_bottom_female_pink_embellished_wide_pants_v2",
+    require("../assets/room/avatar_room_bottom_female_pink_embellished_wide_pants_v2.png")
+  ),
+  bottomFemalePatchworkBowMiniSkirtV2: roomAvatarAsset(
+    "avatar_room_bottom_female_patchwork_bow_mini_skirt_v2",
+    require("../assets/room/avatar_room_bottom_female_patchwork_bow_mini_skirt_v2.png")
+  ),
+  topFemaleSilverLaceRuffleDressTopV2: roomAvatarAsset(
+    "avatar_room_top_female_silver_lace_ruffle_dress_top_v2",
+    require("../assets/room/avatar_room_top_female_silver_lace_ruffle_dress_top_v2.png")
+  ),
+  bottomFemaleSilverLaceRuffleDressBottomV2: roomAvatarAsset(
+    "avatar_room_bottom_female_silver_lace_ruffle_dress_bottom_v2",
+    require("../assets/room/avatar_room_bottom_female_silver_lace_ruffle_dress_bottom_v2.png")
+  ),
+  topFemaleRedFloralBikiniTopV2: roomAvatarAsset(
+    "avatar_room_top_female_red_floral_bikini_top_v2",
+    require("../assets/room/avatar_room_top_female_red_floral_bikini_top_v2.png")
+  ),
+  bottomFemaleWhiteEmbellishedWidePantsV2: roomAvatarAsset(
+    "avatar_room_bottom_female_white_embellished_wide_pants_v2",
+    require("../assets/room/avatar_room_bottom_female_white_embellished_wide_pants_v2.png")
   )
 } as const
