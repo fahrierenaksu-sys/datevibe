@@ -31,6 +31,10 @@ import {
   subscribeToStatus,
   useGlobalRealtimeEvents
 } from "../features/realtime/globalRealtimeProvider"
+import {
+  createLoadedDemoThreadList,
+  shouldConnectGlobalRealtime
+} from "../features/realtime/realtimeMode"
 import { LobbyScreen } from "../screens/LobbyScreen"
 import { MiniRoomScreen } from "../screens/MiniRoomScreen"
 import {
@@ -140,6 +144,7 @@ export function RootNavigator() {
     isBootstrapping,
     errorMessage,
     bootstrapSessionActor,
+    updateSessionProfile,
     clearSessionActor
   } = useSessionState()
   const [globalMatch, setGlobalMatch] = useState<GlobalMatchState | null>(null)
@@ -246,6 +251,15 @@ export function RootNavigator() {
       setGlobalMatch(null)
       resetChatStore()
       disconnectGlobal()
+      return
+    }
+
+    if (!shouldConnectGlobalRealtime(IS_DATEVIBE_MEDIA_DEMO_MODE)) {
+      disconnectGlobal()
+      applyChatThreadListed(
+        createLoadedDemoThreadList(sessionActor.profile.userId, getThreads())
+      )
+      void checkDailyReward()
       return
     }
 
@@ -498,11 +512,9 @@ export function RootNavigator() {
                     currentDisplayName={sessionActor!.profile.displayName}
                     currentAge={sessionActor!.profile.age}
                     currentUserId={sessionActor!.profile.userId}
-                    onSave={(displayName, age) => {
-                      // Client-side update — future: call server API
-                      sessionActor!.profile.displayName = displayName
-                      if (age !== undefined) sessionActor!.profile.age = age
-                    }}
+                    onSave={(displayName, age) =>
+                      updateSessionProfile({ displayName, age })
+                    }
                   />
                 )}
               </Stack.Screen>

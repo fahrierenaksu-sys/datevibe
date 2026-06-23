@@ -11,6 +11,11 @@ export interface SessionActor {
   profile: UserProfile
 }
 
+export interface UpdateSessionProfileInput {
+  displayName: string
+  age?: number
+}
+
 export function createDemoSessionActor(input: BootstrapSessionInput): SessionActor {
   const issuedAt = Date.now()
   const userId = `demo-user-${issuedAt}`
@@ -28,6 +33,21 @@ export function createDemoSessionActor(input: BootstrapSessionInput): SessionAct
       avatar: {
         presetId: input.avatarPresetId ?? "dusk"
       }
+    }
+  }
+}
+
+export function updateSessionActorProfile(
+  sessionActor: SessionActor,
+  input: UpdateSessionProfileInput
+): SessionActor {
+  return {
+    ...sessionActor,
+    profile: {
+      ...sessionActor.profile,
+      displayName: input.displayName,
+      age: input.age,
+      avatar: { ...sessionActor.profile.avatar }
     }
   }
 }

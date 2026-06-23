@@ -7,7 +7,9 @@ import {
   bootstrapSession,
   createDemoSessionActor,
   type BootstrapSessionInput,
-  type SessionActor
+  type SessionActor,
+  type UpdateSessionProfileInput,
+  updateSessionActorProfile
 } from "./sessionApi"
 import {
   clearSessionActor as clearStoredSessionActor,
@@ -21,6 +23,7 @@ export interface UseSessionStateResult {
   isBootstrapping: boolean
   errorMessage: string | null
   bootstrapSessionActor: (input: BootstrapSessionInput) => Promise<void>
+  updateSessionProfile: (input: UpdateSessionProfileInput) => Promise<void>
   clearSessionActor: () => Promise<void>
 }
 
@@ -88,12 +91,25 @@ export function useSessionState(): UseSessionStateResult {
     setErrorMessage(null)
   }, [])
 
+  const updateSessionProfile = useCallback(
+    async (input: UpdateSessionProfileInput): Promise<void> => {
+      if (!sessionActor) {
+        throw new Error("No active session")
+      }
+      const nextSessionActor = updateSessionActorProfile(sessionActor, input)
+      await saveSessionActor(nextSessionActor)
+      setSessionActor(nextSessionActor)
+    },
+    [sessionActor]
+  )
+
   return {
     sessionActor,
     isHydrating,
     isBootstrapping,
     errorMessage,
     bootstrapSessionActor,
+    updateSessionProfile,
     clearSessionActor
   }
 }
