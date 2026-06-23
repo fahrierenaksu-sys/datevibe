@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "plugins": [
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      "expo-secure-store"
     ],
     "assetBundlePatterns": [
       "**/*"

@@ -7,12 +7,12 @@ import {
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native"
-import AsyncStorage from "@react-native-async-storage/async-storage"
 import { MatchResultModal } from "../components/MatchResultModal"
 import type { CandidateAvatarSnapshot } from "../components/DiscoverCard"
 import { addCoins } from "../features/cosmetics/cosmeticStore"
 import { checkDailyReward } from "../features/rewards/dailyReward"
-import { MOBILE_WS_BASE_URL, IS_DATEVIBE_MEDIA_DEMO_MODE } from "../config/env"
+import { isDemoMode, setDemoMode } from "../features/demo/demoStore"
+import { MOBILE_WS_BASE_URL } from "../config/env"
 import {
   applyChatMessageListed,
   applyChatMessageReceived,
@@ -56,9 +56,14 @@ import { CosmeticShopScreen } from "../screens/CosmeticShopScreen"
 import { ProfileEditScreen } from "../screens/ProfileEditScreen"
 import { SettingsScreen } from "../screens/SettingsScreen"
 import { WelcomeScreen } from "../screens/WelcomeScreen"
-import { SessionBootstrapScreen } from "../screens/SessionBootstrapScreen"
+import { AuthEntryScreen } from "../screens/AuthEntryScreen"
+import { RegisterScreen } from "../screens/RegisterScreen"
+import { ProfileSetupScreen } from "../screens/ProfileSetupScreen"
+import { AvatarSetupScreen } from "../screens/AvatarSetupScreen"
+import { RoomSetupScreen } from "../screens/RoomSetupScreen"
 import { WardrobeV2Screen } from "../screens/WardrobeV2Screen"
 import { useSessionState } from "../features/session/useSessionState"
+import { selectSessionEntryRoute } from "../features/session/sessionRouting"
 import { uiTheme } from "../ui/theme"
 import { ToastContainer, showToast } from "../ui/toast"
 import { BrandMark } from "../ui/brandMark"
@@ -81,7 +86,11 @@ export interface MiniRoomParticipantsRouteParam {
 
 export type RootStackParamList = {
   Welcome: undefined
-  SessionBootstrap: undefined
+  AuthEntry: undefined
+  Register: undefined
+  ProfileSetup: undefined
+  AvatarSetup: undefined
+  RoomSetup: undefined
   Lobby: { pendingLikeUserId?: string } | undefined
   ProfilePreview: {
     profile: ProfilePreviewData
@@ -140,34 +149,31 @@ interface GlobalMatchState {
 export function RootNavigator() {
   const {
     sessionActor,
+    hasSeenIntro,
     isHydrating,
     isBootstrapping,
     errorMessage,
-    bootstrapSessionActor,
+    completeIntro,
+    registerSessionActor,
+    startDemoSession,
+    completeProfileSetup,
+    completeAvatarSetup,
+    completeRoomSetup,
     updateSessionProfile,
+    clearErrorMessage,
     clearSessionActor
   } = useSessionState()
   const [globalMatch, setGlobalMatch] = useState<GlobalMatchState | null>(null)
   const handledMatchIdsRef = useRef(new Set<string>())
-  const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null)
   const [currentRouteName, setCurrentRouteName] = useState<
     keyof RootStackParamList | undefined
   >()
   const { totalUnreadCount } = useChatStore()
-
-  // Check if user has completed onboarding
-  useEffect(() => {
-    AsyncStorage.getItem("@datevibe/welcome_seen").then((val) => {
-      setHasSeenWelcome(val === "true")
-    }).catch(() => {
-      setHasSeenWelcome(true) // fail-open
-    })
-  }, [])
-
-  const completeWelcome = useCallback(() => {
-    setHasSeenWelcome(true)
-    void AsyncStorage.setItem("@datevibe/welcome_seen", "true")
-  }, [])
+  const sessionEntryRoute = selectSessionEntryRoute({
+    isHydrating,
+    hasSeenIntro,
+    sessionActor
+  })
 
   const dismissGlobalMatch = useCallback((): void => {
     setGlobalMatch(null)
@@ -246,7 +252,8 @@ export function RootNavigator() {
 
   // ── Global WS lifecycle ─────────────────────────────────
   useEffect(() => {
-    if (!sessionActor) {
+    if (!sessionActor || sessionEntryRoute !== "Main") {
+      if (isDemoMode()) setDemoMode(false)
       handledMatchIdsRef.current.clear()
       setGlobalMatch(null)
       resetChatStore()
@@ -254,7 +261,10 @@ export function RootNavigator() {
       return
     }
 
-    if (!shouldConnectGlobalRealtime(IS_DATEVIBE_MEDIA_DEMO_MODE)) {
+    const isDemoSession = sessionActor.session.mode === "demo"
+    if (isDemoMode() !== isDemoSession) setDemoMode(isDemoSession)
+
+    if (!shouldConnectGlobalRealtime(isDemoSession)) {
       disconnectGlobal()
       applyChatThreadListed(
         createLoadedDemoThreadList(sessionActor.profile.userId, getThreads())
@@ -276,7 +286,7 @@ export function RootNavigator() {
     // Handle invalid session close code
     const unsubscribeInvalidSession = subscribeToStatus((_status, meta) => {
       if (meta?.closeCode === 1008) {
-        if (!IS_DATEVIBE_MEDIA_DEMO_MODE) {
+        if (sessionActor.session.mode === "production") {
           void clearSessionActor()
         }
       }
@@ -287,7 +297,7 @@ export function RootNavigator() {
       unsubscribeInvalidSession()
       disconnectGlobal()
     }
-  }, [clearSessionActor, sessionActor])
+  }, [clearSessionActor, sessionActor, sessionEntryRoute])
 
   // ── Chat + match event routing ──────────────────────────
   const handleGlobalEvent = useCallback(
@@ -361,7 +371,7 @@ export function RootNavigator() {
 
   useGlobalRealtimeEvents(handleGlobalEvent)
 
-  if (isHydrating || hasSeenWelcome === null) {
+  if (sessionEntryRoute === "Splash") {
     return (
       <View style={styles.loadingContainer}>
         <SoftBlobBackground variant="lobby" />
@@ -377,7 +387,7 @@ export function RootNavigator() {
     )
   }
 
-  const currentBottomNavKey = sessionActor
+  const currentBottomNavKey = sessionEntryRoute === "Main" && sessionActor
     ? getBottomNavKeyForRoute(currentRouteName)
     : null
 
@@ -388,8 +398,11 @@ export function RootNavigator() {
         onReady={syncCurrentRouteName}
         onStateChange={syncCurrentRouteName}
       >
-        <Stack.Navigator screenOptions={{ contentStyle: styles.screenContent }}>
-          {sessionActor ? (
+        <Stack.Navigator
+          key={sessionEntryRoute}
+          screenOptions={{ contentStyle: styles.screenContent }}
+        >
+          {sessionEntryRoute === "Main" && sessionActor ? (
             <>
               <Stack.Screen
                 name="Lobby"
@@ -433,9 +446,15 @@ export function RootNavigator() {
               />
               <Stack.Screen
                 name="Inbox"
-                component={InboxScreen}
                 options={{ headerShown: false }}
-              />
+              >
+                {(screenProps) => (
+                  <InboxScreen
+                    {...screenProps}
+                    sessionActor={sessionActor}
+                  />
+                )}
+              </Stack.Screen>
               <Stack.Screen
                 name="MyRoom"
                 options={{ headerShown: false }}
@@ -474,6 +493,7 @@ export function RootNavigator() {
                 {(screenProps) => (
                   <ChatThreadScreen
                     {...screenProps}
+                    sessionActor={sessionActor}
                     route={{
                       ...screenProps.route,
                       params: {
@@ -524,31 +544,78 @@ export function RootNavigator() {
                 options={{ headerShown: false }}
               />
             </>
-          ) : hasSeenWelcome === false ? (
+          ) : sessionEntryRoute === "Welcome" ? (
             <Stack.Screen
               name="Welcome"
               options={{ headerShown: false }}
             >
               {() => (
-                <WelcomeScreen onComplete={completeWelcome} />
+                <WelcomeScreen
+                  isSubmitting={isBootstrapping}
+                  errorMessage={errorMessage}
+                  onComplete={completeIntro}
+                />
+              )}
+            </Stack.Screen>
+          ) : sessionEntryRoute === "AuthEntry" ? (
+            <>
+              <Stack.Screen name="AuthEntry" options={{ headerShown: false }}>
+                {(screenProps) => (
+                  <AuthEntryScreen
+                    {...screenProps}
+                    isSubmitting={isBootstrapping}
+                    errorMessage={errorMessage}
+                    onStartDemo={startDemoSession}
+                    onClearError={clearErrorMessage}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen name="Register" options={{ headerShown: false }}>
+                {(screenProps) => (
+                  <RegisterScreen
+                    {...screenProps}
+                    isSubmitting={isBootstrapping}
+                    errorMessage={errorMessage}
+                    onRegister={registerSessionActor}
+                    onClearError={clearErrorMessage}
+                  />
+                )}
+              </Stack.Screen>
+            </>
+          ) : sessionEntryRoute === "ProfileSetup" && sessionActor ? (
+            <Stack.Screen name="ProfileSetup" options={{ headerShown: false }}>
+              {() => (
+                <ProfileSetupScreen
+                  sessionActor={sessionActor}
+                  isSubmitting={isBootstrapping}
+                  errorMessage={errorMessage}
+                  onComplete={completeProfileSetup}
+                />
+              )}
+            </Stack.Screen>
+          ) : sessionEntryRoute === "AvatarSetup" ? (
+            <Stack.Screen name="AvatarSetup" options={{ headerShown: false }}>
+              {() => (
+                <AvatarSetupScreen
+                  isSubmitting={isBootstrapping}
+                  errorMessage={errorMessage}
+                  onComplete={completeAvatarSetup}
+                />
               )}
             </Stack.Screen>
           ) : (
-            <Stack.Screen
-              name="SessionBootstrap"
-              options={{ headerShown: false }}
-            >
+            <Stack.Screen name="RoomSetup" options={{ headerShown: false }}>
               {() => (
-                <SessionBootstrapScreen
+                <RoomSetupScreen
                   isSubmitting={isBootstrapping}
                   errorMessage={errorMessage}
-                  onBootstrap={bootstrapSessionActor}
+                  onComplete={completeRoomSetup}
                 />
               )}
             </Stack.Screen>
           )}
         </Stack.Navigator>
-        {sessionActor ? (
+        {sessionEntryRoute === "Main" && sessionActor ? (
           <MatchResultModal
             visible={globalMatch !== null}
             currentUserName={sessionActor.profile.displayName}
@@ -583,6 +650,17 @@ export function RootNavigator() {
           onPress={handleBottomNavPress}
         />
       ) : null}
+      {sessionEntryRoute === "Main" &&
+      sessionActor?.session.mode === "demo" ? (
+        <View
+          accessibilityLabel="Demo world session"
+          pointerEvents="none"
+          style={styles.demoBadge}
+        >
+          <View style={styles.demoDot} />
+          <Text style={styles.demoBadgeText}>Demo world</Text>
+        </View>
+      ) : null}
       <ToastContainer />
     </View>
   )
@@ -614,5 +692,30 @@ const styles = StyleSheet.create({
   },
   screenContent: {
     backgroundColor: uiTheme.colors.background
+  },
+  demoBadge: {
+    position: "absolute",
+    top: 54,
+    right: 14,
+    zIndex: 100,
+    minHeight: 30,
+    paddingHorizontal: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.full,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: uiTheme.spacing.xs,
+    backgroundColor: "rgba(32, 22, 42, 0.82)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.22)"
+  },
+  demoDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: uiTheme.colors.primary
+  },
+  demoBadgeText: {
+    ...uiTheme.font.micro,
+    color: uiTheme.colors.textInverted
   }
 })

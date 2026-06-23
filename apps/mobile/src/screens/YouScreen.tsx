@@ -214,11 +214,14 @@ export function YouScreen(props: YouScreenProps) {
           </Pressable>
 
           <Pressable
+            accessibilityLabel="Sign out of DateVibe"
+            accessibilityRole="button"
             onPress={onResetSession}
             style={({ pressed }) => [
               styles.signOutButton,
               pressed ? styles.signOutButtonPressed : null
             ]}
+            testID="session-sign-out"
           >
             <Text style={styles.signOutText}>Sign out</Text>
           </Pressable>

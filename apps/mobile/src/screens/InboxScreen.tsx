@@ -17,9 +17,11 @@ import { LinearGradient } from "../ui/linearGradient"
 import { MyAvatar } from "../ui/myAvatar"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
-import { useSessionState } from "../features/session/useSessionState"
+import type { SessionActor } from "../features/session/sessionModel"
 
-type InboxScreenProps = NativeStackScreenProps<RootStackParamList, "Inbox">
+type InboxScreenProps = NativeStackScreenProps<RootStackParamList, "Inbox"> & {
+  sessionActor: SessionActor
+}
 
 function formatTimeAgo(isoDate: string | undefined): string {
   if (!isoDate) return ""
@@ -165,10 +167,9 @@ function ConversationCard(props: ConversationCardProps) {
 /* ── Main InboxScreen ───────────────────────────────────────── */
 
 export function InboxScreen(props: InboxScreenProps) {
-  const { navigation } = props
+  const { navigation, sessionActor } = props
   const { threads, threadsFetched, getThreadUnreadCount } = useChatStore()
-  const { sessionActor } = useSessionState()
-  const currentUserId = sessionActor?.profile.userId
+  const currentUserId = sessionActor.profile.userId
 
   const now = useMemo(() => Date.now(), [threads])
 
@@ -222,8 +223,8 @@ export function InboxScreen(props: InboxScreenProps) {
           {threads.length === 0 ? (
             <EmptyInbox
               isLoading={!threadsFetched}
-              myDisplayName={sessionActor?.profile.displayName}
-              myUserId={sessionActor?.profile.userId}
+              myDisplayName={sessionActor.profile.displayName}
+              myUserId={sessionActor.profile.userId}
               onGoDiscover={() => navigation.goBack()}
             />
           ) : (

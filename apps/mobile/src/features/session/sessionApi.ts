@@ -1,40 +1,18 @@
-import type { AuthSession, UserProfile } from "@datevibe/contracts"
-
-export interface BootstrapSessionInput {
-  displayName: string
-  avatarPresetId?: string
-  age?: number
-}
-
-export interface SessionActor {
-  session: AuthSession
-  profile: UserProfile
-}
+import {
+  createIncompleteOnboardingStatus,
+  normalizeSessionActor,
+  type SessionActor
+} from "./sessionModel"
 
 export interface UpdateSessionProfileInput {
   displayName: string
   age?: number
+  avatarPresetId?: string
 }
 
-export function createDemoSessionActor(input: BootstrapSessionInput): SessionActor {
-  const issuedAt = Date.now()
-  const userId = `demo-user-${issuedAt}`
-
-  return {
-    session: {
-      userId,
-      sessionToken: `demo-session-${issuedAt}`,
-      expiresAt: new Date(issuedAt + 1000 * 60 * 60 * 24 * 30).toISOString()
-    },
-    profile: {
-      userId,
-      displayName: input.displayName,
-      age: input.age,
-      avatar: {
-        presetId: input.avatarPresetId ?? "dusk"
-      }
-    }
-  }
+export interface RegisterAccountInput {
+  phoneNumber: string
+  verificationCode: string
 }
 
 export function updateSessionActorProfile(
@@ -47,7 +25,11 @@ export function updateSessionActorProfile(
       ...sessionActor.profile,
       displayName: input.displayName,
       age: input.age,
-      avatar: { ...sessionActor.profile.avatar }
+      avatar: {
+        ...sessionActor.profile.avatar,
+        presetId:
+          input.avatarPresetId ?? sessionActor.profile.avatar.presetId
+      }
     }
   }
 }
@@ -57,62 +39,49 @@ function withBaseUrl(baseHttpUrl: string, path: string): string {
   return `${trimmed}${path}`
 }
 
-function isSessionActor(value: unknown): value is SessionActor {
-  if (typeof value !== "object" || value === null) {
-    return false
-  }
-
-  const candidate = value as Record<string, unknown>
-  const session = candidate.session as Record<string, unknown> | undefined
-  const profile = candidate.profile as Record<string, unknown> | undefined
-
-  if (!session || !profile) {
-    return false
-  }
-
-  return (
-    typeof session.userId === "string" &&
-    typeof session.sessionToken === "string" &&
-    typeof session.expiresAt === "string" &&
-    typeof profile.userId === "string" &&
-    typeof profile.displayName === "string" &&
-    typeof profile.avatar === "object" &&
-    profile.avatar !== null &&
-    typeof (profile.avatar as Record<string, unknown>).presetId === "string"
-  )
-}
-
-export async function bootstrapSession(
+export async function registerAccount(
   baseHttpUrl: string,
-  input: BootstrapSessionInput
+  input: RegisterAccountInput,
+  fetcher: typeof fetch = fetch
 ): Promise<SessionActor> {
-  const response = await fetch(withBaseUrl(baseHttpUrl, "/v1/session/bootstrap"), {
+  const response = await fetcher(withBaseUrl(baseHttpUrl, "/v1/accounts/register"), {
     method: "POST",
     headers: {
       "content-type": "application/json"
     },
-    body: JSON.stringify({
-      displayName: input.displayName,
-      avatarPresetId: input.avatarPresetId,
-      age: input.age
-    })
+    body: JSON.stringify(input)
   })
-
   const payload: unknown = await response.json()
 
   if (!response.ok) {
-    const errorMessage =
-      typeof payload === "object" &&
-      payload !== null &&
-      typeof (payload as Record<string, unknown>).error === "string"
-        ? ((payload as Record<string, unknown>).error as string)
-        : "Session bootstrap failed"
-    throw new Error(errorMessage)
+    throw new Error(getApiErrorMessage(payload, "Account registration failed"))
   }
 
-  if (!isSessionActor(payload)) {
-    throw new Error("Invalid bootstrap response")
+  const actor = normalizeSessionActor(payload, {
+    requireExplicitIdentity: true,
+    requiredMode: "production"
+  })
+  if (!actor || actor.session.mode !== "production") {
+    throw new Error("Registration did not return a production session")
   }
 
-  return payload
+  return {
+    ...actor,
+    session: {
+      ...actor.session,
+      onboarding: createIncompleteOnboardingStatus()
+    }
+  }
 }
+
+function getApiErrorMessage(payload: unknown, fallback: string): string {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    typeof (payload as Record<string, unknown>).error === "string"
+  )
+    ? ((payload as Record<string, unknown>).error as string)
+    : fallback
+}
+
+export type { SessionActor } from "./sessionModel"

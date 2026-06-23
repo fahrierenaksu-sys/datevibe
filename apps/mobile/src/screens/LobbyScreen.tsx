@@ -41,7 +41,7 @@ import {
   replacePendingInvitesForUser,
   type PendingInviteMemory
 } from "../features/lobby/pendingInvitesStore"
-import type { SessionActor } from "../features/session/sessionApi"
+import type { SessionActor } from "../features/session/sessionModel"
 import type {
   MiniRoomParticipantsRouteParam,
   RootStackParamList
@@ -867,7 +867,7 @@ export function LobbyScreen(props: LobbyScreenProps) {
           ) : null}
 
           {isDemoMode() ? (
-            <DemoLobbyView />
+            <DemoLobbyView sessionActor={sessionActor} />
           ) : (
             <>
               <Animated.View
