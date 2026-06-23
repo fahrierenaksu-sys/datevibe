@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { useCallback, useMemo, useState } from "react"
 import {
   Image,
+  type ImageSourcePropType,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,10 +33,11 @@ import type {
 } from "../features/roomV2/roomV2.types"
 import {
   buildShopCatalogItems,
-  INITIAL_SHOP_ITEM_ID,
   type ShopCatalogItem,
   type StatusCardCatalogItem
 } from "../features/shop/shopCatalog"
+import { roomAvatarLayerAssets } from "../features/avatarV2/room/avatarRoomAssets"
+import { getAvatarAutomationSlug } from "../features/avatarV2/qa/avatarQaInventory"
 import type { RootStackParamList } from "../navigation/RootNavigator"
 import { hapticError, hapticLight, hapticSuccess } from "../ui/haptics"
 import { ActionButtonCircle, TopBar } from "../ui/primitives"
@@ -47,12 +49,52 @@ type CosmeticShopScreenProps = NativeStackScreenProps<
   "CosmeticShop"
 >
 
+const PRODUCT_REFERENCE_AVATAR_ITEM_IDS = new Set([
+  "avatar_v2_top_lilac_offshoulder_bow_blouse",
+  "avatar_v2_bottom_floral_embroidered_skort_shorts",
+  "avatar_v2_top_silver_sequin_halter_top",
+  "avatar_v2_bottom_pink_embellished_wide_pants",
+  "avatar_v2_bottom_patchwork_bow_mini_skirt",
+  "avatar_v2_top_silver_lace_ruffle_dress_top",
+  "avatar_v2_bottom_silver_lace_ruffle_dress_bottom",
+  "avatar_v2_top_red_floral_bikini_top",
+  "avatar_v2_bottom_white_embellished_wide_pants",
+  "avatar_v2_shoes_white_sneakers"
+])
+const INITIAL_PRODUCT_REFERENCE_SHOP_ITEM_ID =
+  "avatar:avatar_v2_top_lilac_offshoulder_bow_blouse"
+const AVATAR_ITEM_PREVIEW_SOURCES: Partial<Record<string, ImageSourcePropType>> = {
+  avatar_v2_top_default: roomAvatarLayerAssets.topFemaleCreamBasicTeeV2.source,
+  avatar_v2_bottom_default: roomAvatarLayerAssets.bottomFemaleDenimSkortShortsV2.source,
+  avatar_v2_shoes_default: roomAvatarLayerAssets.shoesFemaleDefaultV2.source,
+  avatar_v2_top_lilac_offshoulder_bow_blouse:
+    roomAvatarLayerAssets.topFemaleLilacOffshoulderBowBlouseV2.source,
+  avatar_v2_bottom_floral_embroidered_skort_shorts:
+    roomAvatarLayerAssets.bottomFemaleFloralEmbroideredSkortShortsV2.source,
+  avatar_v2_shoes_white_sneakers:
+    roomAvatarLayerAssets.shoesFemaleWhiteSneakersV2.source,
+  avatar_v2_top_silver_sequin_halter_top:
+    roomAvatarLayerAssets.topFemaleSilverSequinHalterTopV2.source,
+  avatar_v2_bottom_pink_embellished_wide_pants:
+    roomAvatarLayerAssets.bottomFemalePinkEmbellishedWidePantsV2.source,
+  avatar_v2_bottom_patchwork_bow_mini_skirt:
+    roomAvatarLayerAssets.bottomFemalePatchworkBowMiniSkirtV2.source,
+  avatar_v2_top_silver_lace_ruffle_dress_top:
+    roomAvatarLayerAssets.topFemaleSilverLaceRuffleDressTopV2.source,
+  avatar_v2_bottom_silver_lace_ruffle_dress_bottom:
+    roomAvatarLayerAssets.bottomFemaleSilverLaceRuffleDressBottomV2.source,
+  avatar_v2_top_red_floral_bikini_top:
+    roomAvatarLayerAssets.topFemaleRedFloralBikiniTopV2.source,
+  avatar_v2_bottom_white_embellished_wide_pants:
+    roomAvatarLayerAssets.bottomFemaleWhiteEmbellishedWidePantsV2.source
+}
+
 export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
   const { navigation } = props
   const avatarV2 = useAvatarV2()
   const inventoryStore = useInventoryStore()
   const roomV2 = useRoomV2()
-  const [selectedId, setSelectedId] = useState(INITIAL_SHOP_ITEM_ID)
+  const [selectedId, setSelectedId] = useState(INITIAL_PRODUCT_REFERENCE_SHOP_ITEM_ID)
 
   const shopItems = useMemo(
     () =>
@@ -65,7 +107,9 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
   )
 
   const avatarProducts = useMemo(
-    () => shopItems.filter((item) => item.sectionId === "avatar"),
+    () => sortAvatarShopProducts(
+      shopItems.filter((item) => item.sectionId === "avatar")
+    ),
     [shopItems]
   )
   const roomProducts = useMemo(
@@ -252,7 +296,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
       <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
         <TopBar
           title="Shop"
-          subtitle="Preview, unlock, equip, place"
+          subtitle="Curated drops for your avatar"
           titleAlign="start"
           leftSlot={
             <ActionButtonCircle onPress={() => navigation.goBack()} size={40}>
@@ -282,7 +326,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="My Items"
-            subtitle="Owned pieces, equipped avatar items, and placed room decor."
+            subtitle="Owned looks and room pieces."
             products={myItems}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -291,7 +335,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="Avatar Wearables"
-            subtitle="Owned pieces equip now. Locked pieces preview first."
+            subtitle="Preview the drop, then unlock."
             products={avatarProducts}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -299,7 +343,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="Room Pieces"
-            subtitle="Owned decor can be placed into My Room."
+            subtitle="Cozy pieces for your space."
             products={roomProducts}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -307,7 +351,7 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
 
           <ShopSection
             title="Status Styles"
-            subtitle="Prepared for future card and chat identity items."
+            subtitle="Profile polish for later."
             products={statusProducts}
             selectedId={selectedProduct?.id}
             onSelect={handleSelectProduct}
@@ -316,6 +360,21 @@ export function CosmeticShopScreen(props: CosmeticShopScreenProps) {
       </SafeAreaView>
     </View>
   )
+}
+
+function sortAvatarShopProducts(products: ShopCatalogItem[]): ShopCatalogItem[] {
+  return [...products].sort((left, right) => {
+    const priorityDelta =
+      getAvatarShopProductPriority(left) - getAvatarShopProductPriority(right)
+    if (priorityDelta !== 0) return priorityDelta
+    return left.title.localeCompare(right.title)
+  })
+}
+
+function getAvatarShopProductPriority(product: ShopCatalogItem): number {
+  if (PRODUCT_REFERENCE_AVATAR_ITEM_IDS.has(product.sourceItemId)) return 0
+  if (product.priceCoins !== null) return 1
+  return 2
 }
 
 function SelectedProductPreview(props: {
@@ -330,25 +389,39 @@ function SelectedProductPreview(props: {
   const disabled = product.actionType === "disabled"
 
   return (
-    <View style={styles.previewCard}>
+    <View
+      testID="shop-selected-product-preview"
+      accessibilityLabel={`${product.title}, ${product.stateLabel}`}
+      style={styles.previewCard}
+    >
       <View style={styles.previewHeader}>
         <View>
           <Text style={styles.previewEyebrow}>{product.eyebrow}</Text>
-          <Text style={styles.previewTitle}>{product.title}</Text>
+          <Text style={styles.previewTitle} numberOfLines={2}>
+            {product.title}
+          </Text>
         </View>
         <View style={styles.statePill}>
           <Text style={styles.stateText}>{product.stateLabel}</Text>
         </View>
       </View>
 
-      <View style={styles.previewStage}>
+      <View
+        style={[
+          styles.previewStage,
+          product.previewType === "avatar"
+            ? styles.previewStageAvatar
+            : null
+        ]}
+      >
         {product.previewType === "avatar" ? (
           <AvatarPreview2D
             avatar={previewAvatar}
             catalog={AVATAR_V2_CATALOG}
-            size={164}
-            stageHeight={230}
+            size={210}
+            stageHeight={282}
             label="Preview on avatar"
+            metaTone="light"
           />
         ) : product.previewType === "room" ? (
           <RoomRenderer2D
@@ -364,6 +437,10 @@ function SelectedProductPreview(props: {
 
       <Text style={styles.previewDescription}>{product.description}</Text>
       <Pressable
+        testID="shop-preview-primary-action"
+        accessibilityRole="button"
+        accessibilityLabel={product.actionLabel}
+        accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={onPrimaryAction}
         style={({ pressed }) => [
@@ -386,8 +463,13 @@ function ShopSection(props: {
   onSelect: (product: ShopCatalogItem) => void
   getMetaLabel?: (product: ShopCatalogItem) => string
 }) {
+  const sectionSlug = props.title.toLowerCase().replaceAll(" ", "-")
   return (
-    <View style={styles.section}>
+    <View
+      testID={`shop-${sectionSlug}-section`}
+      accessibilityLabel={`${props.title} section`}
+      style={styles.section}
+    >
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{props.title}</Text>
         <Text style={styles.sectionSubtitle}>{props.subtitle}</Text>
@@ -418,8 +500,19 @@ function ShopProductCard(props: {
   onPress: () => void
 }) {
   const { product, selected, metaLabel, onPress } = props
+  const avatarPreviewSource = product.avatarItem
+    ? getAvatarItemPreviewSource(product.avatarItem)
+    : undefined
+  const productReference = PRODUCT_REFERENCE_AVATAR_ITEM_IDS.has(product.sourceItemId)
+  const automationSlug = product.avatarItem
+    ? getAvatarAutomationSlug(product.sourceItemId)
+    : product.sourceItemId.replaceAll("_", "-")
   return (
     <Pressable
+      testID={`shop-item-${automationSlug}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${product.title}, ${metaLabel ?? product.stateLabel}`}
+      accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.productCard,
@@ -428,11 +521,14 @@ function ShopProductCard(props: {
       ]}
     >
       <View style={styles.productThumb}>
+        {product.previewType === "avatar" ? (
+          <View style={styles.productThumbHalo} />
+        ) : null}
         {product.previewType === "avatar" && product.avatarItem ? (
-          <Ionicons
-            name={getAvatarIcon(product.avatarItem.type)}
-            size={24}
-            color={selected ? "#FFFFFF" : uiTheme.colors.primary}
+          <AvatarProductThumbnail
+            item={product.avatarItem}
+            source={avatarPreviewSource}
+            selected={selected}
           />
         ) : product.previewType === "room" && product.roomItem ? (
           <Image
@@ -441,20 +537,72 @@ function ShopProductCard(props: {
             style={styles.productImage}
           />
         ) : (
-          <Ionicons
-            name={getStatusIcon(product.statusCardItem?.category)}
-            size={24}
-            color={selected ? "#FFFFFF" : product.statusCardItem?.accentColor ?? uiTheme.colors.primary}
-          />
+          <View
+            style={[
+              styles.productIconOrb,
+              selected ? styles.productIconOrbSelected : null
+            ]}
+          >
+            <Ionicons
+              name={getStatusIcon(product.statusCardItem?.category)}
+              size={24}
+              color={selected ? "#FFFFFF" : product.statusCardItem?.accentColor ?? uiTheme.colors.primary}
+            />
+          </View>
         )}
+        {productReference ? (
+          <View style={styles.productDropBadge}>
+            <Text style={styles.productDropBadgeText}>Drop</Text>
+          </View>
+        ) : null}
       </View>
-      <Text style={styles.productTitle} numberOfLines={1}>
+      <Text style={styles.productTitle} numberOfLines={2}>
         {product.title}
       </Text>
-      <Text style={styles.productMeta} numberOfLines={1}>
-        {metaLabel ?? product.stateLabel}
-      </Text>
+      <View
+        testID={`shop-item-${automationSlug}-price`}
+        style={styles.productMetaPill}
+      >
+        <Text style={styles.productMeta} numberOfLines={1}>
+          {metaLabel ?? product.stateLabel}
+        </Text>
+      </View>
     </Pressable>
+  )
+}
+
+function AvatarProductThumbnail(props: {
+  item: NonNullable<ShopCatalogItem["avatarItem"]>
+  source: ImageSourcePropType | undefined
+  selected: boolean
+}) {
+  const { item, source, selected } = props
+  if (!source) {
+    return (
+      <View
+        style={[
+          styles.productIconOrb,
+          selected ? styles.productIconOrbSelected : null
+        ]}
+      >
+        <Ionicons
+          name={getAvatarIcon(item.type)}
+          size={24}
+          color={selected ? "#FFFFFF" : uiTheme.colors.primary}
+        />
+      </View>
+    )
+  }
+
+  return (
+    <Image
+      source={source}
+      resizeMode="contain"
+      style={[
+        styles.productWearableImage,
+        getAvatarItemPreviewImageStyle(item)
+      ]}
+    />
   )
 }
 
@@ -552,6 +700,34 @@ function getAvatarIcon(
   return "person"
 }
 
+function getAvatarItemPreviewSource(
+  item: NonNullable<ShopCatalogItem["avatarItem"]>
+): ImageSourcePropType | undefined {
+  return AVATAR_ITEM_PREVIEW_SOURCES[item.id]
+}
+
+function getAvatarItemPreviewImageStyle(
+  item: NonNullable<ShopCatalogItem["avatarItem"]>
+): {
+  width: number
+  height: number
+  transform: Array<{ translateY: number }>
+} {
+  if (item.type === "top") {
+    if (item.id === "avatar_v2_top_default" || item.id === "avatar_v2_top_cream_basic_tee") {
+      return { width: 182, height: 273, transform: [{ translateY: -28 }] }
+    }
+    return { width: 190, height: 285, transform: [{ translateY: -64 }] }
+  }
+  if (item.type === "bottom") {
+    return { width: 210, height: 315, transform: [{ translateY: -124 }] }
+  }
+  if (item.type === "shoes") {
+    return { width: 210, height: 315, transform: [{ translateY: -140 }] }
+  }
+  return { width: 150, height: 225, transform: [{ translateY: -34 }] }
+}
+
 function getStatusIcon(
   category: StatusCardCatalogItem["category"] | undefined
 ): keyof typeof Ionicons.glyphMap {
@@ -617,7 +793,7 @@ const styles = StyleSheet.create({
     paddingTop: uiTheme.spacing.sm,
   },
   scroll: {
-    gap: uiTheme.spacing.lg,
+    gap: uiTheme.spacing.xl,
     paddingBottom: 136,
   },
   coinPill: {
@@ -639,10 +815,10 @@ const styles = StyleSheet.create({
   previewCard: {
     gap: uiTheme.spacing.md,
     padding: uiTheme.spacing.lg,
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.glass,
+    borderRadius: 30,
+    backgroundColor: "#FFF8FC",
     borderWidth: 1,
-    borderColor: uiTheme.colors.glassBorder,
+    borderColor: "#F5DDEC",
     overflow: "hidden",
     ...uiTheme.shadow.deep,
   },
@@ -674,12 +850,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   previewStage: {
-    minHeight: 238,
+    minHeight: 292,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: "#160D1E",
+    borderRadius: uiTheme.radius.xxl,
+    backgroundColor: "#180D21",
     overflow: "hidden",
+  },
+  previewStageAvatar: {
+    backgroundColor: "#FFF0F7",
+    borderWidth: 1,
+    borderColor: "#F4DCEB",
   },
   roomPreviewRenderer: {
     width: "132%",
@@ -783,7 +964,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   section: {
-    gap: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.md,
   },
   sectionHeader: {
     gap: 3,
@@ -797,47 +978,102 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.textSecondary,
   },
   productRow: {
-    gap: uiTheme.spacing.sm,
+    gap: uiTheme.spacing.md,
     paddingRight: uiTheme.spacing.lg,
   },
   productCard: {
-    width: 148,
-    minHeight: 158,
-    gap: uiTheme.spacing.xs,
-    padding: uiTheme.spacing.sm,
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: uiTheme.colors.glass,
+    width: 174,
+    minHeight: 204,
+    gap: uiTheme.spacing.sm,
+    padding: 10,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: uiTheme.colors.glassBorder,
+    borderColor: "#F1E4F2",
     ...uiTheme.shadow.float,
   },
   productCardSelected: {
     borderColor: uiTheme.colors.primary,
-    backgroundColor: "#FFF7FB",
+    backgroundColor: "#FFF5FA",
   },
   productCardPressed: {
     opacity: 0.82,
     transform: [{ scale: 0.97 }],
   },
   productThumb: {
-    height: 80,
+    position: "relative",
+    height: 112,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: uiTheme.radius.lg,
-    backgroundColor: uiTheme.colors.surfaceSoft,
+    borderRadius: 20,
+    backgroundColor: "#FFF2F8",
     overflow: "hidden",
+  },
+  productThumbHalo: {
+    position: "absolute",
+    bottom: 14,
+    width: 94,
+    height: 54,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "#EAC3D9",
+    opacity: 0.7,
+  },
+  productIconOrb: {
+    width: 54,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F2D9E9",
+  },
+  productIconOrbSelected: {
+    backgroundColor: uiTheme.colors.primary,
+    borderColor: "rgba(255,255,255,0.5)",
   },
   productImage: {
     width: "86%",
     height: "86%",
+  },
+  productWearableImage: {
+    alignSelf: "center",
+  },
+  productDropBadge: {
+    position: "absolute",
+    left: 8,
+    top: 8,
+    minHeight: 22,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(255,255,255,0.86)",
+    borderWidth: 1,
+    borderColor: "#F2D9E9",
+  },
+  productDropBadgeText: {
+    ...uiTheme.font.micro,
+    color: uiTheme.colors.primary,
+    fontWeight: "900",
   },
   productTitle: {
     ...uiTheme.font.bodySmall,
     color: uiTheme.colors.textPrimary,
     fontWeight: "900",
   },
+  productMetaPill: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    minHeight: 28,
+    justifyContent: "center",
+    paddingHorizontal: 9,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: "#F4DDEB",
+  },
   productMeta: {
-    ...uiTheme.font.micro,
-    color: uiTheme.colors.textMuted,
+    ...uiTheme.font.captionBold,
+    color: uiTheme.colors.chipText,
   },
 })

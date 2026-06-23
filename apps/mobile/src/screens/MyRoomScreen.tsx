@@ -1,7 +1,16 @@
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack"
 import { Ionicons } from "@expo/vector-icons"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
+import {
+  Image,
+  type LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View
+} from "react-native"
 import { uiTheme } from "../ui/theme"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useAvatarV2 } from "../features/avatarV2/state/AvatarV2Provider"
@@ -38,10 +47,6 @@ import {
   createRoomWorldHotspotsFromRoomV2Scene
 } from "../features/roomWorld/roomWorldRoomV2Projection"
 import {
-  getRoomWorldMotionReadinessSummary,
-  type RoomWorldMotionReadinessLevel
-} from "../features/roomWorld/roomWorldDiagnostics"
-import {
   createRoomWorldMovementPlan,
   getRoomWorldMovementFrame,
   getRoomWorldMovementFramePose,
@@ -72,18 +77,41 @@ type MyRoomScreenProps = MyRoomNavProps & {
 }
 
 const MY_ROOM_STAGE_CAMERA = {
-  compactRendererWidth: "184%",
-  regularRendererWidth: "174%",
-  rendererTranslateY: -4,
-  stageHeightRatio: 0.45,
-  minStageHeight: 390,
-  maxStageHeight: 430
+  compactRendererWidth: "155%",
+  regularRendererWidth: "154%",
+  rendererTranslateY: 0,
+  compactStageHeightRatio: 0.61,
+  wideStageHeightRatio: 0.64,
+  compactMinStageHeight: 468,
+  wideMinStageHeight: 440,
+  compactMaxStageHeight: 560,
+  wideMaxStageHeight: 560
 } as const
 const MY_ROOM_AVATAR_SPAWN = {
   x: 0.47,
-  y: 0.76,
+  y: 0.84,
   direction: "front" as RoomFurnitureRotation
 } as const
+const MY_ROOM_WALK_ACTION_TARGETS: RoomWorldPoint[] = [
+  { x: 0.28, y: 0.86 },
+  { x: 0.72, y: 0.86 },
+  { x: 0.3, y: 0.7 },
+  { x: 0.7, y: 0.7 },
+  { x: 0.5, y: 0.88 },
+  { x: 0.5, y: 0.64 }
+]
+const MY_ROOM_AVATAR_SIZE = {
+  compact: {
+    width: 0.20,
+    height: 0.30
+  },
+  wide: {
+    width: 0.18,
+    height: 0.27
+  }
+} as const
+const MY_ROOM_WIDE_STAGE_BREAKPOINT = 720
+const MY_ROOM_WIDE_STAGE_AVATAR_FEET_Y = 0.82
 const MY_ROOM_TRANSIENT_POSE_DURATION_MS = 1800
 const MY_ROOM_MOVEMENT_FEEDBACK_DURATION_MS = 1700
 const MY_ROOM_MOVEMENT_NO_OP_DISTANCE = 0.012
@@ -112,6 +140,7 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
   const movementFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [movementFeedback, setMovementFeedback] = useState<string | undefined>()
   const [stageMarker, setStageMarker] = useState<RoomRendererStageMarker | undefined>()
+  const [stageWidth, setStageWidth] = useState(0)
 
   const roomScene = useMemo(
     () =>
@@ -131,17 +160,50 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     () => createRoomWorldHotspotsFromRoomV2Scene(roomScene),
     [roomScene]
   )
-  const shellCamera = roomScene.shell?.myRoomCamera ?? MY_ROOM_STAGE_CAMERA
+  const shellCamera = {
+    ...(roomScene.shell?.myRoomCamera ?? MY_ROOM_STAGE_CAMERA),
+    compactRendererWidth: MY_ROOM_STAGE_CAMERA.compactRendererWidth,
+    regularRendererWidth: MY_ROOM_STAGE_CAMERA.regularRendererWidth,
+    rendererTranslateY: MY_ROOM_STAGE_CAMERA.rendererTranslateY,
+    compactStageHeightRatio: MY_ROOM_STAGE_CAMERA.compactStageHeightRatio,
+    wideStageHeightRatio: MY_ROOM_STAGE_CAMERA.wideStageHeightRatio,
+    compactMinStageHeight: MY_ROOM_STAGE_CAMERA.compactMinStageHeight,
+    wideMinStageHeight: MY_ROOM_STAGE_CAMERA.wideMinStageHeight,
+    compactMaxStageHeight: MY_ROOM_STAGE_CAMERA.compactMaxStageHeight,
+    wideMaxStageHeight: MY_ROOM_STAGE_CAMERA.wideMaxStageHeight
+  }
+  const usesWideWindow = windowSize.width >= MY_ROOM_WIDE_STAGE_BREAKPOINT
+  const stageHeightRatio = usesWideWindow
+    ? shellCamera.wideStageHeightRatio
+    : shellCamera.compactStageHeightRatio
+  const minStageHeight = usesWideWindow
+    ? shellCamera.wideMinStageHeight
+    : shellCamera.compactMinStageHeight
+  const maxStageHeight = usesWideWindow
+    ? shellCamera.wideMaxStageHeight
+    : shellCamera.compactMaxStageHeight
   const stageHeight = Math.max(
-    shellCamera.minStageHeight,
+    minStageHeight,
     Math.min(
-      shellCamera.maxStageHeight,
-      Math.round(windowSize.height * shellCamera.stageHeightRatio)
+      maxStageHeight,
+      Math.round(windowSize.height * stageHeightRatio)
     )
   )
-  const stageRendererWidth = windowSize.width < 390
-    ? shellCamera.compactRendererWidth
-    : shellCamera.regularRendererWidth
+  const usesWideStageCamera = stageWidth >= MY_ROOM_WIDE_STAGE_BREAKPOINT
+  const stageRendererWidth = usesWideStageCamera
+    ? "100%"
+    : windowSize.width < 390
+      ? shellCamera.compactRendererWidth
+      : shellCamera.regularRendererWidth
+  const stageRendererTranslateY = usesWideStageCamera && roomScene.shell
+    ? getWideStageRendererTranslateY({
+        stageWidth,
+        stageHeight,
+        shellCanvasWidth: roomScene.shell.canvasSize.width,
+        shellCanvasHeight: roomScene.shell.canvasSize.height,
+        avatarWorldY: avatarPose.y
+      })
+    : shellCamera.rendererTranslateY
 
   const projectedRoomAvatar = useMemo(
     () =>
@@ -160,40 +222,33 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     [projectedRoomAvatar]
   )
   const roomMotionBadge = getMyRoomMotionBadge(roomMotionReadiness.level)
-  const roomWorldReadiness = useMemo(
-    () => getRoomWorldMotionReadinessSummary({
-      geometry: roomWorldGeometry,
-      spawn: MY_ROOM_AVATAR_SPAWN,
-      clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE
-    }),
-    [roomWorldGeometry]
-  )
-  const roomWorldBadge = getMyRoomWorldBadge(roomWorldReadiness.level)
 
-  const roomAvatar = useMemo(
-    () =>
-      createRoomAvatarRenderItem({
-        avatarId: "my-room-owner",
-        name: sessionActor.profile.displayName,
-        appearance: projectedRoomAvatar,
-        x: avatarPose.x,
-        y: avatarPose.y,
-        width: 0.13,
-        height: 0.42,
-        renderId: "my_room_owner_avatar",
-        direction: avatarPose.direction,
-        state: avatarPose.state,
-        depth: avatarPose.y
-      }),
-    [
-      avatarPose.direction,
-      avatarPose.state,
-      avatarPose.x,
-      avatarPose.y,
-      projectedRoomAvatar,
-      sessionActor.profile.displayName
-    ]
-  )
+  const roomAvatar = useMemo(() => {
+    const avatarSize = usesWideStageCamera
+      ? MY_ROOM_AVATAR_SIZE.wide
+      : MY_ROOM_AVATAR_SIZE.compact
+    return createRoomAvatarRenderItem({
+      avatarId: "my-room-owner",
+      name: sessionActor.profile.displayName,
+      appearance: projectedRoomAvatar,
+      x: avatarPose.x,
+      y: avatarPose.y,
+      width: avatarSize.width,
+      height: avatarSize.height,
+      renderId: "my_room_owner_avatar",
+      direction: avatarPose.direction,
+      state: avatarPose.state,
+      depth: avatarPose.y
+    })
+  }, [
+    avatarPose.direction,
+    avatarPose.state,
+    avatarPose.x,
+    avatarPose.y,
+    projectedRoomAvatar,
+    sessionActor.profile.displayName,
+    usesWideStageCamera
+  ])
 
   const renderItems = useMemo(
     () => [...roomScene.renderItems, roomAvatar].sort(compareRoomV2RenderItems),
@@ -396,6 +451,23 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     }, MY_ROOM_TRANSIENT_POSE_DURATION_MS)
   }, [])
 
+  const handleWalkAction = useCallback((): void => {
+    const currentPose = avatarPoseRef.current
+    const target = getMyRoomWalkActionTarget({
+      geometry: roomWorldGeometry,
+      from: currentPose
+    })
+    if (!target) {
+      hapticError()
+      showMovementFeedback("No clear route")
+      return
+    }
+    moveAvatarToPoint(target, {
+      direction: "front",
+      state: "idle"
+    })
+  }, [moveAvatarToPoint, roomWorldGeometry, showMovementFeedback])
+
   const handleRoomItemTap = useCallback((item: RoomV2RenderItem): void => {
     if (item.kind !== "furniture" || item.interactionType !== "seat") return
     const seatGeometry = omitRoomWorldBlockers(roomWorldGeometry, [item.renderId])
@@ -431,29 +503,41 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
     showMovementFeedback
   ])
 
+  const handleStageLayout = useCallback((event: LayoutChangeEvent): void => {
+    const nextWidth = Math.round(event.nativeEvent.layout.width)
+    setStageWidth((current) => current === nextWidth ? current : nextWidth)
+  }, [])
+
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.myRoomRoot}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>My Room</Text>
-            <Text style={styles.subtitle}>Cozy avatar room</Text>
+            <Text style={styles.myRoomTitle}>My Room</Text>
+            <Text style={styles.myRoomSubtitle}>Tap the floor to move</Text>
           </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open profile options"
-            style={styles.iconButton}
+            style={styles.myRoomIconButton}
             onPress={() => navigation.navigate("You")}
           >
-            <Ionicons name="ellipsis-horizontal" size={20} color="#FFEAF4" />
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={20}
+              color={uiTheme.colors.textPrimary}
+            />
           </Pressable>
         </View>
 
         <View style={styles.roomStack}>
-          <View style={[styles.stageCard, { height: stageHeight }]}>
+          <View
+            onLayout={handleStageLayout}
+            style={[styles.stageCard, { height: stageHeight }]}
+          >
             <View style={styles.stageBackdrop} pointerEvents="none" />
             <View style={styles.stageTopScrim} pointerEvents="none" />
             <RoomRenderer2D
@@ -467,26 +551,24 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                 styles.stageRenderer,
                 {
                   width: stageRendererWidth,
-                  transform: [{ translateY: shellCamera.rendererTranslateY }]
+                  transform: [{ translateY: stageRendererTranslateY }]
                 }
               ]}
             />
             <View style={styles.stageHud} pointerEvents="none">
-              <View style={styles.stageHudRow}>
-                <View style={styles.stageHudPill}>
-                  <Ionicons name="heart" size={13} color="#FF7AB8" />
-                  <Text style={styles.stageHeaderText} numberOfLines={1}>
-                    Cozy room
-                  </Text>
-                </View>
-                <View style={styles.stageHudPill}>
-                  <Ionicons name="cube" size={13} color="#FAD7E8" />
-                  <Text style={styles.stageHeaderText} numberOfLines={1}>
-                    {userRoomDecor.placedItems.length} decor
-                  </Text>
-                </View>
+              <View style={styles.stageHudPill}>
+                <Ionicons name="heart" size={13} color="#FF7AB8" />
+                <Text style={styles.stageHeaderText} numberOfLines={1}>
+                  Cozy room
+                </Text>
               </View>
-              <View style={styles.stageHudRow}>
+              <View style={styles.stageHudMetaGroup}>
+                <View style={styles.stageMiniPill}>
+                  <Ionicons name="cube" size={12} color="#FAD7E8" />
+                  <Text style={styles.stageMotionText} numberOfLines={1}>
+                    {userRoomDecor.placedItems.length}
+                  </Text>
+                </View>
                 <View style={styles.stageStatusPill}>
                   <Ionicons
                     name={roomMotionBadge.icon}
@@ -495,16 +577,6 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                   />
                   <Text style={styles.stageMotionText} numberOfLines={1}>
                     {roomMotionBadge.label}
-                  </Text>
-                </View>
-                <View style={styles.stageStatusPill}>
-                  <Ionicons
-                    name={roomWorldBadge.icon}
-                    size={13}
-                    color={roomWorldBadge.color}
-                  />
-                  <Text style={styles.stageMotionText} numberOfLines={1}>
-                    {roomWorldBadge.label}
                   </Text>
                 </View>
               </View>
@@ -517,7 +589,16 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                 </Text>
               </View>
             ) : null}
+          </View>
+
+          <View style={styles.roomControlPanel}>
             <View style={styles.poseDock}>
+              <PoseDockButton
+                icon="walk"
+                label="Walk"
+                active={avatarPose.state === "walking"}
+                onPress={handleWalkAction}
+              />
               <PoseDockButton
                 icon="hand-left"
                 label="Wave"
@@ -537,57 +618,51 @@ export function MyRoomScreen({ navigation, sessionActor }: MyRoomScreenProps) {
                 onPress={() => handlePoseAction("idle")}
               />
             </View>
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open wardrobe"
-              style={({ pressed }) => [
-                styles.actionButtonGlass,
-                pressed ? styles.actionButtonPressed : null
-              ]}
-              onPress={() => navigation.navigate("WardrobeV2")}
-            >
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="shirt" size={20} color="#FF7AB8" />
-              </View>
-              <Text style={styles.actionTextGlass} numberOfLines={1}>
-                Wardrobe
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Edit room"
-              style={({ pressed }) => [
-                styles.actionButtonGlass,
-                pressed ? styles.actionButtonPressed : null
-              ]}
-              onPress={() => navigation.navigate("MyRoomV2Preview")}
-            >
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="brush" size={20} color="#FF7AB8" />
-              </View>
-              <Text style={styles.actionTextGlass} numberOfLines={1}>
-                Edit Room
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open room shop"
-              style={({ pressed }) => [
-                styles.actionButtonGlass,
-                pressed ? styles.actionButtonPressed : null
-              ]}
-              onPress={() => navigation.navigate("RoomShop")}
-            >
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="sparkles" size={20} color="#FF7AB8" />
-              </View>
-              <Text style={styles.actionTextGlass} numberOfLines={1}>
-                Room Shop
-              </Text>
-            </Pressable>
+            <View style={styles.stageActionDock}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open wardrobe"
+                style={({ pressed }) => [
+                  styles.stageActionButton,
+                  styles.stageActionButtonPrimary,
+                  pressed ? styles.stageActionButtonPressed : null
+                ]}
+                onPress={() => navigation.navigate("WardrobeV2")}
+              >
+                <Ionicons name="shirt" size={18} color="#FFFFFF" />
+                <Text style={styles.stageActionText} numberOfLines={1}>
+                  Wardrobe
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit room"
+                style={({ pressed }) => [
+                  styles.stageActionButton,
+                  pressed ? styles.stageActionButtonPressed : null
+                ]}
+                onPress={() => navigation.navigate("MyRoomV2Preview")}
+              >
+                <Ionicons name="brush" size={18} color="#FFD9E8" />
+                <Text style={styles.stageActionText} numberOfLines={1}>
+                  Edit
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open room shop"
+                style={({ pressed }) => [
+                  styles.stageActionButton,
+                  pressed ? styles.stageActionButtonPressed : null
+                ]}
+                onPress={() => navigation.navigate("RoomShop")}
+              >
+                <Ionicons name="sparkles" size={18} color="#FFD9E8" />
+                <Text style={styles.stageActionText} numberOfLines={1}>
+                  Shop
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -604,47 +679,20 @@ function getMyRoomMotionBadge(level: RoomAvatarMotionReadinessLevel): {
     case "motionReady":
       return {
         icon: "checkmark-circle",
-        label: "Motion assets",
+        label: "Ready",
         color: "#8FFFD1"
       }
     case "idleReady":
       return {
         icon: "sparkles",
-        label: "Runtime motion",
+        label: "Preview",
         color: "#FFD1E3"
       }
     case "notReady":
       return {
         icon: "alert-circle",
-        label: "Room art pending",
+        label: "Art pending",
         color: "#FFE1A8"
-      }
-  }
-}
-
-function getMyRoomWorldBadge(level: RoomWorldMotionReadinessLevel): {
-  icon: keyof typeof Ionicons.glyphMap
-  label: string
-  color: string
-} {
-  switch (level) {
-    case "ready":
-      return {
-        icon: "walk",
-        label: "Room pathing",
-        color: "#8FFFD1"
-      }
-    case "constrained":
-      return {
-        icon: "resize",
-        label: "Tight layout",
-        color: "#FFE1A8"
-      }
-    case "blocked":
-      return {
-        icon: "alert-circle",
-        label: "Path blocked",
-        color: "#FFB4C8"
       }
   }
 }
@@ -654,6 +702,58 @@ function getMyRoomPointDistance(
   to: RoomWorldPoint
 ): number {
   return Math.hypot(to.x - from.x, to.y - from.y)
+}
+
+function getMyRoomWalkActionTarget(input: {
+  geometry: RoomWorldGeometry
+  from: RoomWorldPoint
+}): RoomWorldPoint | null {
+  const candidates = [...MY_ROOM_WALK_ACTION_TARGETS].sort(
+    (left, right) =>
+      getMyRoomPointDistance(input.from, right) -
+      getMyRoomPointDistance(input.from, left)
+  )
+  for (const candidate of candidates) {
+    const target = resolveRoomWorldInteractiveTarget({
+      geometry: input.geometry,
+      target: candidate,
+      clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE
+    })
+    if (
+      !target ||
+      getMyRoomPointDistance(input.from, target) <= MY_ROOM_MOVEMENT_NO_OP_DISTANCE
+    ) {
+      continue
+    }
+    const plan = createRoomWorldMovementPlan({
+      geometry: input.geometry,
+      from: input.from,
+      to: target,
+      clearance: ROOM_WORLD_AVATAR_COLLISION_CLEARANCE,
+      timing: ROOM_WORLD_MY_ROOM_MOVEMENT_TIMING
+    })
+    if (plan?.segments.length) return target
+  }
+  return null
+}
+
+function getWideStageRendererTranslateY(input: {
+  stageWidth: number
+  stageHeight: number
+  shellCanvasWidth: number
+  shellCanvasHeight: number
+  avatarWorldY: number
+}): number {
+  const rendererHeight =
+    input.stageWidth * input.shellCanvasHeight / input.shellCanvasWidth
+  const avatarFeetY = rendererHeight * input.avatarWorldY
+  const targetFeetY = input.stageHeight * MY_ROOM_WIDE_STAGE_AVATAR_FEET_Y
+  const centeredRendererTop = (input.stageHeight - rendererHeight) / 2
+  const targetRendererTop = Math.max(
+    input.stageHeight - rendererHeight,
+    Math.min(0, targetFeetY - avatarFeetY)
+  )
+  return Math.round(targetRendererTop - centeredRendererTop)
 }
 
 function PoseDockButton(props: {
@@ -681,7 +781,7 @@ function PoseDockButton(props: {
       <Ionicons
         name={icon}
         size={16}
-        color={active ? "#FFFFFF" : "#FFEAF4"}
+        color={active ? "#FFFFFF" : uiTheme.colors.textSecondary}
       />
       <Text
         style={[
@@ -822,10 +922,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#070B1D",
   },
+  myRoomRoot: {
+    flex: 1,
+    backgroundColor: uiTheme.colors.background,
+  },
   content: {
-    gap: 10,
+    gap: uiTheme.spacing.sm,
     paddingHorizontal: uiTheme.spacing.sm,
-    paddingBottom: uiTheme.spacing.md,
+    paddingBottom: uiTheme.spacing.lg,
   },
   header: {
     flexDirection: "row",
@@ -844,6 +948,15 @@ const styles = StyleSheet.create({
     marginTop: 3,
     color: "rgba(255,255,255,0.62)",
   },
+  myRoomTitle: {
+    ...uiTheme.font.heading,
+    color: uiTheme.colors.textPrimary,
+  },
+  myRoomSubtitle: {
+    ...uiTheme.font.caption,
+    marginTop: 3,
+    color: uiTheme.colors.textSecondary,
+  },
   iconButton: {
     width: 42,
     height: 42,
@@ -854,50 +967,62 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
   },
-  roomStack: {
-    gap: 8,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: 8,
-    padding: 0,
-    marginTop: 0,
-  },
-  actionButtonGlass: {
-    flex: 1,
+  myRoomIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
-    minHeight: 72,
-    paddingVertical: 9,
-    paddingHorizontal: 6,
-    borderRadius: 16,
-    backgroundColor: "rgba(24, 14, 31, 0.58)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255, 122, 184, 0.28)",
-    shadowColor: "#FF4F98",
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
+    borderColor: "#F2DDEA",
   },
-  actionButtonPressed: {
+  roomStack: {
+    gap: 10,
+  },
+  roomControlPanel: {
+    gap: 8,
+    padding: 8,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F2DDEA",
+    ...uiTheme.shadow.soft,
+  },
+  stageActionDock: {
+    flexDirection: "row",
+    gap: 7,
+    padding: 0,
+  },
+  stageActionButton: {
+    flex: 1,
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    backgroundColor: "#26172E",
+    borderWidth: 1,
+    borderColor: "#39243F",
+  },
+  stageActionButtonPrimary: {
+    backgroundColor: "rgba(255, 79, 152, 0.82)",
+    borderColor: "rgba(255,255,255,0.24)",
+    shadowColor: "#FF4F98",
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  stageActionButtonPressed: {
     opacity: 0.82,
     transform: [{ scale: 0.98 }],
   },
-  actionIconWrap: {
-    width: 36,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 13,
-    backgroundColor: "rgba(255, 234, 244, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
-  },
-  actionTextGlass: {
+  stageActionText: {
     ...uiTheme.font.captionBold,
     fontSize: 11.5,
-    color: "#FFD9E8",
+    color: "#FFFFFF",
     textAlign: "center",
   },
   shopContent: {
@@ -1000,12 +1125,12 @@ const styles = StyleSheet.create({
   },
   stageCard: {
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "center",
     overflow: "hidden",
-    borderRadius: uiTheme.radius.xxl,
-    backgroundColor: "#080715",
+    borderRadius: 34,
+    backgroundColor: "#E8B698",
     borderWidth: 1,
-    borderColor: "rgba(255, 183, 217, 0.24)",
+    borderColor: "rgba(255, 183, 217, 0.18)",
     ...uiTheme.shadow.deep,
   },
   stageBackdrop: {
@@ -1014,34 +1139,31 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: "#0B0815",
+    backgroundColor: "#E8B698",
   },
   stageTopScrim: {
     position: "absolute",
     left: 0,
     right: 0,
     top: 0,
-    height: 68,
-    backgroundColor: "rgba(255, 111, 174, 0.08)",
+    height: 92,
+    backgroundColor: "rgba(255, 111, 174, 0.1)",
   },
   stageRenderer: {
-    backgroundColor: "#0B0815",
+    backgroundColor: "#E8B698",
   },
   stageHud: {
     position: "absolute",
-    left: 12,
-    top: 12,
-    right: 12,
-    gap: 7,
-  },
-  stageHudRow: {
+    left: 14,
+    top: 14,
+    right: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
   stageHudPill: {
-    maxWidth: "48%",
+    maxWidth: "45%",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -1052,8 +1174,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.16)",
   },
+  stageHudMetaGroup: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 7,
+  },
+  stageMiniPill: {
+    minWidth: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "rgba(9,13,34,0.54)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
   stageStatusPill: {
-    maxWidth: "48%",
+    maxWidth: 138,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -1094,29 +1236,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   poseDock: {
-    position: "absolute",
-    left: 10,
-    right: 10,
-    bottom: 10,
     flexDirection: "row",
     gap: 5,
-    padding: 5,
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: "rgba(9,13,34,0.68)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
   },
   poseButton: {
     flex: 1,
-    minHeight: 36,
+    minHeight: 42,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#FFF4F9",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "#F2DDEA",
   },
   poseButtonActive: {
     backgroundColor: "rgba(255,79,152,0.78)",
@@ -1128,7 +1261,7 @@ const styles = StyleSheet.create({
   },
   poseButtonText: {
     ...uiTheme.font.captionBold,
-    color: "#FFEAF4",
+    color: uiTheme.colors.textSecondary,
   },
   poseButtonTextActive: {
     color: "#FFFFFF",

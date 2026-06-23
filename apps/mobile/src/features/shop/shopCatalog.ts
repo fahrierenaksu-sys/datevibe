@@ -98,7 +98,16 @@ export interface BuildAvatarShopCatalogItemInput {
 const SHOP_AVATAR_TYPES = new Set(["hair", "top", "bottom", "shoes", "accessory"])
 
 const AVATAR_SHOP_PRICES: Record<string, number> = {
-  avatar_v2_top_locked_luxe: 280
+  avatar_v2_top_locked_luxe: 280,
+  avatar_v2_top_lilac_offshoulder_bow_blouse: 360,
+  avatar_v2_bottom_floral_embroidered_skort_shorts: 380,
+  avatar_v2_top_silver_sequin_halter_top: 340,
+  avatar_v2_bottom_pink_embellished_wide_pants: 420,
+  avatar_v2_bottom_patchwork_bow_mini_skirt: 350,
+  avatar_v2_top_silver_lace_ruffle_dress_top: 390,
+  avatar_v2_bottom_silver_lace_ruffle_dress_bottom: 430,
+  avatar_v2_top_red_floral_bikini_top: 260,
+  avatar_v2_bottom_white_embellished_wide_pants: 410
 }
 
 const ROOM_SHOP_PRICES: Record<string, number> = {

@@ -45,9 +45,10 @@ export function RoomAvatarRenderer2D(props: RoomAvatarRenderer2DProps) {
         const asset = getLayerFrameAsset(layer, frameIndex)
         return (
           <Image
-            key={`${layer.type}:${layer.id}:${asset.key}`}
+            key={`${layer.type}:${layer.id}`}
             source={asset.source}
             resizeMode="contain"
+            fadeDuration={0}
             style={[
               styles.layer,
               getLayerFitStyle(layer)
@@ -111,29 +112,9 @@ const ROOM_AVATAR_LAYER_FIT: Record<
   RoomAvatarFitProfileId,
   Partial<Record<RoomAvatarLayerType, ImageStyle>>
 > = {
-  datevibe_female_room_avatar_v1: {
-    hairBack: {
-      transform: [{ translateY: -2 }, { scale: 1.045 }]
-    },
-    hairFront: {
-      transform: [{ translateY: -2 }, { scale: 1.035 }]
-    },
-    face: {
-      transform: [{ translateY: -1 }, { scale: 0.985 }]
-    },
-    top: {
-      transform: [{ translateY: 1 }, { scaleX: 1.012 }, { scaleY: 1.006 }]
-    },
-    bottom: {
-      transform: [{ translateY: 1 }, { scaleX: 1.006 }]
-    },
-    shoes: {
-      transform: [{ translateY: 2 }, { scaleX: 1.035 }, { scaleY: 0.99 }]
-    },
-    accessory: {
-      transform: [{ translateY: 1 }, { scale: 0.99 }]
-    }
-  },
+  // Female Motion v1 layers share the same approved 256x384 front rig.
+  // Per-layer transforms break the pixel alignment established by asset QA.
+  datevibe_female_room_avatar_v1: {},
   datevibe_male_room_avatar_v1: {
     hairFront: {
       transform: [{ translateY: -1 }, { scale: 1.018 }]

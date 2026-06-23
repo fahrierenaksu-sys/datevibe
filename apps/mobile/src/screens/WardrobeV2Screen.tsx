@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons"
 import type { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { useMemo, useState } from "react"
 import {
+  Image,
+  type ImageSourcePropType,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,9 +17,14 @@ import {
   isAvatarV2ItemEquipped
 } from "../features/avatarV2/avatarV2Selectors"
 import { AvatarPreview2D } from "../features/avatarV2/components/AvatarPreview2D"
+import { roomAvatarLayerAssets } from "../features/avatarV2/room/avatarRoomAssets"
 import { ROOM_AVATAR_CATALOG } from "../features/avatarV2/room/avatarRoom.mock"
-import { projectAvatarV2ToRoomAvatarAppearance } from "../features/avatarV2/room/avatarRoomProjection"
+import {
+  DEFAULT_AVATAR_ROOM_PROJECTION_MAP,
+  projectAvatarV2ToRoomAvatarAppearance
+} from "../features/avatarV2/room/avatarRoomProjection"
 import { getRoomAvatarMotionReadinessSummary } from "../features/avatarV2/room/avatarRoomSelectors"
+import { getAvatarAutomationSlug } from "../features/avatarV2/qa/avatarQaInventory"
 import type {
   AvatarAnimationState,
   AvatarCatalogItem,
@@ -45,6 +52,32 @@ const CATEGORY_ICONS: Record<AvatarItemType, keyof typeof Ionicons.glyphMap> = {
   accessory: "glasses"
 }
 
+const AVATAR_ITEM_PREVIEW_SOURCES: Partial<Record<string, ImageSourcePropType>> = {
+  avatar_v2_top_default: roomAvatarLayerAssets.topFemaleCreamBasicTeeV2.source,
+  avatar_v2_bottom_default: roomAvatarLayerAssets.bottomFemaleDenimSkortShortsV2.source,
+  avatar_v2_shoes_default: roomAvatarLayerAssets.shoesFemaleDefaultV2.source,
+  avatar_v2_top_lilac_offshoulder_bow_blouse:
+    roomAvatarLayerAssets.topFemaleLilacOffshoulderBowBlouseV2.source,
+  avatar_v2_bottom_floral_embroidered_skort_shorts:
+    roomAvatarLayerAssets.bottomFemaleFloralEmbroideredSkortShortsV2.source,
+  avatar_v2_shoes_white_sneakers:
+    roomAvatarLayerAssets.shoesFemaleWhiteSneakersV2.source,
+  avatar_v2_top_silver_sequin_halter_top:
+    roomAvatarLayerAssets.topFemaleSilverSequinHalterTopV2.source,
+  avatar_v2_bottom_pink_embellished_wide_pants:
+    roomAvatarLayerAssets.bottomFemalePinkEmbellishedWidePantsV2.source,
+  avatar_v2_bottom_patchwork_bow_mini_skirt:
+    roomAvatarLayerAssets.bottomFemalePatchworkBowMiniSkirtV2.source,
+  avatar_v2_top_silver_lace_ruffle_dress_top:
+    roomAvatarLayerAssets.topFemaleSilverLaceRuffleDressTopV2.source,
+  avatar_v2_bottom_silver_lace_ruffle_dress_bottom:
+    roomAvatarLayerAssets.bottomFemaleSilverLaceRuffleDressBottomV2.source,
+  avatar_v2_top_red_floral_bikini_top:
+    roomAvatarLayerAssets.topFemaleRedFloralBikiniTopV2.source,
+  avatar_v2_bottom_white_embellished_wide_pants:
+    roomAvatarLayerAssets.bottomFemaleWhiteEmbellishedWidePantsV2.source
+}
+
 const PREVIEW_MOTION_MODES: Array<{
   state: AvatarAnimationState
   label: string
@@ -52,13 +85,12 @@ const PREVIEW_MOTION_MODES: Array<{
 }> = [
   { state: "idle_front", label: "Idle", icon: "accessibility" },
   { state: "walk_front", label: "Walk", icon: "walk" },
-  { state: "sit_front", label: "Sit", icon: "body" },
-  { state: "wave_front", label: "Wave", icon: "hand-left" }
+  { state: "sit_front", label: "Sit", icon: "body" }
 ]
 
 export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
   const { navigation } = props
-  const [activeType, setActiveType] = useState<AvatarItemType>("hair")
+  const [activeType, setActiveType] = useState<AvatarItemType>("top")
   const [previewMotionState, setPreviewMotionState] =
     useState<AvatarAnimationState>("idle_front")
   const { avatar, catalog, inventory, canEquipItem, equipItem } = useAvatarV2()
@@ -84,13 +116,28 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
   )
   const readinessTone = getReadinessTone(roomMotionReadiness.level)
   const readinessCopy = getWardrobeReadinessCopy(roomMotionReadiness.level)
+  const motionRequirementPreview = roomMotionReadiness.requirementSummaries.slice(0, 3)
 
   const equippedLabel = useMemo(() => {
     const equipped = activeItems.find((item) =>
       isAvatarV2ItemEquipped(avatar, item)
     )
-    return equipped ? `${equipped.name} equipped` : `${activeType} ready`
+    if (!equipped) return `${activeType} ready`
+    if (!isAvatarItemRoomPreviewSupported(equipped)) {
+      return `${equipped.name} room art pending`
+    }
+    return `${equipped.name} equipped`
   }, [activeItems, activeType, avatar])
+  const visibleActiveItems = useMemo(
+    () =>
+      [...activeItems].sort((left, right) => {
+        const leftEquipped = isAvatarV2ItemEquipped(avatar, left)
+        const rightEquipped = isAvatarV2ItemEquipped(avatar, right)
+        if (leftEquipped === rightEquipped) return 0
+        return leftEquipped ? -1 : 1
+      }),
+    [activeItems, avatar]
+  )
 
   const handleEquip = (item: AvatarCatalogItem): void => {
     hapticLight()
@@ -113,11 +160,11 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
             ]}
             hitSlop={8}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={uiTheme.colors.textPrimary} />
           </Pressable>
           <View style={styles.titleBlock}>
             <Text style={styles.title}>Wardrobe</Text>
-            <Text style={styles.subtitle}>Customize your look</Text>
+            <Text style={styles.subtitle}>Try on your favorite look</Text>
           </View>
           {SHOW_DEBUG_UI ? (
             <View style={styles.statusPill}>
@@ -137,8 +184,9 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
             animationState={previewMotionState}
             selectedType={activeType}
             label={equippedLabel}
-            size={164}
-            stageHeight={246}
+            metaTone="light"
+            size={238}
+            stageHeight={356}
           />
 
           <View style={styles.motionPreviewRow}>
@@ -164,7 +212,7 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                   <Ionicons
                     name={mode.icon}
                     size={14}
-                    color={active ? "#FFFFFF" : "rgba(255,255,255,0.64)"}
+                    color={active ? "#FFFFFF" : uiTheme.colors.textSecondary}
                   />
                   <Text
                     style={[
@@ -179,119 +227,43 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
             })}
           </View>
 
-          <View style={styles.roomReadinessCard}>
-            <View
-              style={[
-                styles.roomReadinessIcon,
-                { backgroundColor: readinessTone.backgroundColor }
-              ]}
-            >
-              <Ionicons
-                name={readinessTone.icon}
-                size={18}
-                color={readinessTone.color}
-              />
-            </View>
-            <View style={styles.roomReadinessCopy}>
-              <Text style={styles.roomReadinessSlice} numberOfLines={1}>
-                Room motion status
-              </Text>
-              <View style={styles.roomReadinessTitleRow}>
-                <Text style={styles.roomReadinessTitle}>
-                  {readinessCopy.title}
-                </Text>
-                <View style={styles.roomReadinessStatePill}>
-                  <View
-                    style={[
-                      styles.roomReadinessStateDot,
-                      { backgroundColor: readinessTone.color }
-                    ]}
-                  />
-                  <Text style={styles.roomReadinessCount}>
-                    {roomMotionReadiness.readyRequirementCount}/
-                    {roomMotionReadiness.totalRequirementCount}
-                  </Text>
-                </View>
+          <View style={styles.motionStatusStrip}>
+            <View style={styles.motionStatusLead}>
+              <View
+                style={[
+                  styles.motionStatusIcon,
+                  { backgroundColor: readinessTone.backgroundColor }
+                ]}
+              >
+                <Ionicons
+                  name={readinessTone.icon}
+                  size={15}
+                  color={readinessTone.color}
+                />
               </View>
-              <Text style={styles.roomReadinessBody}>
-                {readinessCopy.body}
+              <Text style={styles.motionStatusTitle} numberOfLines={1}>
+                {readinessCopy.title}
               </Text>
-              <View style={styles.motionCoverageRail}>
-                {roomMotionReadiness.requirementSummaries.map((requirement) => (
-                  <View
-                    key={requirement.label}
+            </View>
+            <View style={styles.motionStatusChips}>
+              {motionRequirementPreview.map((requirement) => (
+                <View
+                  key={requirement.label}
+                  style={[
+                    styles.motionStatusChip,
+                    requirement.isReady ? styles.motionStatusChipReady : null
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.motionCoverageChip,
-                      requirement.isReady ? styles.motionCoverageChipReady : null
+                      styles.motionStatusChipText,
+                      requirement.isReady ? styles.motionStatusChipTextReady : null
                     ]}
                   >
-                    <Ionicons
-                      name={requirement.isReady ? "checkmark-circle" : "ellipse-outline"}
-                      size={13}
-                      color={requirement.isReady ? "#8FFFD1" : "#FFB4D4"}
-                    />
-                    <Text
-                      style={[
-                        styles.motionCoverageChipText,
-                        requirement.isReady ? styles.motionCoverageChipTextReady : null
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {formatWardrobeMotionRequirementLabel(requirement.label)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.motionGestureRow}>
-                <Text style={styles.motionGestureLabel} numberOfLines={1}>
-                  Gestures {roomMotionReadiness.gestureReadyRequirementCount}/
-                  {roomMotionReadiness.gestureTotalRequirementCount}
-                </Text>
-                <View style={styles.motionGestureRail}>
-                  {roomMotionReadiness.gestureRequirementSummaries.map((requirement) => (
-                    <View
-                      key={requirement.label}
-                      style={[
-                        styles.motionGestureChip,
-                        requirement.isReady ? styles.motionGestureChipReady : null
-                      ]}
-                    >
-                      <Ionicons
-                        name={requirement.isReady ? "checkmark-circle" : "ellipse-outline"}
-                        size={12}
-                        color={requirement.isReady ? "#C9FFEA" : "#FFB4D4"}
-                      />
-                      <Text
-                        style={[
-                          styles.motionGestureChipText,
-                          requirement.isReady ? styles.motionGestureChipTextReady : null
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {formatWardrobeMotionRequirementLabel(requirement.label)}
-                      </Text>
-                    </View>
-                  ))}
+                    {getMotionRequirementShortLabel(requirement.label)}
+                  </Text>
                 </View>
-              </View>
-              {roomMotionReadiness.missingRequirementLabels.length > 0 ? (
-                <Text style={styles.roomReadinessNext} numberOfLines={1}>
-                  Needs art: {formatWardrobeMotionRequirementLabel(
-                    roomMotionReadiness.missingRequirementLabels[0]
-                  )}
-                </Text>
-              ) : roomMotionReadiness.missingGestureRequirementLabels.length > 0 ? (
-                <Text style={styles.roomReadinessNext} numberOfLines={1}>
-                  Next gesture art: {formatWardrobeMotionRequirementLabel(
-                    roomMotionReadiness.missingGestureRequirementLabels[0]
-                  )}
-                </Text>
-              ) : null}
-              {roomMotionReadiness.blockingLayerLabels.length > 0 ? (
-                <Text style={styles.roomReadinessLayer} numberOfLines={1}>
-                  Blocking layer: {roomMotionReadiness.blockingLayerLabels[0]}
-                </Text>
-              ) : null}
+              ))}
             </View>
           </View>
 
@@ -305,6 +277,10 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
               return (
                 <Pressable
                   key={category.type}
+                  testID={`wardrobe-category-${category.type}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${category.label} wardrobe category`}
+                  accessibilityState={{ selected: active }}
                   onPress={() => {
                     hapticLight()
                     setActiveType(category.type)
@@ -317,7 +293,7 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                   <Ionicons
                     name={CATEGORY_ICONS[category.type]}
                     size={17}
-                    color={active ? "#FFFFFF" : "rgba(255,255,255,0.54)"}
+                    color={active ? "#FFFFFF" : uiTheme.colors.textSecondary}
                   />
                   <Text
                     style={[
@@ -332,19 +308,46 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
             })}
           </ScrollView>
 
+          <View style={styles.selectedLookBar}>
+            <Ionicons
+              name={CATEGORY_ICONS[activeType]}
+              size={16}
+              color={uiTheme.colors.chipText}
+            />
+            <Text style={styles.selectedLookText} numberOfLines={1}>
+              {equippedLabel}
+            </Text>
+          </View>
+
           <View style={styles.grid}>
-            {activeItems.map((item) => {
+            {visibleActiveItems.map((item) => {
               const catalogItem = buildAvatarShopCatalogItem({
                 item,
                 avatar,
                 inventory
               })
               const canEquip = canEquipItem(item)
-              const locked = !canEquip
-              const equipped = isAvatarV2ItemEquipped(avatar, item)
+              const roomPreviewSupported = isAvatarItemRoomPreviewSupported(item)
+              const locked = !canEquip || !roomPreviewSupported
+              const equipped = isAvatarV2ItemEquipped(avatar, item) && roomPreviewSupported
+              const previewSource = getAvatarItemPreviewSource(item)
+              const itemStateLabel = !roomPreviewSupported
+                ? "Room art pending"
+                : locked
+                  ? catalogItem.stateLabel
+                  : "Try on"
               return (
                 <Pressable
                   key={item.id}
+                  testID={`wardrobe-item-${getAvatarAutomationSlug(item.id)}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}, ${
+                    equipped ? "Wearing" : itemStateLabel
+                  }`}
+                  accessibilityState={{
+                    disabled: locked,
+                    selected: equipped
+                  }}
                   disabled={locked}
                   onPress={() => handleEquip(item)}
                   style={({ pressed }) => [
@@ -354,30 +357,51 @@ export function WardrobeV2Screen(props: WardrobeV2ScreenProps) {
                     pressed ? styles.itemCardPressed : null
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.itemIconShell,
-                      equipped ? styles.itemIconShellEquipped : null
-                    ]}
-                  >
-                    <Ionicons
-                      name={locked ? "lock-closed" : CATEGORY_ICONS[item.type]}
-                      size={20}
-                      color={equipped ? "#FFFFFF" : "rgba(255,255,255,0.74)"}
-                    />
+                  <View style={styles.itemPreviewStage}>
+                    <View style={styles.itemPreviewHalo} />
+                    {previewSource ? (
+                      <Image
+                        source={previewSource}
+                        resizeMode="contain"
+                        style={[
+                          styles.itemPreviewImage,
+                          getAvatarItemPreviewImageStyle(item)
+                        ]}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.itemIconShell,
+                          equipped ? styles.itemIconShellEquipped : null
+                        ]}
+                      >
+                        <Ionicons
+                          name={locked ? "lock-closed" : CATEGORY_ICONS[item.type]}
+                          size={20}
+                          color={equipped ? "#FFFFFF" : uiTheme.colors.primary}
+                        />
+                      </View>
+                    )}
+                    {equipped ? (
+                      <View style={styles.itemCheckBadge}>
+                        <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+                      </View>
+                    ) : null}
                   </View>
-                  <Text style={styles.itemName} numberOfLines={1}>
+                  <Text style={styles.itemName} numberOfLines={2}>
                     {item.name}
                   </Text>
-                  <Text
+                  <View
                     style={[
-                      styles.itemMeta,
+                      styles.itemMetaPill,
+                      equipped ? styles.itemMetaPillEquipped : null,
                       locked ? styles.itemMetaLocked : null
                     ]}
-                    numberOfLines={1}
                   >
-                    {catalogItem.stateLabel}
-                  </Text>
+                    <Text style={styles.itemMeta} numberOfLines={1}>
+                      {equipped ? "Wearing" : itemStateLabel}
+                    </Text>
+                  </View>
                 </Pressable>
               )
             })}
@@ -442,10 +466,48 @@ function formatWardrobeMotionRequirementLabel(label: string): string {
   return label.replace(" front", "")
 }
 
+function getMotionRequirementShortLabel(label: string): string {
+  const normalized = label.toLowerCase()
+  if (normalized.includes("idle")) return "Idle"
+  if (normalized.includes("walk")) return "Walk"
+  if (normalized.includes("sit")) return "Sit"
+  return formatWardrobeMotionRequirementLabel(label)
+}
+
+function getAvatarItemPreviewSource(
+  item: AvatarCatalogItem
+): ImageSourcePropType | undefined {
+  return AVATAR_ITEM_PREVIEW_SOURCES[item.id]
+}
+
+function isAvatarItemRoomPreviewSupported(item: AvatarCatalogItem): boolean {
+  return item.id in DEFAULT_AVATAR_ROOM_PROJECTION_MAP
+}
+
+function getAvatarItemPreviewImageStyle(item: AvatarCatalogItem): {
+  width: number
+  height: number
+  transform: Array<{ translateY: number }>
+} {
+  if (item.type === "top") {
+    if (item.id === "avatar_v2_top_default" || item.id === "avatar_v2_top_cream_basic_tee") {
+      return { width: 170, height: 255, transform: [{ translateY: -24 }] }
+    }
+    return { width: 178, height: 267, transform: [{ translateY: -60 }] }
+  }
+  if (item.type === "bottom") {
+    return { width: 196, height: 294, transform: [{ translateY: -116 }] }
+  }
+  if (item.type === "shoes") {
+    return { width: 196, height: 294, transform: [{ translateY: -130 }] }
+  }
+  return { width: 142, height: 213, transform: [{ translateY: -32 }] }
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#110A16",
+    backgroundColor: uiTheme.colors.background,
   },
   safe: {
     flex: 1,
@@ -465,9 +527,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.09)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "#F2DDEA",
   },
   iconButtonPressed: {
     opacity: 0.76,
@@ -478,12 +540,12 @@ const styles = StyleSheet.create({
   },
   title: {
     ...uiTheme.font.heading,
-    color: "#FFFFFF",
+    color: uiTheme.colors.textPrimary,
   },
   subtitle: {
     ...uiTheme.font.caption,
     marginTop: 2,
-    color: "rgba(255,255,255,0.54)",
+    color: uiTheme.colors.textSecondary,
   },
   statusPill: {
     minWidth: 70,
@@ -493,13 +555,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "#F2DDEA",
   },
   statusPillText: {
     ...uiTheme.font.captionBold,
-    color: "#FFFFFF",
+    color: uiTheme.colors.textPrimary,
   },
   scroll: {
     paddingHorizontal: uiTheme.spacing.lg,
@@ -511,9 +573,9 @@ const styles = StyleSheet.create({
     marginTop: uiTheme.spacing.sm,
     padding: 5,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "#F2DDEA",
   },
   motionPreviewButton: {
     flex: 1,
@@ -523,9 +585,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 5,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "#FFF7FB",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "#F2DDEA",
   },
   motionPreviewButtonActive: {
     backgroundColor: "rgba(255,79,152,0.7)",
@@ -533,27 +595,94 @@ const styles = StyleSheet.create({
   },
   motionPreviewButtonText: {
     ...uiTheme.font.micro,
-    color: "rgba(255,255,255,0.64)",
+    color: uiTheme.colors.textSecondary,
     fontWeight: "900",
   },
   motionPreviewButtonTextActive: {
     color: "#FFFFFF",
   },
+  motionStatusStrip: {
+    marginTop: uiTheme.spacing.sm,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: uiTheme.spacing.sm,
+    paddingVertical: 7,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F2DDEA",
+  },
+  motionStatusLead: {
+    minWidth: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  motionStatusIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  motionStatusTitle: {
+    ...uiTheme.font.captionBold,
+    flex: 1,
+    minWidth: 0,
+    color: uiTheme.colors.textPrimary,
+  },
+  motionStatusChips: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  motionStatusChip: {
+    minHeight: 24,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "#FFF3FA",
+    borderWidth: 1,
+    borderColor: "#F5D7E8",
+  },
+  motionStatusChipReady: {
+    backgroundColor: "#EFFFF7",
+    borderColor: "#BFEEDB",
+  },
+  motionStatusChipText: {
+    ...uiTheme.font.micro,
+    color: "#FFB4D4",
+    fontWeight: "900",
+  },
+  motionStatusChipTextReady: {
+    color: "#33825F",
+  },
+  motionStatusNext: {
+    ...uiTheme.font.micro,
+    width: "100%",
+    color: uiTheme.colors.textSecondary,
+    fontWeight: "800",
+  },
   roomReadinessCard: {
-    marginTop: uiTheme.spacing.md,
+    marginTop: uiTheme.spacing.sm,
     flexDirection: "row",
     alignItems: "center",
     gap: uiTheme.spacing.sm,
-    padding: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: "rgba(255,255,255,0.09)",
+    padding: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.lg,
+    backgroundColor: "rgba(255,255,255,0.075)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(255,255,255,0.12)",
   },
   roomReadinessIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -603,7 +732,7 @@ const styles = StyleSheet.create({
   },
   roomReadinessBody: {
     ...uiTheme.font.caption,
-    marginTop: 5,
+    marginTop: 2,
     color: "rgba(255,255,255,0.68)",
     lineHeight: 18,
   },
@@ -711,7 +840,8 @@ const styles = StyleSheet.create({
   },
   categoryRow: {
     gap: 8,
-    paddingVertical: uiTheme.spacing.lg,
+    paddingTop: uiTheme.spacing.lg,
+    paddingBottom: uiTheme.spacing.sm,
   },
   categoryTab: {
     minWidth: 86,
@@ -722,17 +852,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingHorizontal: 14,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "#F2DDEA",
   },
   categoryTabActive: {
     backgroundColor: uiTheme.colors.primary,
     borderColor: "rgba(255,255,255,0.2)",
   },
+  selectedLookBar: {
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: uiTheme.spacing.md,
+    marginBottom: uiTheme.spacing.sm,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "#FFF0F8",
+    borderWidth: 1,
+    borderColor: "#F4CFE4",
+  },
+  selectedLookText: {
+    ...uiTheme.font.captionBold,
+    flex: 1,
+    minWidth: 0,
+    color: uiTheme.colors.chipText,
+  },
   categoryTabText: {
     ...uiTheme.font.captionBold,
-    color: "rgba(255,255,255,0.58)",
+    color: uiTheme.colors.textSecondary,
   },
   categoryTabTextActive: {
     color: "#FFFFFF",
@@ -744,19 +892,25 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     width: "48%",
-    minHeight: 130,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: uiTheme.spacing.xs,
-    padding: uiTheme.spacing.md,
-    borderRadius: uiTheme.radius.xl,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    minHeight: 172,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 9,
+    padding: 10,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "#F2DDEA",
+    overflow: "hidden",
+    ...uiTheme.shadow.float,
   },
   itemCardEquipped: {
-    backgroundColor: "rgba(255,79,152,0.17)",
-    borderColor: "rgba(255,79,152,0.68)",
+    backgroundColor: "#FFF3FA",
+    borderColor: uiTheme.colors.primary,
+    shadowColor: "#FF4F98",
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
   itemCardLocked: {
     opacity: 0.48,
@@ -764,31 +918,89 @@ const styles = StyleSheet.create({
   itemCardPressed: {
     transform: [{ scale: 0.97 }],
   },
-  itemIconShell: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+  itemPreviewStage: {
+    position: "relative",
+    width: "100%",
+    height: 100,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 20,
+    backgroundColor: "#FFF2F8",
+    overflow: "hidden",
+  },
+  itemPreviewHalo: {
+    position: "absolute",
+    bottom: 16,
+    width: 88,
+    height: 50,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: "#EAC3D9",
+    opacity: 0.7,
+  },
+  itemPreviewImage: {
+    alignSelf: "center",
+  },
+  itemTopRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  itemIconShell: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF7FB",
+    borderWidth: 1,
+    borderColor: "#F2DDEA",
   },
   itemIconShellEquipped: {
     backgroundColor: uiTheme.colors.primary,
   },
+  itemCheckBadge: {
+    position: "absolute",
+    right: 8,
+    top: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#31B67A",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
+  },
   itemName: {
     ...uiTheme.font.bodySmall,
     maxWidth: "100%",
-    color: "#FFFFFF",
+    color: uiTheme.colors.textPrimary,
     fontWeight: "900",
-    textAlign: "center",
+    textAlign: "left",
+  },
+  itemMetaPill: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    minHeight: 28,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    borderRadius: uiTheme.radius.full,
+    backgroundColor: uiTheme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: "#F4DDEB",
+  },
+  itemMetaPillEquipped: {
+    backgroundColor: "#EFFFF7",
+    borderColor: "#BFEEDB",
   },
   itemMeta: {
-    ...uiTheme.font.caption,
+    ...uiTheme.font.captionBold,
     maxWidth: "100%",
-    color: "rgba(255,255,255,0.54)",
+    color: uiTheme.colors.chipText,
     textAlign: "center",
   },
   itemMetaLocked: {
-    color: "#FFB4D4",
+    opacity: 0.78,
   },
 })

@@ -25,6 +25,7 @@ interface AvatarPreview2DProps {
   stageHeight?: number
   selectedType?: AvatarItemType
   label?: string
+  metaTone?: "dark" | "light"
   style?: StyleProp<ViewStyle>
 }
 
@@ -37,6 +38,7 @@ export function AvatarPreview2D(props: AvatarPreview2DProps) {
     stageHeight = 286,
     selectedType,
     label,
+    metaTone = "dark",
     style
   } = props
   const roomAvatarLayers = useMemo(() => {
@@ -67,9 +69,20 @@ export function AvatarPreview2D(props: AvatarPreview2DProps) {
         </View>
       </View>
       {label || selectedType ? (
-        <View style={styles.metaPill}>
+        <View
+          style={[
+            styles.metaPill,
+            metaTone === "light" ? styles.metaPillLight : null
+          ]}
+        >
           <View style={styles.metaDot} />
-          <Text style={styles.metaText} numberOfLines={1}>
+          <Text
+            style={[
+              styles.metaText,
+              metaTone === "light" ? styles.metaTextLight : null
+            ]}
+            numberOfLines={1}
+          >
             {label ?? `${selectedType} selected`}
           </Text>
         </View>
@@ -140,6 +153,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)"
   },
+  metaPillLight: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#F2DDEA"
+  },
   metaDot: {
     width: 7,
     height: 7,
@@ -152,5 +169,8 @@ const styles = StyleSheet.create({
     ...uiTheme.font.caption,
     fontWeight: "800",
     textTransform: "capitalize"
+  },
+  metaTextLight: {
+    color: uiTheme.colors.textPrimary
   }
 })
