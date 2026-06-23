@@ -16,7 +16,9 @@ import { LinearGradient } from "../ui/linearGradient"
 import { uiTheme } from "../ui/theme"
 
 interface WelcomeScreenProps {
-  onComplete: () => void
+  isSubmitting: boolean
+  errorMessage: string | null
+  onComplete: () => Promise<void>
 }
 
 const STEPS = [
@@ -92,7 +94,7 @@ function AnimatedDot({ active }: { active: boolean }) {
 /* ─── Main screen ─────────────────────────────────────────────── */
 
 export function WelcomeScreen(props: WelcomeScreenProps) {
-  const { onComplete } = props
+  const { errorMessage, isSubmitting, onComplete } = props
   const { width } = useWindowDimensions()
   const [currentStep, setCurrentStep] = useState(0)
   const scrollRef = useRef<ScrollView>(null)
@@ -168,13 +170,18 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
     [fadeAnim, width, animateCardEntrance]
   )
 
+  const completeWelcome = useCallback(() => {
+    if (isSubmitting) return
+    void onComplete().catch(() => undefined)
+  }, [isSubmitting, onComplete])
+
   const handleNext = useCallback(() => {
     if (currentStep < STEPS.length - 1) {
       goToStep(currentStep + 1)
     } else {
-      onComplete()
+      completeWelcome()
     }
-  }, [currentStep, goToStep, onComplete])
+  }, [completeWelcome, currentStep, goToStep])
 
   const handleButtonPressIn = useCallback(() => {
     Animated.spring(buttonScale, {
@@ -250,6 +257,11 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
 
         {/* Actions */}
         <View style={styles.actions}>
+          {errorMessage ? (
+            <Text accessibilityRole="alert" style={styles.errorText}>
+              {errorMessage}
+            </Text>
+          ) : null}
           <Animated.View
             style={[
               styles.primaryButtonWrap,
@@ -257,6 +269,11 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
             ]}
           >
             <Pressable
+              accessibilityLabel={
+                isLast ? "Finish DateVibe introduction" : "Next introduction step"
+              }
+              accessibilityRole="button"
+              disabled={isSubmitting}
               onPress={handleNext}
               onPressIn={handleButtonPressIn}
               onPressOut={handleButtonPressOut}
@@ -264,6 +281,7 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
                 styles.primaryButton,
                 pressed ? styles.primaryButtonPressed : null
               ]}
+              testID="welcome-primary-action"
             >
               <LinearGradient
                 colors={uiTheme.gradients.primary}
@@ -272,14 +290,25 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
                 style={styles.primaryButtonGradient}
               >
                 <Text style={styles.primaryButtonText}>
-                  {isLast ? "Build my vibe" : "Next"}
+                  {isSubmitting
+                    ? "Saving..."
+                    : isLast
+                      ? "Build my vibe"
+                      : "Next"}
                 </Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>
 
           {!isLast ? (
-            <Pressable onPress={onComplete} hitSlop={8}>
+            <Pressable
+              accessibilityLabel="Skip DateVibe introduction"
+              accessibilityRole="button"
+              disabled={isSubmitting}
+              onPress={completeWelcome}
+              hitSlop={8}
+              testID="welcome-skip-action"
+            >
               <Text style={styles.skipText}>Skip intro</Text>
             </Pressable>
           ) : null}
@@ -408,5 +437,10 @@ const styles = StyleSheet.create({
     color: uiTheme.colors.textMuted,
     ...uiTheme.font.bodySmall,
     fontWeight: "600"
+  },
+  errorText: {
+    color: uiTheme.colors.dangerInk,
+    ...uiTheme.font.bodySmall,
+    textAlign: "center"
   }
 })

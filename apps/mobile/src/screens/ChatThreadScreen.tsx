@@ -23,12 +23,14 @@ import { ActionButtonCircle, TopBar } from "../ui/primitives"
 import { TypingIndicator } from "../ui/typingIndicator"
 import { uiTheme } from "../ui/theme"
 import { hapticLight } from "../ui/haptics"
-import { useSessionState } from "../features/session/useSessionState"
+import type { SessionActor } from "../features/session/sessionModel"
 
 type ChatThreadScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "ChatThread"
->
+> & {
+  sessionActor: SessionActor
+}
 
 const ROOM_INVITE_SENTINEL = "__room_invite__"
 
@@ -56,10 +58,9 @@ function formatDateSeparator(date: Date): string {
 }
 
 export function ChatThreadScreen(props: ChatThreadScreenProps) {
-  const { navigation, route } = props
+  const { navigation, route, sessionActor } = props
   const { threadId, partnerId: pendingPartnerId, partnerName: pendingPartnerName } = route.params
   const { threads, getMessages, findThreadForPartner, addOptimisticMessage, setActiveThread } = useChatStore()
-  const { sessionActor } = useSessionState()
   const [inputText, setInputText] = useState("")
   const scrollViewRef = useRef<ScrollView>(null)
   const [reportVisible, setReportVisible] = useState(false)
@@ -74,7 +75,7 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
   const resolvedThreadId = thread?.threadId ?? threadId
   const messages = resolvedThreadId ? getMessages(resolvedThreadId) : []
 
-  const currentUserId = sessionActor?.profile.userId ?? ""
+  const currentUserId = sessionActor.profile.userId
   
   const partnerSummary = useMemo(() => {
     if (!thread) return null
@@ -118,7 +119,7 @@ export function ChatThreadScreen(props: ChatThreadScreenProps) {
   }, [resolvedThreadId, setActiveThread])
 
   const handleJoinRoom = useCallback((): void => {
-    if (!sessionActor || !partnerUserId) return
+    if (!partnerUserId) return
     const now = Date.now()
     const miniRoomId = `demo-invite-${now}`
     hapticLight()

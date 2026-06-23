@@ -24,7 +24,7 @@ import type { RootStackParamList } from "../navigation/RootNavigator"
 import { useDemoStore } from "../features/demo/demoStore"
 import { DEMO_CURRENT_USER } from "../features/demo/dummyProfiles"
 import type { DummyProfile } from "../features/demo/dummyProfiles"
-import { useSessionState } from "../features/session/useSessionState"
+import type { SessionActor } from "../features/session/sessionModel"
 import { SwipeableDiscoverCard } from "../features/demo/SwipeableDiscoverCard"
 import { MatchResultModal } from "../components/MatchResultModal"
 import { findThreadForPartner } from "../features/chat/chatStore"
@@ -32,10 +32,13 @@ import { Avatar } from "../ui/avatar"
 import { ActionButtonCircle } from "../ui/primitives"
 import { uiTheme } from "../ui/theme"
 
-export function DemoLobbyView() {
+interface DemoLobbyViewProps {
+  sessionActor: SessionActor
+}
+
+export function DemoLobbyView({ sessionActor }: DemoLobbyViewProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const demo = useDemoStore()
-  const { sessionActor } = useSessionState()
   const [matchModalProfile, setMatchModalProfile] = useState<DummyProfile | null>(null)
 
   // Match animation values
@@ -46,12 +49,10 @@ export function DemoLobbyView() {
       Vibration.vibrate(18)
       const result = demo.like(
         userId,
-        sessionActor
-          ? {
-              userId: sessionActor.profile.userId,
-              displayName: sessionActor.profile.displayName
-            }
-          : undefined
+        {
+          userId: sessionActor.profile.userId,
+          displayName: sessionActor.profile.displayName
+        }
       )
       if (result.matched && result.profile) {
         // Show match modal with delay for card exit animation

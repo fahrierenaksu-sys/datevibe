@@ -67,6 +67,8 @@ PODS:
     - React-Core
     - React-runtimescheduler
     - ReactCommon
+  - ExpoSecureStore (55.0.14):
+    - ExpoModulesCore
   - FBLazyVector (0.83.9)
   - hermes-engine (0.14.1):
     - hermes-engine/Pre-built (= 0.14.1)
@@ -2066,6 +2068,7 @@ DEPENDENCIES:
   - "ExpoLogBox (from `../../../node_modules/@expo/log-box`)"
   - ExpoModulesCore (from `../../../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../../../node_modules/expo-modules-core`)
+  - ExpoSecureStore (from `../../../node_modules/expo-secure-store/ios`)
   - FBLazyVector (from `../../../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - "livekit-react-native (from `../../../node_modules/@livekit/react-native`)"
@@ -2172,6 +2175,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-modules-core"
   ExpoModulesJSI:
     :path: "../../../node_modules/expo-modules-core"
+  ExpoSecureStore:
+    :path: "../../../node_modules/expo-secure-store/ios"
   FBLazyVector:
     :path: "../../../node_modules/react-native/Libraries/FBLazyVector"
   hermes-engine:
@@ -2343,6 +2348,7 @@ SPEC CHECKSUMS:
   ExpoLogBox: a678d36477ab9544fe63e0b5328a0716539b6774
   ExpoModulesCore: 998d0fbf7f687b1ff715b87cec779fc92be628ac
   ExpoModulesJSI: 964334271fc77832736f66ee1785761cdc778dbe
+  ExpoSecureStore: 0e7959ad3a9fa59306d55f26a37854640dd334c2
   FBLazyVector: dbf74de4626150660e7e6aa61bedca5bfe08ee97
   hermes-engine: fac301c767130aea98a7ecbf293e0958caf0304d
   livekit-react-native: 58b32aac95e51d7e8ff00a71e08ec58784923be1
